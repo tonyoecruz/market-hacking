@@ -9,15 +9,23 @@ import random
 # --- CONFIGURAÇÃO VISUAL ---
 st.set_page_config(page_title="Market Hacking v27.0", page_icon="💀", layout="wide")
 
-# --- CSS DE ALTO CONTRASTE ---
+# --- CSS DE ALTO CONTRASTE & REMOÇÃO DE BRANDING (PROTOCOLO FANTASMA) ---
 st.markdown("""
 <style>
+    /* Fundo e Fonte Hacker */
     .stApp { background-color: #000000; background-image: linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px); background-size: 30px 30px; color: #e0e0e0; }
     * { font-family: 'Consolas', 'Courier New', monospace !important; }
     h1, h2, h3 { color: #00ff41 !important; text-shadow: 0 0 10px rgba(0, 255, 65, 0.8); font-weight: 900 !important; text-transform: uppercase; }
+    
+    /* Inputs */
     div[data-testid="stNumberInput"] input { color: #ffffff !important; background-color: #111 !important; border: 2px solid #00ff41 !important; font-size: 30px !important; font-weight: bold !important; text-align: center !important; height: 70px !important; }
+    div[data-testid="stNumberInput"] label { display: none; }
+    
+    /* Botões */
     .stButton>button { background-color: #000; color: #00ff41; border: 2px solid #00ff41; font-size: 18px !important; font-weight: bold; text-transform: uppercase; height: 60px; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); }
     .stButton>button:hover { background-color: #00ff41; color: #000; box-shadow: 0 0 25px #00ff41; transform: scale(1.02); }
+    
+    /* Cards */
     .hacker-card { background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 5px; border-radius: 4px; position: relative; }
     .card-ticker { font-size: 24px; color: #fff; font-weight: bold; }
     .card-price { font-size: 28px; color: #00ff41; font-weight: bold; float: right; text-shadow: 0 0 8px rgba(0, 255, 65, 0.4); }
@@ -25,6 +33,7 @@ st.markdown("""
     .metric-label { color: #888; font-size: 14px; }
     .metric-value { color: #ffffff; font-weight: bold; font-size: 18px; }
     .buy-section { margin-top: 15px; background-color: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; padding: 10px; color: #FFD700; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+    .buy-value { font-size: 20px; color: #fff; }
     
     /* MODAL */
     @keyframes unfold { 0% { transform: scaleY(0.005) scaleX(0); opacity: 0; } 30% { transform: scaleY(0.005) scaleX(1); opacity: 1; } 100% { transform: scaleY(1) scaleX(1); opacity: 1; } }
@@ -41,6 +50,14 @@ st.markdown("""
     .highlight-score { color: #fff; background-color: #000; padding: 2px 10px; font-weight: 900; border-radius: 4px; font-size: 110%; }
     
     .terminal-box { background-color: #050505; border: 1px solid #00ff41; padding: 15px; font-size: 16px; color: #00ff41; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); font-family: 'Courier New', monospace; height: 350px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+
+    /* --- PROTOCOLO FANTASMA: REMOVENDO MARCAS DO STREAMLIT --- */
+    #MainMenu {visibility: hidden;} /* Esconde o menu de 3 riscos no topo */
+    footer {visibility: hidden;} /* Esconde o rodapé "Made with Streamlit" */
+    header {visibility: hidden;} /* Esconde a barra colorida superior */
+    div[data-testid="stToolbar"] {visibility: hidden;} /* Esconde toolbar */
+    div[data-testid="stDecoration"] {display: none;} /* Remove linha colorida */
+    div[data-testid="stStatusWidget"] {visibility: hidden;} /* Esconde indicador de running */
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,7 +99,7 @@ def get_data_direct():
         r = requests.get(url, headers=headers, timeout=15)
         r.raise_for_status()
         
-        # Lê a tabela usando LXML (que já instalamos)
+        # Lê a tabela usando LXML
         df = pd.read_html(io.StringIO(r.text), decimal=',', thousands='.')[0]
         
         rename_map = {'Papel': 'ticker', 'Cotação': 'price', 'P/L': 'pl', 'P/VP': 'pvp', 'EV/EBIT': 'ev_ebit', 'ROIC': 'roic', 'Liq.2meses': 'liquidezmediadiaria'}
