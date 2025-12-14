@@ -4,5 +4,3 @@ requests
 numpy
 openpyxl
 lxml
-html5lib
-beautifulsoup4
