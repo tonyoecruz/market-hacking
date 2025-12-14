@@ -1,22 +1,27 @@
 import streamlit as st
 import pandas as pd
-import fundamentus # A NOVA FONTE DE DADOS (SEM BLOQUEIO)
+import requests
+import io
 import numpy as np
 import time
 import random
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Market Hacking vFinal", page_icon="💀", layout="wide")
+st.set_page_config(page_title="Market Hacking v26.0", page_icon="💀", layout="wide")
 
-# --- CSS DE ALTO CONTRASTE ---
+# --- CSS HACKER ---
 st.markdown("""
 <style>
     .stApp { background-color: #000000; background-image: linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px); background-size: 30px 30px; color: #e0e0e0; }
     * { font-family: 'Consolas', 'Courier New', monospace !important; }
     h1, h2, h3 { color: #00ff41 !important; text-shadow: 0 0 10px rgba(0, 255, 65, 0.8); font-weight: 900 !important; text-transform: uppercase; }
+    
     div[data-testid="stNumberInput"] input { color: #ffffff !important; background-color: #111 !important; border: 2px solid #00ff41 !important; font-size: 30px !important; font-weight: bold !important; text-align: center !important; height: 70px !important; }
+    div[data-testid="stNumberInput"] label { display: none; }
+    
     .stButton>button { background-color: #000; color: #00ff41; border: 2px solid #00ff41; font-size: 18px !important; font-weight: bold; text-transform: uppercase; height: 60px; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); }
     .stButton>button:hover { background-color: #00ff41; color: #000; box-shadow: 0 0 25px #00ff41; transform: scale(1.02); }
+    
     .hacker-card { background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 5px; border-radius: 4px; position: relative; }
     .card-ticker { font-size: 24px; color: #fff; font-weight: bold; }
     .card-price { font-size: 28px; color: #00ff41; font-weight: bold; float: right; text-shadow: 0 0 8px rgba(0, 255, 65, 0.4); }
@@ -24,13 +29,11 @@ st.markdown("""
     .metric-label { color: #888; font-size: 14px; }
     .metric-value { color: #ffffff; font-weight: bold; font-size: 18px; }
     .buy-section { margin-top: 15px; background-color: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; padding: 10px; color: #FFD700; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
-    .buy-value { font-size: 20px; color: #fff; }
     
-    /* MODAL WIDESCREEN */
-    @keyframes unfold { 0% { transform: scaleY(0.005) scaleX(0); opacity: 0; } 30% { transform: scaleY(0.005) scaleX(1); opacity: 1; } 100% { transform: scaleY(1) scaleX(1); opacity: 1; } }
-    div[role="dialog"] { width: 85vw !important; max-width: 90vw !important; background-color: #e6e6e6 !important; border: 4px solid #000 !important; box-shadow: 0 0 0 1000px rgba(0,0,0,0.8); border-radius: 5px; animation: unfold 0.8s cubic-bezier(0.165, 0.840, 0.440, 1.000) forwards; }
+    /* MODAL */
+    div[role="dialog"] { width: 85vw !important; max-width: 90vw !important; background-color: #e6e6e6 !important; border: 4px solid #000 !important; box-shadow: 0 0 0 1000px rgba(0,0,0,0.8); border-radius: 5px; }
     div[role="dialog"] > div { width: 100% !important; }
-    button[aria-label="Close"] { color: #000 !important; transform: scale(3.0) !important; margin-right: 30px !important; margin-top: 30px !important; background: transparent !important; border: none !important; }
+    button[aria-label="Close"] { color: #000 !important; transform: scale(3.0) !important; margin-right: 30px !important; margin-top: 30px !important; }
     
     .modal-header { font-size: 32px; color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; font-weight: 900; letter-spacing: 2px; }
     .modal-math { font-size: 28px; color: #000; background-color: #fff; padding: 30px; border: 2px solid #000; margin: 10px 0; font-family: 'Verdana', sans-serif !important; font-weight: bold; box-shadow: 8px 8px 0px rgba(0,0,0,0.2); }
@@ -49,7 +52,7 @@ def format_brl(value):
     if pd.isna(value): return "R$ 0,00"
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# --- LOAD EXCEL DATABASE (NOMES) ---
+# --- LOAD EXCEL DATABASE ---
 @st.cache_data
 def load_excel_db():
     try:
@@ -72,28 +75,71 @@ if 'valuation_run' not in st.session_state: st.session_state['valuation_run'] = 
 if 'stats_raw' not in st.session_state: st.session_state['stats_raw'] = 0
 if 'stats_removed' not in st.session_state: st.session_state['stats_removed'] = 0
 
-# --- EXTRAÇÃO FUNDAMENTUS (BIBLIOTECA OFICIAL) ---
-def get_fundamentus_data():
-    # Esta função busca TODOS os dados direto da fonte sem bloqueio
-    df = fundamentus.get_resultado()
+# --- EXTRAÇÃO DIRETA (BYPASS LIBRARY) ---
+@st.cache_data(show_spinner=False)
+def get_data_direct():
+    url = 'https://www.fundamentus.com.br/resultado.php'
+    # Headers de navegador para não ser bloqueado
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
     
-    # O index vem com o ticker, vamos mover para coluna
-    df = df.reset_index()
-    df.rename(columns={'papel': 'ticker', 'cotacao': 'price', 'liq_2meses': 'liquidezmediadiaria', 'evebit': 'ev_ebit'}, inplace=True)
-    
-    # Tratamento de colunas para Graham e Magic
-    # Fundamentus dá P/L e P/VP. Precisamos converter strings para float se necessário
-    for col in ['price', 'liquidezmediadiaria', 'ev_ebit', 'roic', 'pl', 'pvp']:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-    
-    # CRIAÇÃO DE DADOS CALCULADOS (REVERSE ENGINEERING)
-    # LPA = Preço / PL
-    # VPA = Preço / PVP
-    df['lpa'] = df.apply(lambda x: x['price'] / x['pl'] if x['pl'] > 0 else 0, axis=1)
-    df['vpa'] = df.apply(lambda x: x['price'] / x['pvp'] if x['pvp'] > 0 else 0, axis=1)
-    
-    return df
+    try:
+        # Pede a página para o site
+        r = requests.get(url, headers=headers, timeout=15)
+        r.raise_for_status()
+        
+        # O Pandas lê a tabela direto do HTML (precisa do lxml instalado no requirements.txt)
+        # O Fundamentus usa vírgula como decimal e ponto como milhar
+        df = pd.read_html(io.StringIO(r.text), decimal=',', thousands='.')[0]
+        
+        # Renomeia colunas para nosso padrão
+        rename_map = {
+            'Papel': 'ticker',
+            'Cotação': 'price',
+            'P/L': 'pl',
+            'P/VP': 'pvp',
+            'PSR': 'psr',
+            'Div.Yield': 'dy',
+            'P/Ativo': 'pa',
+            'P/Cap.Giro': 'pcg',
+            'P/EBIT': 'pebit',
+            'P/Ativ Circ.Liq': 'pacl',
+            'EV/EBIT': 'ev_ebit',
+            'EV/EBITDA': 'ev_ebitda',
+            'Mrg Ebit': 'mrg_ebit',
+            'Mrg. Líq.': 'mrg_liq',
+            'Liq. Corr.': 'liq_corr',
+            'ROIC': 'roic',
+            'ROE': 'roe',
+            'Liq.2meses': 'liquidezmediadiaria',
+            'Patrim. Líq': 'patrim_liq',
+            'Dív.Brut/ Patrim.': 'div_bruta_patrim',
+            'Cresc. Rec.5a': 'cresc_rec_5a'
+        }
+        df.rename(columns=rename_map, inplace=True)
+        
+        # Limpeza de Strings (tira % e converte pra numero)
+        for col in df.columns:
+            if df[col].dtype == object and col != 'ticker':
+                df[col] = df[col].str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.replace('%', '', regex=False)
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Ajuste de Porcentagem (Fundamentus manda 10% como 10.0, precisamos de 0.10 para cálculos se for o caso, 
+        # mas para exibição magic formula usamos o valor bruto ou dividimos.
+        # Aqui, vamos dividir ROIC por 100 pois o Magic usa decimal em alguns lugares ou comparar bruto.
+        df['roic'] = df['roic'] / 100
+        
+        # Criação de LPA e VPA (Fundamentus não entrega direto, calculamos)
+        # LPA = Preço / PL
+        df['lpa'] = df.apply(lambda x: x['price'] / x['pl'] if x['pl'] > 0 else 0, axis=1)
+        # VPA = Preço / PVP
+        df['vpa'] = df.apply(lambda x: x['price'] / x['pvp'] if x['pvp'] > 0 else 0, axis=1)
+        
+        return df
+        
+    except Exception as e:
+        return pd.DataFrame()
 
 # --- MODAIS ---
 @st.dialog("📂 DOSSIÊ DO ATIVO")
@@ -112,30 +158,29 @@ def show_magic_details(ticker, row):
     with c1: st.markdown(f"""<div class="modal-subtitle">MODELO GREENBLATT</div><div class="modal-math">SCORE = RANK(EV) + RANK(ROIC)<br>SCORE = #{rev} + #{rroic}<br>TOTAL = <span class="highlight-score">{sc}</span></div>""", unsafe_allow_html=True)
     with c2: st.markdown("""<div class="modal-subtitle">GLOSSÁRIO</div><div class="modal-text"><b>EV/EBIT:</b> Preço (menor é melhor).<br><b>ROIC:</b> Qualidade (maior é melhor).<br><b>Score:</b> Soma dos rankings.</div>""", unsafe_allow_html=True)
 
-# --- PROCESSAMENTO E MATRIX ---
+# --- LÓGICA DO SCAN ---
 def run_scan_logic():
     terminal = st.empty()
+    df_raw = get_data_direct() # CHAMA A NOVA FUNÇÃO DIRETA
     
-    # 1. Puxa dados da biblioteca
-    df_raw = get_fundamentus_data()
+    if df_raw.empty:
+        return pd.DataFrame(), 0, 0 # Erro
+    
     total_bruto = len(df_raw)
-    
-    real_tickers = df_raw['ticker'].dropna().unique().tolist()
+    real_tickers = df_raw['ticker'].unique().tolist()
     random.shuffle(real_tickers)
     
-    # Animação Matrix
+    # Animação
     log = ["<span style='color:#fff'>CONECTANDO DATABASE FUNDAMENTUS...</span>", "<span style='color:#00ff41'>ACESSO CONCEDIDO.</span>", "-"*40]
     for i in range(15):
-        t = random.choice(real_tickers)
+        t = random.choice(real_tickers) if real_tickers else "..."
         log.append(f"> EXTRAINDO: {t} ... [OK]")
         terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-12:])}<br><span style="color:#fff;animation:blink 0.2s infinite">_</span></div>""", unsafe_allow_html=True)
-        time.sleep(0.08)
+        time.sleep(0.05)
     
     # Limpeza
-    # Remove liquidez zerada e preço zerado
     mask_trash = (df_raw['liquidezmediadiaria'] <= 0) | (df_raw['price'] <= 0)
     df_clean = df_raw[~mask_trash].copy()
-    
     removed = total_bruto - len(df_clean)
     
     log.append(f"<br><span style='color:#FFD700'> >>> INICIANDO DATA PURGE <<< </span>")
@@ -143,17 +188,16 @@ def run_scan_logic():
     time.sleep(1)
     
     log.append(f"> PACOTES RECEBIDOS: {total_bruto}")
-    log.append(f"> REMOVENDO ZUMBIS (SEM LIQUIDEZ)... <span style='color:red'>-{removed}</span>")
+    log.append(f"> REMOVENDO ZUMBIS... <span style='color:red'>-{removed}</span>")
     log.append(f"<span style='color:#00ff41;font-weight:bold'> >>> BASE CONSOLIDADA: {len(df_clean)} ATIVOS <<< </span>")
     terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-12:])}</div>""", unsafe_allow_html=True)
     time.sleep(2)
     terminal.empty()
-    
     return df_clean, total_bruto, removed
 
-# --- MAIN ---
-st.title("💀 MARKET HACKING (CLOUD EDITION)")
-st.markdown("`> PROTOCOLO: DEEP VALUE` | `> FONTE: FUNDAMENTUS (AUTO)`")
+# --- MAIN UI ---
+st.title("💀 MARKET HACKING v26.0")
+st.markdown("`> PROTOCOLO: DEEP VALUE` | `> FONTE: FUNDAMENTUS (DIRECT)`")
 st.divider()
 
 c1, c2 = st.columns([1, 2])
@@ -163,12 +207,15 @@ with c1:
         s = st.empty()
         s.info("⏳ ACESSANDO GATEWAY DE DADOS...")
         time.sleep(0.5)
-        s.empty()
         
         df, raw, rem = run_scan_logic()
         
-        st.session_state.update({'market_data': df, 'stats_raw': raw, 'stats_removed': rem, 'data_loaded': True})
-        st.rerun()
+        if not df.empty:
+            s.empty()
+            st.session_state.update({'market_data': df, 'stats_raw': raw, 'stats_removed': rem, 'data_loaded': True})
+            st.rerun()
+        else:
+            s.error("ERRO DE CONEXÃO: SITE ALVO FORA DO AR.")
 
 with c2:
     if st.session_state['data_loaded']:
@@ -192,7 +239,6 @@ if st.session_state['data_loaded']:
 
     if st.session_state['valuation_run']:
         df_fin = df[df['liquidezmediadiaria'] > min_liq].copy()
-        
         st.markdown(f"### RESULTADO: {len(df_fin)} ATIVOS")
         t1, t2 = st.tabs(["GRAHAM", "MAGIC FORMULA"])
         
