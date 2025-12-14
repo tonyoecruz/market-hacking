@@ -1,5 +1,8 @@
 streamlit
 pandas
+requests
 numpy
 openpyxl
-fundamentus
+lxml
+html5lib
+bs4
