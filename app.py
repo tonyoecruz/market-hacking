@@ -8,7 +8,8 @@ import random
 from datetime import datetime
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Market Hacking v2.19 Mobile", page_icon="💀", layout="wide")
+# Aqui definimos o Título da Aba (SCOPE3) e o Ícone da Aba (logo.jpeg)
+st.set_page_config(page_title="SCOPE3", page_icon="logo.jpeg", layout="wide")
 
 # --- CSS INTELIGENTE (DESKTOP vs MOBILE) ---
 st.markdown("""
@@ -223,9 +224,12 @@ def run_scan_logic():
     terminal.empty()
     return df_final, total_bruto, removed
 
-# --- MAIN UI ---
-st.title("💀 MARKET HACKING v2.19")
-st.markdown("`> PROTOCOLO: SNIPER & SCAN` | `> FONTE: FUNDAMENTUS`")
+# --- MAIN UI (AGORA COM SUA LOGO NO TOPO) ---
+c_logo_esq, c_logo_meio, c_logo_dir = st.columns([1, 2, 1])
+with c_logo_meio:
+    st.image("logo.jpeg", use_container_width=True)
+
+st.markdown("<h3 style='text-align: center; color: #00ff41; margin-top: -10px;'>PROTOCOLO: SNIPER & SCAN | FONTE: FUNDAMENTUS</h3>", unsafe_allow_html=True)
 st.divider()
 
 if not st.session_state['data_loaded']:
@@ -372,3 +376,4 @@ st.markdown("""
     ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. USE COM RESPONSABILIDADE.
 </div>
 """, unsafe_allow_html=True)
+
