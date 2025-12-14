@@ -8,7 +8,7 @@ import random
 from datetime import datetime
 
 # --- CONFIGURAÇÃO VISUAL ---
-# Aqui definimos o Título da Aba (SCOPE3) e o Ícone da Aba (logo.jpeg)
+# Define o ícone da aba do navegador como sua logo
 st.set_page_config(page_title="SCOPE3", page_icon="logo.jpeg", layout="wide")
 
 # --- CSS INTELIGENTE (DESKTOP vs MOBILE) ---
@@ -49,6 +49,9 @@ st.markdown("""
 
     /* Modal - Padrão Desktop */
     div[role="dialog"] { width: 85vw !important; max-width: 90vw !important; }
+    
+    /* Centralizar imagens */
+    div[data-testid="stImage"] { display: block; margin-left: auto; margin-right: auto; }
 
     /* ================= INTEELIGÊNCIA MOBILE (O PULO DO GATO) ================= */
     @media only screen and (max-width: 768px) {
@@ -191,7 +194,7 @@ def run_scan_logic():
     random.shuffle(real_tickers)
     
     # Animação Rápida
-    log = ["<span style='color:#fff'>CONECTANDO DATABASE FUNDAMENTUS...</span>", "<span style='color:#00ff41'>ACESSO CONCEDIDO.</span>", "-"*40]
+    log = ["<span style='color:#fff'>CONECTANDO DATABASE SEGURO...</span>", "<span style='color:#00ff41'>ACESSO CONCEDIDO.</span>", "-"*40]
     for i in range(8):
         t = random.choice(real_tickers) if real_tickers else "..."
         log.append(f"> EXTRAINDO: {t} ... [OK]")
@@ -224,12 +227,15 @@ def run_scan_logic():
     terminal.empty()
     return df_final, total_bruto, removed
 
-# --- MAIN UI (AGORA COM SUA LOGO NO TOPO) ---
-c_logo_esq, c_logo_meio, c_logo_dir = st.columns([1, 2, 1])
-with c_logo_meio:
-    st.image("logo.jpeg", use_container_width=True)
+# --- MAIN UI (INTERFACE PRINCIPAL - LOGO PEQUENA) ---
+# Usamos colunas vazias nas laterais para espremer a imagem no meio e deixá-la pequena
+c_left, c_logo, c_right = st.columns([10, 3, 10]) 
+with c_logo:
+    # width=150 força o tamanho ser pequeno, como um ícone
+    st.image("logo.jpeg", width=150)
 
-st.markdown("<h3 style='text-align: center; color: #00ff41; margin-top: -10px;'>PROTOCOLO: SNIPER & SCAN | FONTE: FUNDAMENTUS</h3>", unsafe_allow_html=True)
+# Título Limpo (Sem a Fonte)
+st.markdown("<h3 style='text-align: center; color: #00ff41; margin-top: -10px;'>PROTOCOLO: SNIPER & SCAN</h3>", unsafe_allow_html=True)
 st.divider()
 
 if not st.session_state['data_loaded']:
@@ -376,4 +382,3 @@ st.markdown("""
     ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. USE COM RESPONSABILIDADE.
 </div>
 """, unsafe_allow_html=True)
-
