@@ -8,7 +8,7 @@ import random
 from datetime import datetime
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Market Hacking v2.16", page_icon="💀", layout="wide")
+st.set_page_config(page_title="Market Hacking v2.17", page_icon="💀", layout="wide")
 
 # --- CSS DE ALTO CONTRASTE & REMOÇÃO DE BRANDING ---
 st.markdown("""
@@ -127,7 +127,13 @@ def show_graham_details(ticker, row):
 
 @st.dialog("📂 DOSSIÊ DO ATIVO")
 def show_magic_details(ticker, row):
-    ev = row['ev_ebit']; roic = row['roic']; rev = int(row['R_EV']); rroic = int(row['R_ROIC']); sc = int(row['Score'])
+    # Proteção contra erro de coluna inexistente
+    ev = row.get('ev_ebit', 0)
+    roic = row.get('roic', 0)
+    rev = int(row.get('R_EV', 0))
+    rroic = int(row.get('R_ROIC', 0))
+    sc = int(row.get('Score', 0))
+    
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
     c1, c2 = st.columns([1.5, 1])
     with c1: st.markdown(f"""<div class="modal-subtitle">MODELO GREENBLATT</div><div class="modal-math">SCORE = RANK(EV) + RANK(ROIC)<br>SCORE = #{rev} + #{rroic}<br>TOTAL = <span class="highlight-score">{sc}</span></div>""", unsafe_allow_html=True)
@@ -167,7 +173,10 @@ def run_scan_logic():
     df_magic['Score'] = df_magic['R_EV'] + df_magic['R_ROIC']
     df_magic['MagicRank'] = df_magic['Score'].rank(ascending=True)
     
-    df_final = df_clean.merge(df_magic[['ticker', 'Score', 'MagicRank']], on='ticker', how='left')
+    # Merge cuidadoso
+    df_final = df_clean.merge(df_magic[['ticker', 'Score', 'MagicRank', 'R_EV', 'R_ROIC']], on='ticker', how='left')
+    df_final['Score'] = df_final['Score'].fillna(0) # Garante que Score existe
+    
     removed = total_bruto - len(df_final)
     
     terminal.markdown(f"""<div class="terminal-box"><br><br><span style='color:#00ff41;font-weight:bold;font-size:20px'> >>> INTRUSÃO CONCLUÍDA. {len(df_final)} ATIVOS VÁLIDOS NA MEMÓRIA.</span></div>""", unsafe_allow_html=True)
@@ -176,7 +185,7 @@ def run_scan_logic():
     return df_final, total_bruto, removed
 
 # --- MAIN UI ---
-st.title("💀 MARKET HACKING v2.16")
+st.title("💀 MARKET HACKING v2.17")
 st.markdown("`> PROTOCOLO: SNIPER & SCAN` | `> FONTE: FUNDAMENTUS`")
 st.divider()
 
@@ -316,4 +325,11 @@ else:
     
     st.download_button("📥 DOWNLOAD LISTA COMPLETA (.XLSX)", data=buffer.getvalue(), file_name=f"RELATORIO_HACKER_{datetime.now().strftime('%Y%m%d')}.xlsx")
 
-    st.markdown("""<div class="disclaimer">⚠️ AVISO LEGAL: FERRAMENTA EDUCACIONAL. DADOS PÚBLICOS. NÃO É RECOMENDAÇÃO DE INVESTIMENTO.</div>""", unsafe_allow_html=True)
+# --- DISCLAIMER (AGORA FORA DO IF - SEMPRE VISÍVEL) ---
+st.markdown("""
+<div class="disclaimer">
+    ⚠️ AVISO LEGAL: ESTA FERRAMENTA É APENAS PARA FINS EDUCACIONAIS E DE CÁLCULO AUTOMATIZADO.<br>
+    OS DADOS SÃO OBTIDOS DE FONTES PÚBLICAS E PODEM CONTER ATRASOS.<br>
+    ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. USE COM RESPONSABILIDADE.
+</div>
+""", unsafe_allow_html=True)
