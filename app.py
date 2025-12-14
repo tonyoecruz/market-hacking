@@ -5,11 +5,12 @@ import io
 import numpy as np
 import time
 import random
+from datetime import datetime
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Market Hacking v27.0", page_icon="💀", layout="wide")
+st.set_page_config(page_title="Market Hacking v2.15", page_icon="💀", layout="wide")
 
-# --- CSS DE ALTO CONTRASTE & REMOÇÃO DE BRANDING (PROTOCOLO FANTASMA) ---
+# --- CSS DE ALTO CONTRASTE & REMOÇÃO DE BRANDING ---
 st.markdown("""
 <style>
     /* Fundo e Fonte Hacker */
@@ -17,23 +18,33 @@ st.markdown("""
     * { font-family: 'Consolas', 'Courier New', monospace !important; }
     h1, h2, h3 { color: #00ff41 !important; text-shadow: 0 0 10px rgba(0, 255, 65, 0.8); font-weight: 900 !important; text-transform: uppercase; }
     
-    /* Inputs */
-    div[data-testid="stNumberInput"] input { color: #ffffff !important; background-color: #111 !important; border: 2px solid #00ff41 !important; font-size: 30px !important; font-weight: bold !important; text-align: center !important; height: 70px !important; }
-    div[data-testid="stNumberInput"] label { display: none; }
+    /* Inputs e Selectbox */
+    div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div { color: #ffffff !important; background-color: #111 !important; border: 2px solid #00ff41 !important; font-size: 20px !important; font-weight: bold !important; }
+    div[data-testid="stSelectbox"] label { color: #00ff41 !important; font-size: 18px !important; }
     
     /* Botões */
-    .stButton>button { background-color: #000; color: #00ff41; border: 2px solid #00ff41; font-size: 18px !important; font-weight: bold; text-transform: uppercase; height: 60px; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); }
+    .stButton>button { background-color: #000; color: #00ff41; border: 2px solid #00ff41; font-size: 18px !important; font-weight: bold; text-transform: uppercase; height: 50px; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); width: 100%; }
     .stButton>button:hover { background-color: #00ff41; color: #000; box-shadow: 0 0 25px #00ff41; transform: scale(1.02); }
     
-    /* Cards */
+    /* Cards Gerais */
     .hacker-card { background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 5px; border-radius: 4px; position: relative; }
+    
+    /* CARDS DE DIAGNÓSTICO (MIRA LASER) */
+    .diag-box-green { border: 4px solid #00ff41; background-color: #051a05; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); margin-bottom: 20px; }
+    .diag-box-red { border: 4px solid #ff0000; background-color: #1a0505; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px rgba(255, 0, 0, 0.2); margin-bottom: 20px; }
+    .diag-box-yellow { border: 4px solid #FFD700; background-color: #1a1a05; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); margin-bottom: 20px; }
+    
+    .diag-title { font-size: 28px; font-weight: 900; color: #fff; text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #555; padding-bottom: 10px; }
+    .diag-val { font-size: 22px; margin: 10px 0; }
+    .diag-status-green { color: #00ff41; font-weight: bold; font-size: 24px; text-align: center; margin-top: 15px; text-transform: uppercase; }
+    .diag-status-red { color: #ff0000; font-weight: bold; font-size: 24px; text-align: center; margin-top: 15px; text-transform: uppercase; }
+    
     .card-ticker { font-size: 24px; color: #fff; font-weight: bold; }
     .card-price { font-size: 28px; color: #00ff41; font-weight: bold; float: right; text-shadow: 0 0 8px rgba(0, 255, 65, 0.4); }
     .metric-row { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; }
     .metric-label { color: #888; font-size: 14px; }
     .metric-value { color: #ffffff; font-weight: bold; font-size: 18px; }
     .buy-section { margin-top: 15px; background-color: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; padding: 10px; color: #FFD700; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
-    .buy-value { font-size: 20px; color: #fff; }
     
     /* MODAL */
     @keyframes unfold { 0% { transform: scaleY(0.005) scaleX(0); opacity: 0; } 30% { transform: scaleY(0.005) scaleX(1); opacity: 1; } 100% { transform: scaleY(1) scaleX(1); opacity: 1; } }
@@ -41,23 +52,14 @@ st.markdown("""
     div[role="dialog"] > div { width: 100% !important; }
     button[aria-label="Close"] { color: #000 !important; transform: scale(3.0) !important; margin-right: 30px !important; margin-top: 30px !important; }
     
-    .modal-header { font-size: 32px; color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; font-weight: 900; letter-spacing: 2px; }
-    .modal-math { font-size: 28px; color: #000; background-color: #fff; padding: 30px; border: 2px solid #000; margin: 10px 0; font-family: 'Verdana', sans-serif !important; font-weight: bold; box-shadow: 8px 8px 0px rgba(0,0,0,0.2); }
-    .modal-subtitle { font-size: 22px; color: #000; font-weight: bold; margin-top: 15px; margin-bottom: 5px; text-decoration: underline; }
-    .modal-text { font-size: 20px; color: #222; line-height: 1.5; margin-bottom: 10px; font-weight: 600; }
-    .term-def { color: #444; font-size: 16px; font-style: italic; display: block; margin-bottom: 15px; border-left: 3px solid #ccc; padding-left: 10px; }
-    .highlight-val { color: #000; background-color: #00ff41; padding: 0 5px; font-weight: 900; border: 1px solid #000; }
-    .highlight-score { color: #fff; background-color: #000; padding: 2px 10px; font-weight: 900; border-radius: 4px; font-size: 110%; }
-    
     .terminal-box { background-color: #050505; border: 1px solid #00ff41; padding: 15px; font-size: 16px; color: #00ff41; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); font-family: 'Courier New', monospace; height: 350px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+    
+    /* DISCLAIMER */
+    .disclaimer { text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }
 
-    /* --- PROTOCOLO FANTASMA: REMOVENDO MARCAS DO STREAMLIT --- */
-    #MainMenu {visibility: hidden;} /* Esconde o menu de 3 riscos no topo */
-    footer {visibility: hidden;} /* Esconde o rodapé "Made with Streamlit" */
-    header {visibility: hidden;} /* Esconde a barra colorida superior */
-    div[data-testid="stToolbar"] {visibility: hidden;} /* Esconde toolbar */
-    div[data-testid="stDecoration"] {display: none;} /* Remove linha colorida */
-    div[data-testid="stStatusWidget"] {visibility: hidden;} /* Esconde indicador de running */
+    /* --- PROTOCOLO FANTASMA: REMOVENDO MARCAS --- */
+    #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;} 
+    div[data-testid="stToolbar"] {visibility: hidden;} div[data-testid="stDecoration"] {display: none;} div[data-testid="stStatusWidget"] {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -85,21 +87,19 @@ EXCEL_DB = load_excel_db()
 # --- ESTADO ---
 if 'market_data' not in st.session_state: st.session_state['market_data'] = pd.DataFrame()
 if 'data_loaded' not in st.session_state: st.session_state['data_loaded'] = False
-if 'valuation_run' not in st.session_state: st.session_state['valuation_run'] = False
 if 'stats_raw' not in st.session_state: st.session_state['stats_raw'] = 0
 if 'stats_removed' not in st.session_state: st.session_state['stats_removed'] = 0
+if 'target_ticker' not in st.session_state: st.session_state['target_ticker'] = None
+if 'processed_target' not in st.session_state: st.session_state['processed_target'] = False
 
-# --- EXTRAÇÃO DIRETA (SEM CLOUDSCRAPER) ---
+# --- EXTRAÇÃO DIRETA ---
 @st.cache_data(show_spinner=False)
 def get_data_direct():
     url = 'https://www.fundamentus.com.br/resultado.php'
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
     try:
-        # Tenta conectar direto
         r = requests.get(url, headers=headers, timeout=15)
         r.raise_for_status()
-        
-        # Lê a tabela usando LXML
         df = pd.read_html(io.StringIO(r.text), decimal=',', thousands='.')[0]
         
         rename_map = {'Papel': 'ticker', 'Cotação': 'price', 'P/L': 'pl', 'P/VP': 'pvp', 'EV/EBIT': 'ev_ebit', 'ROIC': 'roic', 'Liq.2meses': 'liquidezmediadiaria'}
@@ -116,160 +116,171 @@ def get_data_direct():
         return df
     except: return pd.DataFrame()
 
-# --- MODAIS ---
-@st.dialog("📂 DOSSIÊ DO ATIVO")
-def show_graham_details(ticker, row):
-    lpa = row['lpa']; vpa = row['vpa']; vi = row['ValorJusto']
-    st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns([1.5, 1])
-    with c1: st.markdown(f"""<div class="modal-subtitle">FÓRMULA APLICADA</div><div class="modal-math">VI = √(22.5 × LPA × VPA)<br>VI = √(22.5 × {lpa:.2f} × {vpa:.2f})<br>VI = <span class="highlight-val">{format_brl(vi)}</span></div><div style="text-align:center;color:#000;font-size:20px;margin-top:20px;">PREÇO: <b>{format_brl(row['price'])}</b> | POTENCIAL: <b style="color:#008000">{row['Margem']:.1%}</b></div>""", unsafe_allow_html=True)
-    with c2: st.markdown("""<div class="modal-subtitle">GLOSSÁRIO</div><div class="modal-text"><b>VI:</b> Valor Intrínseco (Preço Justo).<br><b>LPA:</b> Lucro por Ação.<br><b>VPA:</b> Valor Patrimonial.<br><b>22.5:</b> Constante de Graham.</div>""", unsafe_allow_html=True)
-
-@st.dialog("📂 DOSSIÊ DO ATIVO")
-def show_magic_details(ticker, row):
-    ev = row['ev_ebit']; roic = row['roic']; rev = int(row['R_EV']); rroic = int(row['R_ROIC']); sc = int(row['Score'])
-    st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns([1.5, 1])
-    with c1: st.markdown(f"""<div class="modal-subtitle">MODELO GREENBLATT</div><div class="modal-math">SCORE = RANK(EV) + RANK(ROIC)<br>SCORE = #{rev} + #{rroic}<br>TOTAL = <span class="highlight-score">{sc}</span></div>""", unsafe_allow_html=True)
-    with c2: st.markdown("""<div class="modal-subtitle">GLOSSÁRIO</div><div class="modal-text"><b>EV/EBIT:</b> Preço (menor é melhor).<br><b>ROIC:</b> Qualidade (maior é melhor).<br><b>Score:</b> Soma dos rankings.</div>""", unsafe_allow_html=True)
-
 # --- LÓGICA DO SCAN ---
 def run_scan_logic():
     terminal = st.empty()
     df_raw = get_data_direct()
-    
     if df_raw.empty: return pd.DataFrame(), 0, 0
     
     total_bruto = len(df_raw)
     real_tickers = df_raw['ticker'].unique().tolist()
     random.shuffle(real_tickers)
     
-    # Animação
+    # Animação Rápida
     log = ["<span style='color:#fff'>CONECTANDO DATABASE FUNDAMENTUS...</span>", "<span style='color:#00ff41'>ACESSO CONCEDIDO.</span>", "-"*40]
-    for i in range(12):
+    for i in range(8):
         t = random.choice(real_tickers) if real_tickers else "..."
         log.append(f"> EXTRAINDO: {t} ... [OK]")
-        terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-12:])}<br><span style="color:#fff;animation:blink 0.2s infinite">_</span></div>""", unsafe_allow_html=True)
+        terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-10:])}<br><span style="color:#fff;animation:blink 0.2s infinite">_</span></div>""", unsafe_allow_html=True)
         time.sleep(0.05)
     
-    # --- LIMPEZA REAL (REFINARIA) ---
-    # 1. Zumbis (Liquidez e Preço Zero)
+    # Limpeza
     mask_zombie = (df_raw['liquidezmediadiaria'] <= 0) | (df_raw['price'] <= 0)
-    qtd_zombie = mask_zombie.sum()
-    
-    # 2. Fracionários (Terminam em F)
     mask_frac = df_raw['ticker'].astype(str).str.endswith('F')
-    qtd_frac = mask_frac.sum()
-    
-    # 3. BDRs (Terminam em 32, 33, 34, 35)
     mask_bdr = df_raw['ticker'].astype(str).str.contains(r'(32|33|34|35)$', regex=True)
-    qtd_bdr = mask_bdr.sum()
     
-    # Aplica Filtros
-    mask_trash = mask_zombie | mask_frac | mask_bdr
-    df_clean = df_raw[~mask_trash].copy()
+    df_clean = df_raw[~(mask_zombie | mask_frac | mask_bdr)].copy()
     
-    removed = total_bruto - len(df_clean)
+    # CÁLCULOS GLOBAIS NA BASE LIMPA
+    df_clean['ValorJusto'] = np.sqrt(22.5 * df_clean['lpa'] * df_clean['vpa']).fillna(0)
+    df_clean['Margem'] = (df_clean['ValorJusto'] / df_clean['price']) - 1
     
-    # Relatório Visual
-    log.append(f"<br><span style='color:#FFD700'> >>> INICIANDO REFINARIA DE DADOS <<< </span>")
-    terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-12:])}</div>""", unsafe_allow_html=True)
-    time.sleep(1)
+    # Magic Formula (Rankings)
+    df_magic = df_clean[(df_clean['ev_ebit'] > 0) & (df_clean['roic'] > 0)].copy()
+    df_magic['R_EV'] = df_magic['ev_ebit'].rank(ascending=True)
+    df_magic['R_ROIC'] = df_magic['roic'].rank(ascending=False)
+    df_magic['Score'] = df_magic['R_EV'] + df_magic['R_ROIC']
+    df_magic['MagicRank'] = df_magic['Score'].rank(ascending=True)
     
-    log.append(f"> TOTAL BRUTO: {total_bruto}")
+    # Merge de volta para o principal
+    df_final = df_clean.merge(df_magic[['ticker', 'Score', 'MagicRank']], on='ticker', how='left')
     
-    if qtd_frac > 0:
-        log.append(f"> REMOVENDO FRACIONÁRIOS... <span style='color:red'>-{qtd_frac}</span>")
-        terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-12:])}</div>""", unsafe_allow_html=True)
-        time.sleep(0.5)
-        
-    if qtd_bdr > 0:
-        log.append(f"> REMOVENDO BDRs (MERCADO EXTERNO)... <span style='color:red'>-{qtd_bdr}</span>")
-        terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-12:])}</div>""", unsafe_allow_html=True)
-        time.sleep(0.5)
-        
-    if qtd_zombie > 0:
-        log.append(f"> REMOVENDO ZUMBIS (SEM LIQUIDEZ)... <span style='color:red'>-{qtd_zombie}</span>")
-        terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-12:])}</div>""", unsafe_allow_html=True)
-        time.sleep(0.5)
-
-    log.append(f"<span style='color:#00ff41;font-weight:bold'> >>> BASE BRASIL CONSOLIDADA: {len(df_clean)} ATIVOS <<< </span>")
-    terminal.markdown(f"""<div class="terminal-box">{"<br>".join(log[-12:])}</div>""", unsafe_allow_html=True)
-    time.sleep(2.5)
+    removed = total_bruto - len(df_final)
+    
+    terminal.markdown(f"""<div class="terminal-box"><br><br><span style='color:#00ff41;font-weight:bold;font-size:20px'> >>> INTRUSÃO CONCLUÍDA. {len(df_final)} ATIVOS VÁLIDOS NA MEMÓRIA.</span></div>""", unsafe_allow_html=True)
+    time.sleep(1.5)
     terminal.empty()
-    return df_clean, total_bruto, removed
+    return df_final, total_bruto, removed
 
 # --- MAIN UI ---
-st.title("💀 MARKET HACKING v27.0")
-st.markdown("`> PROTOCOLO: DEEP VALUE` | `> FONTE: FUNDAMENTUS` | `> FILTRO: AÇÕES BR`")
+st.title("💀 MARKET HACKING v2.15")
+st.markdown("`> PROTOCOLO: SNIPER` | `> FONTE: FUNDAMENTUS`")
 st.divider()
 
-c1, c2 = st.columns([1, 2])
-with c1:
-    btn_txt = "⚡ RE-INICIAR ATAQUE" if st.session_state['data_loaded'] else "⚡ INICIAR ATAQUE DE DADOS"
-    if st.button(btn_txt):
-        s = st.empty()
-        s.info("⏳ ACESSANDO GATEWAY DE DADOS...")
-        time.sleep(0.5)
+# Botão Iniciar
+if not st.session_state['data_loaded']:
+    if st.button("⚡ INICIAR VARREDURA DE DADOS"):
         df, raw, rem = run_scan_logic()
         if not df.empty:
-            s.empty()
             st.session_state.update({'market_data': df, 'stats_raw': raw, 'stats_removed': rem, 'data_loaded': True})
             st.rerun()
-        else: s.error("ERRO DE CONEXÃO.")
+        else: st.error("ERRO DE CONEXÃO.")
+else:
+    # --- ÁREA DE OPERAÇÃO PÓS-LOAD ---
+    st.success(f"BASE CARREGADA: {len(st.session_state['market_data'])} ATIVOS PRONTOS.")
 
-with c2:
-    if st.session_state['data_loaded']:
-        st.success(f"RELATÓRIO: {st.session_state['stats_raw']} TOTAIS ➔ {st.session_state['stats_removed']} FILTRADOS (BDR/LIXO) ➔ {len(st.session_state['market_data'])} AÇÕES BR VÁLIDAS.")
-    else: st.info("SISTEMA EM STANDBY. CLIQUE PARA INICIAR.")
-
-st.divider()
-
-if st.session_state['data_loaded']:
-    df = st.session_state['market_data']
-    st.markdown("<h3 style='text-align:center'>PARÂMETROS</h3>", unsafe_allow_html=True)
-    ic1, ic2, ic3, ic4 = st.columns([1,2,2,1])
-    with ic2: min_liq = st.number_input("Liquidez Min", value=200000, step=50000)
-    with ic3: invest = st.number_input("Investimento", value=0.0, step=100.0)
+    # --- SNIPER (BUSCA INDIVIDUAL) ---
+    st.markdown("### 🎯 MIRA LASER (DIAGNÓSTICO INDIVIDUAL)")
+    c_search, c_act = st.columns([3, 1])
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    cb1, cb2, cb3 = st.columns([1,1,1])
-    with cb2: 
-        if st.button("💀 EXECUTAR VALORAÇÃO"): st.session_state['valuation_run'] = True
-
-    if st.session_state['valuation_run']:
-        df_fin = df[df['liquidezmediadiaria'] > min_liq].copy()
-        st.markdown(f"### RESULTADO: {len(df_fin)} ATIVOS")
-        t1, t2 = st.tabs(["GRAHAM", "MAGIC FORMULA"])
+    df = st.session_state['market_data']
+    all_tickers = sorted(df['ticker'].unique())
+    
+    with c_search:
+        target = st.selectbox("DIGITE O CÓDIGO DO ATIVO:", options=all_tickers, index=None, placeholder="Ex: PETR4, VALE3...")
+        st.session_state['target_ticker'] = target
         
-        def card(t, p, l1, v1, l2, v2, r, inv=0):
-            nm = f"{EXCEL_DB[t]['nome']} ({EXCEL_DB[t]['segmento']})" if t in EXCEL_DB else ""
-            buy = ""
-            if inv > 0 and p > 0:
-                q = int((invest/10)//p); c = q*p
-                buy = f"<div class='buy-section'>COMPRA: <span class='buy-value'>{q} un. ({format_brl(c)})</span></div>"
-            return f"""<div class="hacker-card"><div><span class="card-ticker">#{r} {t}</span><span class="card-price">{format_brl(p)}</span></div><div style='color:#888;font-size:12px'>{nm}</div><div class="metric-row"><div><div class="metric-label">{l1}</div><div class="metric-value">{v1}</div></div><div style="text-align:right"><div class="metric-label">{l2}</div><div class="metric-value">{v2}</div></div></div>{buy}</div>"""
+    with c_act:
+        st.markdown("<br>", unsafe_allow_html=True) # Espaçamento
+        if st.button("PROCESSAR ALVO"):
+            st.session_state['processed_target'] = True
 
-        with t1:
-            df_g = df_fin[(df_fin['lpa']>0)&(df_fin['vpa']>0)].copy()
-            df_g['ValorJusto'] = np.sqrt(22.5 * df_g['lpa'] * df_g['vpa'])
-            df_g['Margem'] = (df_g['ValorJusto']/df_g['price']) - 1
-            top = df_g.sort_values('Margem', ascending=False).head(10)
-            cc1, cc2 = st.columns(2)
-            for i, r in top.reset_index().iterrows():
-                html = card(r['ticker'], r['price'], "VALOR JUSTO", format_brl(r['ValorJusto']), "POTENCIAL", f"{r['Margem']:.1%}", i+1, invest)
-                with (cc1 if i%2==0 else cc2):
-                    st.markdown(html, unsafe_allow_html=True)
-                    if st.button(f"📂 DECODE #{i+1}", key=f"g_{r['ticker']}"): show_graham_details(r['ticker'], r)
+    # --- RESULTADO DA BUSCA ---
+    if st.session_state['processed_target'] and st.session_state['target_ticker']:
+        ticker = st.session_state['target_ticker']
+        row = df[df['ticker'] == ticker].iloc[0]
+        
+        # Lógica de Cores
+        preco = row['price']
+        vi = row['ValorJusto']
+        magic_rank = row['MagicRank']
+        
+        # Graham Logic
+        if preco < vi: 
+            graham_class = "diag-box-green"
+            graham_status = "<div class='diag-status-green'>BARATO (OPORTUNIDADE)</div>"
+        elif preco > vi * 1.1: # 10% de margem
+            graham_class = "diag-box-red"
+            graham_status = "<div class='diag-status-red'>CARO (AGUARDE)</div>"
+        else:
+            graham_class = "diag-box-yellow"
+            graham_status = "<div style='color:#FFD700;text-align:center;font-weight:bold;font-size:24px;margin-top:15px'>PREÇO JUSTO</div>"
 
-        with t2:
-            df_m = df_fin[(df_fin['ev_ebit']>0)&(df_fin['roic']>0)].copy()
-            df_m['Score'] = df_m['ev_ebit'].rank(ascending=True) + df_m['roic'].rank(ascending=False)
-            df_m['R_EV'] = df_m['ev_ebit'].rank(ascending=True); df_m['R_ROIC'] = df_m['roic'].rank(ascending=False)
-            top = df_m.sort_values('Score').head(10)
-            cc1, cc2 = st.columns(2)
-            for i, r in top.reset_index().iterrows():
-                html = card(r['ticker'], r['price'], "EV/EBIT", f"{r['ev_ebit']:.2f}", "ROIC", f"{r['roic']:.1%}", i+1, invest)
-                with (cc1 if i%2==0 else cc2):
-                    st.markdown(html, unsafe_allow_html=True)
-                    if st.button(f"📂 DECODE #{i+1}", key=f"m_{r['ticker']}"): show_magic_details(r['ticker'], r)
+        # Magic Logic (Top 100 = Bom)
+        if not pd.isna(magic_rank) and magic_rank <= 100:
+            magic_icon = "✅"
+            magic_text = "<span style='color:#00ff41'>MAGIC APROVADO</span>"
+        else:
+            magic_icon = "❌"
+            magic_text = "<span style='color:#ff0000'>MAGIC REPROVADO</span>"
+            if pd.isna(magic_rank): magic_rank = 999
+
+        st.markdown("---")
+        sc1, sc2 = st.columns(2)
+        
+        with sc1:
+            st.markdown(f"""
+            <div class="{graham_class}">
+                <div class="diag-title">MÉTODO GRAHAM</div>
+                <div class="diag-val">PREÇO ATUAL: <span style="color:#fff">{format_brl(preco)}</span></div>
+                <div class="diag-val">VALOR JUSTO: <span style="color:#fff">{format_brl(vi)}</span></div>
+                <div class="diag-val">MARGEM: <span style="color:#fff">{row['Margem']:.1%}</span></div>
+                {graham_status}
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with sc2:
+            st.markdown(f"""
+            <div class="hacker-card" style="padding: 30px; text-align: center; height: 100%; border: 2px dashed #444;">
+                <div class="diag-title">FORMULA MÁGICA</div>
+                <div style="font-size: 60px; margin: 20px 0;">{magic_icon}</div>
+                <div style="font-size: 24px; font-weight:bold;">{magic_text}</div>
+                <div style="margin-top:15px; color:#888;">POSIÇÃO NO RANKING: #{int(magic_rank)}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown("---")
+
+    # --- ÁREA DE DOWNLOAD ---
+    st.markdown("### 💾 EXPORTAÇÃO DE DADOS")
+    
+    # Preparar Excel Limpo
+    df_export = df.copy()
+    if 'ticker' in EXCEL_DB: # Adicionar nomes se possível
+        df_export['Nome_Empresa'] = df_export['ticker'].apply(lambda x: EXCEL_DB.get(x, {}).get('nome', 'N/A'))
+    
+    # Selecionar colunas bonitas
+    cols_export = ['ticker', 'price', 'ValorJusto', 'Margem', 'ev_ebit', 'roic', 'MagicRank', 'liquidezmediadiaria']
+    df_export = df_export[cols_export]
+    df_export.columns = ['ATIVO', 'PRECO_ATUAL', 'VALOR_JUSTO_GRAHAM', 'POTENCIAL_%', 'EV_EBIT', 'ROIC', 'POSICAO_MAGIC', 'LIQUIDEZ']
+    df_export['DATA_CAPTURA'] = datetime.now().strftime("%d/%m/%Y")
+    
+    # Converter para Excel na memória
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df_export.to_excel(writer, index=False, sheet_name='Analise_Hacker')
+    
+    st.download_button(
+        label="📥 DOWNLOAD LISTA COMPLETA (.XLSX)",
+        data=buffer.getvalue(),
+        file_name=f"RELATORIO_HACKER_{datetime.now().strftime('%Y%m%d')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    # --- DISCLAIMER ---
+    st.markdown("""
+    <div class="disclaimer">
+        ⚠️ AVISO LEGAL: ESTA FERRAMENTA É APENAS PARA FINS EDUCACIONAIS E DE CÁLCULO AUTOMATIZADO.<br>
+        OS DADOS SÃO OBTIDOS DE FONTES PÚBLICAS E PODEM CONTER ATRASOS.<br>
+        ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. USE COM RESPONSABILIDADE.
+    </div>
+    """, unsafe_allow_html=True)
