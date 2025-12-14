@@ -8,9 +8,9 @@ import random
 from datetime import datetime
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Market Hacking v2.17", page_icon="💀", layout="wide")
+st.set_page_config(page_title="Market Hacking v2.18", page_icon="💀", layout="wide")
 
-# --- CSS DE ALTO CONTRASTE & REMOÇÃO DE BRANDING ---
+# --- CSS DE ALTO CONTRASTE ---
 st.markdown("""
 <style>
     /* Fundo e Fonte Hacker */
@@ -18,7 +18,7 @@ st.markdown("""
     * { font-family: 'Consolas', 'Courier New', monospace !important; }
     h1, h2, h3 { color: #00ff41 !important; text-shadow: 0 0 10px rgba(0, 255, 65, 0.8); font-weight: 900 !important; text-transform: uppercase; }
     
-    /* Inputs e Selectbox */
+    /* Inputs */
     div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div { color: #ffffff !important; background-color: #111 !important; border: 2px solid #00ff41 !important; font-size: 20px !important; font-weight: bold !important; }
     div[data-testid="stSelectbox"] label { color: #00ff41 !important; font-size: 18px !important; }
     
@@ -26,7 +26,7 @@ st.markdown("""
     .stButton>button { background-color: #000; color: #00ff41; border: 2px solid #00ff41; font-size: 18px !important; font-weight: bold; text-transform: uppercase; height: 50px; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); width: 100%; }
     .stButton>button:hover { background-color: #00ff41; color: #000; box-shadow: 0 0 25px #00ff41; transform: scale(1.02); }
     
-    /* Cards Gerais (Listagem) */
+    /* Cards */
     .hacker-card { background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 5px; border-radius: 4px; position: relative; }
     .card-ticker { font-size: 24px; color: #fff; font-weight: bold; }
     .card-price { font-size: 28px; color: #00ff41; font-weight: bold; float: right; text-shadow: 0 0 8px rgba(0, 255, 65, 0.4); }
@@ -34,25 +34,30 @@ st.markdown("""
     .metric-label { color: #888; font-size: 14px; }
     .metric-value { color: #ffffff; font-weight: bold; font-size: 18px; }
     .buy-section { margin-top: 15px; background-color: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; padding: 10px; color: #FFD700; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
-    .buy-value { font-size: 20px; color: #fff; }
-
-    /* CARDS DE DIAGNÓSTICO (MIRA LASER) - AJUSTADOS PARA ALTURA IGUAL */
-    .diag-box { height: 320px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; padding: 20px; border-radius: 10px; }
     
+    /* MIRA LASER */
+    .diag-box { height: 340px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; padding: 20px; border-radius: 10px; }
     .diag-green { border: 4px solid #00ff41; background-color: #051a05; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); }
     .diag-red { border: 4px solid #ff0000; background-color: #1a0505; box-shadow: 0 0 20px rgba(255, 0, 0, 0.2); }
     .diag-yellow { border: 4px solid #FFD700; background-color: #1a1a05; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
-    .diag-neutral { border: 2px dashed #444; background-color: #0e0e0e; } /* Para o Magic */
-
+    .diag-neutral { border: 2px dashed #444; background-color: #0e0e0e; }
     .diag-title { font-size: 24px; font-weight: 900; color: #fff; text-align: center; border-bottom: 1px dashed #555; padding-bottom: 10px; margin-bottom: 10px;}
     .diag-val { font-size: 20px; margin: 5px 0; }
     .diag-status { font-weight: bold; font-size: 22px; text-align: center; text-transform: uppercase; margin-top: auto; padding-top: 10px;}
     
-    /* MODAL & TERMINAL */
+    /* MODAL */
     @keyframes unfold { 0% { transform: scaleY(0.005) scaleX(0); opacity: 0; } 30% { transform: scaleY(0.005) scaleX(1); opacity: 1; } 100% { transform: scaleY(1) scaleX(1); opacity: 1; } }
     div[role="dialog"] { width: 85vw !important; max-width: 90vw !important; background-color: #e6e6e6 !important; border: 4px solid #000 !important; box-shadow: 0 0 0 1000px rgba(0,0,0,0.8); border-radius: 5px; animation: unfold 0.8s cubic-bezier(0.165, 0.840, 0.440, 1.000) forwards; }
     div[role="dialog"] > div { width: 100% !important; }
     button[aria-label="Close"] { color: #000 !important; transform: scale(3.0) !important; margin-right: 30px !important; margin-top: 30px !important; }
+    
+    /* TEXTOS DO MODAL */
+    .modal-header { font-size: 32px; color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; font-weight: 900; letter-spacing: 2px; }
+    .modal-math { font-size: 28px; color: #000; background-color: #fff; padding: 30px; border: 2px solid #000; margin: 10px 0; font-family: 'Verdana', sans-serif !important; font-weight: bold; box-shadow: 8px 8px 0px rgba(0,0,0,0.2); }
+    .modal-subtitle { font-size: 22px; color: #000; font-weight: bold; margin-top: 15px; margin-bottom: 5px; text-decoration: underline; }
+    .modal-text { font-size: 18px; color: #222; line-height: 1.5; margin-bottom: 10px; font-weight: 500; }
+    .highlight-val { color: #000; background-color: #00ff41; padding: 0 5px; font-weight: 900; border: 1px solid #000; }
+    .highlight-score { color: #fff; background-color: #000; padding: 2px 10px; font-weight: 900; border-radius: 4px; font-size: 110%; }
     
     .terminal-box { background-color: #050505; border: 1px solid #00ff41; padding: 15px; font-size: 16px; color: #00ff41; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); font-family: 'Courier New', monospace; height: 350px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
     .disclaimer { text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }
@@ -116,28 +121,43 @@ def get_data_direct():
         return df
     except: return pd.DataFrame()
 
-# --- MODAIS ---
+# --- MODAIS DETALHADOS ---
 @st.dialog("📂 DOSSIÊ DO ATIVO")
 def show_graham_details(ticker, row):
     lpa = row['lpa']; vpa = row['vpa']; vi = row['ValorJusto']
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
     c1, c2 = st.columns([1.5, 1])
     with c1: st.markdown(f"""<div class="modal-subtitle">FÓRMULA APLICADA</div><div class="modal-math">VI = √(22.5 × LPA × VPA)<br>VI = √(22.5 × {lpa:.2f} × {vpa:.2f})<br>VI = <span class="highlight-val">{format_brl(vi)}</span></div><div style="text-align:center;color:#000;font-size:20px;margin-top:20px;">PREÇO: <b>{format_brl(row['price'])}</b> | POTENCIAL: <b style="color:#008000">{row['Margem']:.1%}</b></div>""", unsafe_allow_html=True)
-    with c2: st.markdown("""<div class="modal-subtitle">GLOSSÁRIO</div><div class="modal-text"><b>VI:</b> Valor Intrínseco (Preço Justo).<br><b>LPA:</b> Lucro por Ação.<br><b>VPA:</b> Valor Patrimonial.<br><b>22.5:</b> Constante de Graham.</div>""", unsafe_allow_html=True)
+    with c2: 
+        st.markdown("""
+        <div class="modal-subtitle">GLOSSÁRIO TÉCNICO</div>
+        <div class="modal-text">
+            <b>1. VI (Valor Intrínseco):</b> O "Preço Justo" teórico segundo Graham.
+            <br><b>2. LPA (Lucro/Ação):</b> Quanto a empresa lucra por papel.
+            <br><b>3. VPA (Valor/Ação):</b> Quanto vale o patrimônio físico por papel.
+            <br><b>4. Constante 22.5:</b> O teto de Graham (P/L x P/VP máximos).
+            <br><b>5. Margem (Potencial):</b> Diferença entre o Preço de Tela e o Valor Justo. Positivo = Desconto.
+        </div>
+        """, unsafe_allow_html=True)
 
 @st.dialog("📂 DOSSIÊ DO ATIVO")
 def show_magic_details(ticker, row):
-    # Proteção contra erro de coluna inexistente
-    ev = row.get('ev_ebit', 0)
-    roic = row.get('roic', 0)
-    rev = int(row.get('R_EV', 0))
-    rroic = int(row.get('R_ROIC', 0))
-    sc = int(row.get('Score', 0))
+    ev = row.get('ev_ebit', 0); roic = row.get('roic', 0)
+    rev = int(row.get('R_EV', 0)); rroic = int(row.get('R_ROIC', 0)); sc = int(row.get('Score', 0))
     
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
     c1, c2 = st.columns([1.5, 1])
     with c1: st.markdown(f"""<div class="modal-subtitle">MODELO GREENBLATT</div><div class="modal-math">SCORE = RANK(EV) + RANK(ROIC)<br>SCORE = #{rev} + #{rroic}<br>TOTAL = <span class="highlight-score">{sc}</span></div>""", unsafe_allow_html=True)
-    with c2: st.markdown("""<div class="modal-subtitle">GLOSSÁRIO</div><div class="modal-text"><b>EV/EBIT:</b> Preço (menor é melhor).<br><b>ROIC:</b> Qualidade (maior é melhor).<br><b>Score:</b> Soma dos rankings.</div>""", unsafe_allow_html=True)
+    with c2: 
+        st.markdown(f"""
+        <div class="modal-subtitle">ENTENDENDO A PONTUAÇÃO</div>
+        <div class="modal-text">
+            <b>1. EV/EBIT (Preço):</b> Mede se a empresa está barata. (Você é a #{rev}ª mais barata da bolsa).
+            <br><b>2. ROIC (Qualidade):</b> Mede a eficiência. (Você é a #{rroic}ª mais eficiente da bolsa).
+            <br><b>3. Score (Soma):</b> A soma das duas posições.
+            <br><b>4. Lógica:</b> Na Fórmula Mágica, <u>quanto MENOR a pontuação, MELHOR</u>. O objetivo é comprar empresas boas por preços baixos.
+        </div>
+        """, unsafe_allow_html=True)
 
 # --- LÓGICA DO SCAN ---
 def run_scan_logic():
@@ -173,9 +193,8 @@ def run_scan_logic():
     df_magic['Score'] = df_magic['R_EV'] + df_magic['R_ROIC']
     df_magic['MagicRank'] = df_magic['Score'].rank(ascending=True)
     
-    # Merge cuidadoso
     df_final = df_clean.merge(df_magic[['ticker', 'Score', 'MagicRank', 'R_EV', 'R_ROIC']], on='ticker', how='left')
-    df_final['Score'] = df_final['Score'].fillna(0) # Garante que Score existe
+    df_final['Score'] = df_final['Score'].fillna(0)
     
     removed = total_bruto - len(df_final)
     
@@ -185,7 +204,7 @@ def run_scan_logic():
     return df_final, total_bruto, removed
 
 # --- MAIN UI ---
-st.title("💀 MARKET HACKING v2.17")
+st.title("💀 MARKET HACKING v2.18")
 st.markdown("`> PROTOCOLO: SNIPER & SCAN` | `> FONTE: FUNDAMENTUS`")
 st.divider()
 
@@ -325,7 +344,7 @@ else:
     
     st.download_button("📥 DOWNLOAD LISTA COMPLETA (.XLSX)", data=buffer.getvalue(), file_name=f"RELATORIO_HACKER_{datetime.now().strftime('%Y%m%d')}.xlsx")
 
-# --- DISCLAIMER (AGORA FORA DO IF - SEMPRE VISÍVEL) ---
+# --- DISCLAIMER (SEMPRE VISÍVEL) ---
 st.markdown("""
 <div class="disclaimer">
     ⚠️ AVISO LEGAL: ESTA FERRAMENTA É APENAS PARA FINS EDUCACIONAIS E DE CÁLCULO AUTOMATIZADO.<br>
