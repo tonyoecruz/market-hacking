@@ -8,12 +8,12 @@ import random
 from datetime import datetime
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Market Hacking v2.18", page_icon="💀", layout="wide")
+st.set_page_config(page_title="Market Hacking v2.19 Mobile", page_icon="💀", layout="wide")
 
-# --- CSS DE ALTO CONTRASTE ---
+# --- CSS INTELIGENTE (DESKTOP vs MOBILE) ---
 st.markdown("""
 <style>
-    /* Fundo e Fonte Hacker */
+    /* ================= ESTILO GERAL (BASE DESKTOP) ================= */
     .stApp { background-color: #000000; background-image: linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px); background-size: 30px 30px; color: #e0e0e0; }
     * { font-family: 'Consolas', 'Courier New', monospace !important; }
     h1, h2, h3 { color: #00ff41 !important; text-shadow: 0 0 10px rgba(0, 255, 65, 0.8); font-weight: 900 !important; text-transform: uppercase; }
@@ -26,44 +26,64 @@ st.markdown("""
     .stButton>button { background-color: #000; color: #00ff41; border: 2px solid #00ff41; font-size: 18px !important; font-weight: bold; text-transform: uppercase; height: 50px; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); width: 100%; }
     .stButton>button:hover { background-color: #00ff41; color: #000; box-shadow: 0 0 25px #00ff41; transform: scale(1.02); }
     
-    /* Cards */
+    /* Cards Gerais */
     .hacker-card { background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 5px; border-radius: 4px; position: relative; }
-    .card-ticker { font-size: 24px; color: #fff; font-weight: bold; }
-    .card-price { font-size: 28px; color: #00ff41; font-weight: bold; float: right; text-shadow: 0 0 8px rgba(0, 255, 65, 0.4); }
-    .metric-row { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; }
-    .metric-label { color: #888; font-size: 14px; }
-    .metric-value { color: #ffffff; font-weight: bold; font-size: 18px; }
-    .buy-section { margin-top: 15px; background-color: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; padding: 10px; color: #FFD700; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
     
-    /* MIRA LASER */
+    /* MIRA LASER (DESKTOP) - Altura Fixa para alinhar lado a lado */
     .diag-box { height: 340px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; padding: 20px; border-radius: 10px; }
+    
+    /* Cores das Caixas */
     .diag-green { border: 4px solid #00ff41; background-color: #051a05; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); }
     .diag-red { border: 4px solid #ff0000; background-color: #1a0505; box-shadow: 0 0 20px rgba(255, 0, 0, 0.2); }
     .diag-yellow { border: 4px solid #FFD700; background-color: #1a1a05; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
     .diag-neutral { border: 2px dashed #444; background-color: #0e0e0e; }
+    
+    /* Textos do Diagnóstico */
     .diag-title { font-size: 24px; font-weight: 900; color: #fff; text-align: center; border-bottom: 1px dashed #555; padding-bottom: 10px; margin-bottom: 10px;}
     .diag-val { font-size: 20px; margin: 5px 0; }
     .diag-status { font-weight: bold; font-size: 22px; text-align: center; text-transform: uppercase; margin-top: auto; padding-top: 10px;}
-    
-    /* MODAL */
-    @keyframes unfold { 0% { transform: scaleY(0.005) scaleX(0); opacity: 0; } 30% { transform: scaleY(0.005) scaleX(1); opacity: 1; } 100% { transform: scaleY(1) scaleX(1); opacity: 1; } }
-    div[role="dialog"] { width: 85vw !important; max-width: 90vw !important; background-color: #e6e6e6 !important; border: 4px solid #000 !important; box-shadow: 0 0 0 1000px rgba(0,0,0,0.8); border-radius: 5px; animation: unfold 0.8s cubic-bezier(0.165, 0.840, 0.440, 1.000) forwards; }
-    div[role="dialog"] > div { width: 100% !important; }
-    button[aria-label="Close"] { color: #000 !important; transform: scale(3.0) !important; margin-right: 30px !important; margin-top: 30px !important; }
-    
-    /* TEXTOS DO MODAL */
-    .modal-header { font-size: 32px; color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; font-weight: 900; letter-spacing: 2px; }
-    .modal-math { font-size: 28px; color: #000; background-color: #fff; padding: 30px; border: 2px solid #000; margin: 10px 0; font-family: 'Verdana', sans-serif !important; font-weight: bold; box-shadow: 8px 8px 0px rgba(0,0,0,0.2); }
-    .modal-subtitle { font-size: 22px; color: #000; font-weight: bold; margin-top: 15px; margin-bottom: 5px; text-decoration: underline; }
-    .modal-text { font-size: 18px; color: #222; line-height: 1.5; margin-bottom: 10px; font-weight: 500; }
-    .highlight-val { color: #000; background-color: #00ff41; padding: 0 5px; font-weight: 900; border: 1px solid #000; }
-    .highlight-score { color: #fff; background-color: #000; padding: 2px 10px; font-weight: 900; border-radius: 4px; font-size: 110%; }
-    
-    .terminal-box { background-color: #050505; border: 1px solid #00ff41; padding: 15px; font-size: 16px; color: #00ff41; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); font-family: 'Courier New', monospace; height: 350px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
-    .disclaimer { text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }
 
-    /* --- PROTOCOLO FANTASMA --- */
+    /* Terminal */
+    .terminal-box { background-color: #050505; border: 1px solid #00ff41; padding: 15px; font-size: 16px; color: #00ff41; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); font-family: 'Courier New', monospace; height: 350px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+
+    /* Modal - Padrão Desktop */
+    div[role="dialog"] { width: 85vw !important; max-width: 90vw !important; }
+
+    /* ================= INTEELIGÊNCIA MOBILE (O PULO DO GATO) ================= */
+    @media only screen and (max-width: 768px) {
+        
+        /* 1. Ajuste de Fontes Gigantes */
+        h1 { font-size: 32px !important; text-align: center; }
+        h2, h3 { font-size: 22px !important; }
+        
+        /* 2. Ajuste dos Inputs (pra não ficar enorme no celular) */
+        div[data-testid="stNumberInput"] input { font-size: 18px !important; height: 50px !important; }
+        
+        /* 3. Ajuste das Caixas de Diagnóstico (Permitir altura variável) */
+        /* No celular, uma fica embaixo da outra, então não precisa ter altura fixa igual */
+        .diag-box { height: auto !important; min-height: 250px; margin-bottom: 15px; }
+        .diag-title { font-size: 20px !important; }
+        .diag-val { font-size: 16px !important; }
+        .diag-status { font-size: 18px !important; margin-top: 15px; }
+        
+        /* 4. Ajuste dos Modais (Janelas Pop-up) */
+        div[role="dialog"] { width: 95vw !important; max-width: 98vw !important; margin: 0 auto; }
+        .modal-header { font-size: 20px !important; }
+        .modal-math { font-size: 18px !important; padding: 15px !important; }
+        .modal-text { font-size: 14px !important; }
+        
+        /* 5. Terminal menor no celular */
+        .terminal-box { height: 250px !important; font-size: 12px !important; }
+        
+        /* 6. Cards da Lista */
+        .card-ticker { font-size: 20px !important; }
+        .card-price { font-size: 22px !important; }
+        .metric-value { font-size: 16px !important; }
+    }
+
+    /* --- PROTOCOLO FANTASMA (Remover marcas) --- */
     #MainMenu, footer, header, div[data-testid="stToolbar"], div[data-testid="stDecoration"], div[data-testid="stStatusWidget"] {visibility: hidden; display: none;}
+    .disclaimer { text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -204,7 +224,7 @@ def run_scan_logic():
     return df_final, total_bruto, removed
 
 # --- MAIN UI ---
-st.title("💀 MARKET HACKING v2.18")
+st.title("💀 MARKET HACKING v2.19")
 st.markdown("`> PROTOCOLO: SNIPER & SCAN` | `> FONTE: FUNDAMENTUS`")
 st.divider()
 
@@ -276,7 +296,7 @@ else:
 
     st.markdown("---")
 
-    # ================= LISTAGEM GLOBAL (RESTAURADO) =================
+    # ================= LISTAGEM GLOBAL =================
     st.markdown("<h3 style='text-align:center'>PARÂMETROS GLOBAIS</h3>", unsafe_allow_html=True)
     ic1, ic2, ic3, ic4 = st.columns([1, 2, 2, 1])
     with ic2:
