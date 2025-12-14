@@ -1,8 +1,5 @@
 streamlit
 pandas
-requests
 numpy
 openpyxl
-cloudscraper
-lxml
-brotli
+fundamentus
