@@ -13,33 +13,37 @@ URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🔑 CONFIGURAÇÃO DA IA (MODO COFRE BLINDADO)
+# 🔑 CONFIGURAÇÃO DA IA (COM RETENTATIVA DE MODELO)
 # ==============================================================================
-# Tenta pegar a chave dos Segredos do Streamlit. Se não tiver, avisa.
 try:
-    if "GEMINI_KEY" in st.secrets:
-        API_KEY = st.secrets["GEMINI_KEY"]
-        
-        # Configuração de Segurança (Safety OFF)
-        SAFETY_SETTINGS = {
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-        }
-        
-        genai.configure(api_key=API_KEY)
+    # Tenta pegar do Secrets, se não, usa a hardcoded (cuidado com github publico)
+    API_KEY = st.secrets.get("GEMINI_KEY", "AIzaSyB4Xu_ebwghWcUb4QnVFRI4qjYNjWBrk1E")
+    
+    SAFETY_SETTINGS = {
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+    }
+    
+    genai.configure(api_key=API_KEY)
+    
+    # Tenta carregar o Flash (Rápido), se falhar, carrega o Pro (Clássico)
+    try:
         model = genai.GenerativeModel('gemini-1.5-flash')
-        IA_AVAILABLE = True
-    else:
-        IA_AVAILABLE = False
-        STARTUP_ERROR = "Chave GEMINI_KEY não encontrada nos Secrets do Streamlit."
+        MODEL_NAME = "GEMINI 1.5 FLASH"
+    except:
+        model = genai.GenerativeModel('gemini-pro')
+        MODEL_NAME = "GEMINI PRO (LEGACY)"
+        
+    IA_AVAILABLE = True
+
 except Exception as e:
     IA_AVAILABLE = False
     STARTUP_ERROR = str(e)
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (DARK MODE & UI)
+# 🎨 ESTILOS CSS
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -131,7 +135,7 @@ def get_data_direct():
 # ==============================================================================
 def get_ai_analysis(ticker, price, fair_value, details):
     if not IA_AVAILABLE:
-        return f"⚠️ ERRO DE CONFIGURAÇÃO:\n{STARTUP_ERROR}\n\nVá em Settings > Secrets no Streamlit e adicione sua chave lá."
+        return f"⚠️ ERRO DE CONFIGURAÇÃO:\n{STARTUP_ERROR}\n\nVerifique se google-generativeai>=0.5.0 está no requirements.txt"
     
     prompt = f"""
     Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
@@ -146,7 +150,7 @@ def get_ai_analysis(ticker, price, fair_value, details):
     Seja curto (max 5 linhas). Direto ao ponto.
     """
     try:
-        response = model.generate_content(prompt)
+        response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
         return response.text
     except Exception as e:
         return f"⚠️ ERRO NA IA: {str(e)}"
@@ -192,7 +196,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v4.0</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v4.1</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
