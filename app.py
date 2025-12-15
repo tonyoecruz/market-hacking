@@ -7,13 +7,13 @@ import time
 import random
 from datetime import datetime
 
-# --- CONFIGURAÇÃO INICIAL (Versão na Aba do Navegador) ---
-st.set_page_config(page_title="SCOPE3 v2.24", page_icon="logo.jpeg", layout="wide")
+# --- CONFIGURAÇÃO INICIAL (Versão v2.25) ---
+st.set_page_config(page_title="SCOPE3 v2.25", page_icon="logo.jpeg", layout="wide")
 
 # ==============================================================================
 # 🍎 ÁREA DE TRANSFORMAÇÃO EM APP IPHONE (PWA)
-# Link direto do SEU GitHub Público
-URL_DO_ICONE = "https://raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg?v=2"
+# TRUQUE DO PROXY: Usamos o wsrv.nl para "limpar" o link e forçar o iPhone a baixar
+URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
 # ==============================================================================
 
 # --- CSS E METADADOS DO IPHONE ---
@@ -240,11 +240,11 @@ with c_head_logo:
     st.image("logo.jpeg", width=70)
 
 with c_head_text:
-    # Texto alinhado ao lado da logo - AGORA COM A VERSÃO v2.24
+    # Texto alinhado ao lado da logo - AGORA COM A VERSÃO v2.25
     st.markdown("""
     <div class='header-text'>
         <h2 style='color: #00ff41; margin: 0; padding: 0; line-height: 1.2;'>SCOPE3</h2>
-        <span style='color: #888; font-weight: bold; font-size: 14px;'>PROTOCOLO: SNIPER & SCAN | v2.24</span>
+        <span style='color: #888; font-weight: bold; font-size: 14px;'>PROTOCOLO: SNIPER & SCAN | v2.25</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -394,4 +394,3 @@ st.markdown("""
     ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. USE COM RESPONSABILIDADE.
 </div>
 """, unsafe_allow_html=True)
-
