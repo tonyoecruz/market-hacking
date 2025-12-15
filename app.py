@@ -10,11 +10,12 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # ==============================================================================
-# 🔑 CONFIGURAÇÃO DA INTELIGÊNCIA ARTIFICIAL (GEMINI 1.5 FLASH)
+# 🔑 CONFIGURAÇÃO DA INTELIGÊNCIA ARTIFICIAL (NOVA CHAVE)
 # ==============================================================================
-API_KEY = "AIzaSyB--UCOCA6vZg8VTknqJkbQapZ7yFa4agU"
+# Chave atualizada em 15/12
+API_KEY = "AIzaSyB4Xu_ebwghWcUb4QnVFRI4qjYNjWBrk1E"
 
-# Configuração de Segurança (DESATIVANDO FILTROS para permitir falar de Falência/Risco)
+# Configuração para IGNORAR filtros de segurança (Permite falar de Risco/Falência)
 SAFETY_SETTINGS = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -24,12 +25,11 @@ SAFETY_SETTINGS = {
 
 try:
     genai.configure(api_key=API_KEY)
+    # Modelo Flash: Rápido e eficiente para esse tipo de análise
     model = genai.GenerativeModel('gemini-1.5-flash') 
     IA_AVAILABLE = True
-    STARTUP_MSG = "IA Conectada e Pronta."
 except Exception as e:
     IA_AVAILABLE = False
-    STARTUP_MSG = f"Erro de Conexão IA: {str(e)}"
     STARTUP_ERROR = str(e)
 
 # ==============================================================================
@@ -40,7 +40,7 @@ URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (CORRIGIDO: FONTE BRANCA E CONTRASTE)
+# 🎨 ESTILOS CSS (FONTE BRANCA E CONTRASTE)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -65,7 +65,7 @@ st.markdown(f"""
     .metric-value {{ font-size: 16px; font-weight: bold; color: #fff; }}
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; }}
 
-    /* CAIXAS DA IA (FONTE BRANCA) */
+    /* CAIXAS DA IA (BRANCO FORÇADO) */
     .ai-box {{ 
         border: 1px solid #9933ff; 
         background-color: #1a0526; 
@@ -77,7 +77,7 @@ st.markdown(f"""
     }}
     .ai-title {{ color: #c299ff; font-weight: bold; font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }}
     
-    /* ALERTA DE RISCO (FONTE BRANCA) */
+    /* ALERTA DE RISCO (BRANCO FORÇADO) */
     .risk-alert {{ 
         background-color: #330000; 
         color: #ffffff !important; 
@@ -89,16 +89,9 @@ st.markdown(f"""
     }}
     .risk-title {{ color: #ff0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; }}
     
-    /* CAIXA DE ERRO (VISÍVEL) */
-    .error-box {{ 
-        border: 1px solid red; 
-        background: #220000; 
-        color: #ffffff !important; 
-        padding: 15px; 
-        font-family: monospace; 
-        margin-top: 10px;
-    }}
-    
+    /* CAIXA DE ERRO */
+    .error-box {{ border: 1px solid red; background: #220000; color: #ffcccc; padding: 15px; font-family: monospace; }}
+
     /* MODAIS MATEMÁTICOS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
     .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #ccc; margin-bottom: 15px; }}
@@ -158,11 +151,11 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 🧠 INTELIGÊNCIA ARTIFICIAL (DEBUG MODE + SAFETY OFF)
+# 🧠 INTELIGÊNCIA ARTIFICIAL (SAFETY OFF)
 # ==============================================================================
 def get_ai_analysis(ticker, price, fair_value, details):
     if not IA_AVAILABLE:
-        return f"⚠️ ERRO CRÍTICO NA BIBLIOTECA IA:\n{STARTUP_ERROR}\n\nSOLUÇÃO: Verifique se 'google-generativeai' está no requirements.txt"
+        return f"⚠️ ERRO CRÍTICO: A biblioteca Google Generative AI não carregou.\nErro: {STARTUP_ERROR}\n\nSOLUÇÃO: Verifique o requirements.txt."
     
     prompt = f"""
     Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
@@ -177,16 +170,15 @@ def get_ai_analysis(ticker, price, fair_value, details):
     Seja curto (max 5 linhas). Direto ao ponto.
     """
     try:
-        # Tenta gerar resposta COM FILTROS DESATIVADOS
+        # Envia para a IA com a nova chave e SEM filtros
         response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
         
-        # Verifica se houve bloqueio mesmo assim
         if response.prompt_feedback.block_reason:
-            return f"⚠️ AVISO: O Google bloqueou a resposta. Motivo: {response.prompt_feedback.block_reason}"
+            return f"⚠️ BLOQUEIO DO GOOGLE: A resposta foi bloqueada por segurança.\nMotivo: {response.prompt_feedback.block_reason}"
             
         return response.text
     except Exception as e:
-        return f"⚠️ ERRO TÉCNICO NO GOOGLE API:\n{str(e)}\n\nVERIFIQUE: Sua Chave API pode estar errada ou bloqueada."
+        return f"⚠️ ERRO NA COMUNICAÇÃO:\n{str(e)}\n\nVERIFIQUE: Se a API Key '{API_KEY[:10]}...' está ativa no Google Cloud."
 
 # ==============================================================================
 # 📂 MODAIS DE DECODE
@@ -232,8 +224,7 @@ def show_ai_decode(ticker, row, details):
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_ai_analysis(ticker, row['price'], row['ValorJusto'], details)
     
-    # Exibição Condicional
-    if "ERRO" in analise or "AVISO" in analise:
+    if "ERRO" in analise or "BLOQUEIO" in analise:
         st.markdown(f"<div class='error-box'>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
     elif "ALERTA" in analise.upper() or "RISCO" in analise.upper() or "CAVEIRA" in analise.upper():
         st.markdown(f"<div class='risk-alert'><div class='risk-title'>⚠️ ALERTA DE RISCO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
@@ -246,12 +237,7 @@ def show_ai_decode(ticker, row, details):
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
 with c_title: 
-    st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| AI v3.5</span></h2>", unsafe_allow_html=True)
-    # Debug visual do Status da IA no topo
-    if IA_AVAILABLE:
-        st.caption("🟢 SISTEMA DE INTELIGÊNCIA: ONLINE")
-    else:
-        st.caption(f"🔴 SISTEMA DE INTELIGÊNCIA: OFFLINE ({STARTUP_ERROR})")
+    st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| AI v3.6</span></h2>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -280,7 +266,7 @@ else:
     df = st.session_state['market_data']
     st.success(f"BASE OPERACIONAL: {len(df)} ATIVOS.")
     
-    # --- ÁREA SNIPER (BARRA PEQUENA) ---
+    # --- ÁREA SNIPER (COMPACTA) ---
     st.markdown("### 🎯 MIRA LASER (IA)")
     c_sel, c_btn, c_vazio = st.columns([2, 1, 6])
     with c_sel: 
@@ -294,14 +280,13 @@ else:
 
     st.markdown("---")
 
-    # --- ÁREA SCANNER (LISTAS TOP 10) ---
+    # --- ÁREA SCANNER ---
     st.markdown("### 📊 SCANNER DE OPORTUNIDADES")
     ic1, ic2, ic3 = st.columns([1, 2, 2])
     with ic2: min_liq = st.number_input("Liquidez Mínima", value=200000, step=50000)
     with ic3: invest = st.number_input("Simular Investimento (R$)", value=0.0, step=100.0)
     
     df_fin = df[df['liquidezmediadiaria'] > min_liq].copy()
-    
     t1, t2 = st.tabs(["💎 GRAHAM (PREÇO JUSTO)", "✨ MAGIC FORMULA (QUALIDADE)"])
     
     def card(t, p, l1, v1, l2, v2, r, inv=0):
