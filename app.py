@@ -82,7 +82,7 @@ def get_ai_analysis(ticker, price, fair_value, details):
     except Exception as e: return f"⚠️ ERRO DE GERAÇÃO: {str(e)}"
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (REFINADO PARA ALINHAMENTO)
+# 🎨 ESTILOS CSS
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -106,41 +106,22 @@ st.markdown(f"""
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; }}
 
     /* IA BOX */
-    .ai-box {{ 
-        border: 1px solid #9933ff; 
-        background-color: #0d0214; 
-        padding: 20px; 
-        border-radius: 6px; 
-        margin-top: 15px; 
-        border-left: 4px solid #9933ff; 
-        color: #e0e0e0 !important;
-        font-size: 15px;
-        line-height: 1.6;
-    }}
+    .ai-box {{ border: 1px solid #9933ff; background-color: #0d0214; padding: 20px; border-radius: 6px; margin-top: 15px; border-left: 4px solid #9933ff; color: #e0e0e0 !important; font-size: 15px; line-height: 1.6; }}
     .ai-header {{ display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #3d1466; padding-bottom: 10px; margin-bottom: 15px; }}
     .ai-icon {{ font-size: 24px; }}
     .ai-title {{ color: #c299ff; font-weight: bold; font-size: 18px; text-transform: uppercase; }}
 
-    /* TAGS DE INFORMAÇÃO (ALINHADAS) */
-    .tag-grid {{
-        display: grid;
-        grid-template-columns: repeat(3, 1fr); /* 3 Colunas iguais */
-        gap: 10px;
-        margin-bottom: 20px;
-    }}
-    .info-tag {{ 
-        background: #111; 
-        border: 1px solid #333; 
-        padding: 8px 12px; 
-        border-radius: 4px; 
-        font-size: 12px; 
-        color: #888; 
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }}
-    .info-label {{ font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }}
-    .info-val {{ color: #fff; font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+    /* INFO TAGS & STATUS BOXES */
+    .tag-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }}
+    .info-tag {{ background: #111; border: 1px solid #333; padding: 8px 12px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; }}
+    .info-label {{ font-size: 10px; text-transform: uppercase; color: #888; margin-bottom: 2px; }}
+    .info-val {{ color: #fff; font-weight: bold; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+    
+    /* STATUS GRID (GRAHAM E MAGIC) */
+    .status-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }}
+    .status-box {{ padding: 10px; border-radius: 4px; text-align: center; border: 1px solid #333; }}
+    .status-title {{ font-size: 11px; font-weight: bold; margin-bottom: 5px; color: #fff; }}
+    .status-result {{ font-size: 14px; font-weight: bold; text-transform: uppercase; }}
 
     /* ALERTA SNIPER */
     .risk-alert {{ background-color: #2b0505; color: #ffcccc !important; border: 2px solid #ff0000; padding: 20px; border-radius: 6px; margin-top: 15px; animation: pulse 2s infinite; }}
@@ -202,7 +183,7 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 📂 MODAIS (DESIGN AJUSTADO)
+# 📂 MODAIS (COM STATUS CHECK)
 # ==============================================================================
 @st.dialog("📂 DOSSIÊ GRAHAM")
 def show_graham_details(ticker, row):
@@ -222,56 +203,63 @@ def show_magic_details(ticker, row):
 
 @st.dialog("🧠 DECODE INTELLIGENCE", width="large")
 def show_ai_decode(ticker, row, details):
-    # HEADER DO MODAL
     st.markdown(f"### 🎯 ALVO: {ticker}")
     
-    # TAGS DE INFORMAÇÃO (ALINHADAS EM GRID)
-    # Adicionado Segmento que faltava e CSS de grid
+    # --- 1. INFO GERAL ---
     st.markdown(f"""
     <div class="tag-grid">
-        <div class="info-tag">
-            <span class="info-label">EMPRESA</span>
-            <span class="info-val">{details.get('Empresa', 'N/A')}</span>
+        <div class="info-tag"><span class="info-label">EMPRESA</span><span class="info-val">{details.get('Empresa', 'N/A')}</span></div>
+        <div class="info-tag"><span class="info-label">SETOR</span><span class="info-val">{details.get('Setor', 'N/A')}</span></div>
+        <div class="info-tag"><span class="info-label">SEGMENTO</span><span class="info-val">{details.get('Segmento', 'N/A')}</span></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- 2. STATUS CHECK (GRAHAM & MAGIC) ---
+    # Lógica Graham: Margem > 0
+    graham_ok = row['Margem'] > 0
+    graham_txt = "✅ APROVADA" if graham_ok else "❌ REPROVADA"
+    graham_bg = "#051a05" if graham_ok else "#1a0505"
+    graham_bdr = "#00ff41" if graham_ok else "#ff4444"
+    graham_sub = f"UPSIDE: {row['Margem']:.1%}" if graham_ok else "SEM MARGEM"
+
+    # Lógica Magic: ROIC > 10% e EV/EBIT > 0 (Filtro de Qualidade)
+    magic_ok = (row['roic'] > 0.10) and (row['ev_ebit'] > 0)
+    magic_txt = "✅ APROVADA" if magic_ok else "⚠️ ATENÇÃO"
+    magic_bg = "#051a05" if magic_ok else "#1a1a05"
+    magic_bdr = "#00ff41" if magic_ok else "#ffaa00"
+    magic_sub = f"ROIC: {row['roic']:.1%} (Sólido)" if magic_ok else f"ROIC: {row['roic']:.1%} (Baixo)"
+
+    st.markdown(f"""
+    <div class="status-grid">
+        <div class="status-box" style="background-color: {graham_bg}; border-color: {graham_bdr};">
+            <div class="status-title" style="color:{graham_bdr}">MÉTODO GRAHAM</div>
+            <div class="status-result" style="color:{graham_bdr}">{graham_txt}</div>
+            <div style="font-size:10px; color:#aaa; margin-top:2px">{graham_sub}</div>
         </div>
-        <div class="info-tag">
-            <span class="info-label">SETOR</span>
-            <span class="info-val">{details.get('Setor', 'N/A')}</span>
-        </div>
-        <div class="info-tag">
-            <span class="info-label">SEGMENTO</span>
-            <span class="info-val">{details.get('Segmento', 'N/A')}</span>
+        <div class="status-box" style="background-color: {magic_bg}; border-color: {magic_bdr};">
+            <div class="status-title" style="color:{magic_bdr}">MAGIC FORMULA</div>
+            <div class="status-result" style="color:{magic_bdr}">{magic_txt}</div>
+            <div style="font-size:10px; color:#aaa; margin-top:2px">{magic_sub}</div>
         </div>
     </div>
     <hr style="border-color: #333; margin: 15px 0;">
     """, unsafe_allow_html=True)
     
+    # --- 3. ANÁLISE IA ---
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_ai_analysis(ticker, row['price'], row['ValorJusto'], details)
     
     if "ALERTA" in analise.upper() or "RISCO" in analise.upper():
-        st.markdown(f"""
-        <div class='risk-alert'>
-            <div class='risk-title'>💀 ALERTA DE RISCO DETECTADO</div>
-            {analise.replace(chr(10), '<br>')}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"<div class='risk-alert'><div class='risk-title'>💀 ALERTA DE RISCO DETECTADO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
     else:
-        st.markdown(f"""
-        <div class='ai-box'>
-            <div class='ai-header'>
-                <span class='ai-icon'>🧠</span>
-                <span class='ai-title'>ANÁLISE TÁTICA (GEMINI)</span>
-            </div>
-            {analise.replace(chr(10), '<br>')}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-icon'>🧠</span><span class='ai-title'>ANÁLISE TÁTICA (GEMINI)</span></div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
 
 # ==============================================================================
 # 📺 UI PRINCIPAL
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v7.3</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v7.4</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
