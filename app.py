@@ -101,7 +101,7 @@ def get_sniper_analysis(ticker, price, fair_value, details):
     return get_ai_generic_analysis(prompt)
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (FUNDO BRANCO / LETRA PRETA)
+# 🎨 ESTILOS CSS (CORRIGIDO PARA LEGIBILIDADE)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -110,57 +110,47 @@ st.markdown(f"""
     .stApp {{ background-color: #000; color: #fff; font-family: 'Consolas', monospace; }}
     h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; }}
     
-    /* UI ELEMENTS */
+    /* INPUTS E LABELS (CORREÇÃO DE LEGIBILIDADE) */
+    .stSelectbox label, .stNumberInput label {{
+        color: #00ff41 !important; /* TÍTULOS DOS CAMPOS EM VERDE */
+        font-weight: bold !important;
+        font-size: 14px !important;
+    }}
+    div[data-testid="stSelectbox"] > div > div {{
+        background-color: #111 !important;
+        color: #fff !important; /* TEXTO DIGITADO EM BRANCO */
+        border: 1px solid #333 !important;
+    }}
+    div[data-testid="stNumberInput"] input {{
+        background-color: #111 !important;
+        color: #fff !important; /* NÚMEROS EM BRANCO */
+        border: 1px solid #333 !important;
+    }}
+    
+    /* BOTÕES */
     .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; text-transform: uppercase; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
-    div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #fff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
     
-    /* CARDS */
-    .hacker-card {{ 
-        background-color: #ffffff; /* FUNDO BRANCO */
-        border: 1px solid #ccc; 
-        border-top: 3px solid #00ff41; 
-        padding: 15px; 
-        margin-bottom: 10px; 
-        border-radius: 4px; 
-    }}
-    .card-ticker {{ font-size: 20px; font-weight: bold; color: #000; }} /* LETRA PRETA */
-    .card-price {{ float: right; font-size: 20px; color: #009926; font-weight: bold; }} /* VERDE ESCURO */
+    /* CARDS BRANCOS */
+    .hacker-card {{ background-color: #ffffff; border: 1px solid #ccc; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
+    .card-ticker {{ font-size: 20px; font-weight: bold; color: #000; }}
+    .card-price {{ float: right; font-size: 20px; color: #009926; font-weight: bold; }}
     .metric-row {{ display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 5px; }}
-    .metric-label {{ font-size: 12px; color: #555; font-weight: bold; }} /* CINZA ESCURO */
-    .metric-value {{ font-size: 16px; font-weight: bold; color: #000; }} /* LETRA PRETA */
+    .metric-label {{ font-size: 12px; color: #555; font-weight: bold; }}
+    .metric-value {{ font-size: 16px; font-weight: bold; color: #000; }}
     .buy-section {{ margin-top: 10px; background: #e6ffe6; padding: 5px; text-align: center; border: 1px solid #00cc33; font-size: 14px; color: #006600; font-weight: bold; }}
 
     /* IA BOX */
-    .ai-box {{ 
-        border: 1px solid #9933ff; 
-        background-color: #f3e5ff; /* FUNDO ROXO CLARINHO */
-        padding: 15px; 
-        border-radius: 6px; 
-        margin-top: 10px; 
-        border-left: 4px solid #9933ff; 
-        color: #000 !important; /* LETRA PRETA */
-        font-size: 14px; 
-        line-height: 1.5; 
-    }}
+    .ai-box {{ border: 1px solid #9933ff; background-color: #f3e5ff; padding: 15px; border-radius: 6px; margin-top: 10px; border-left: 4px solid #9933ff; color: #000 !important; font-size: 14px; line-height: 1.5; }}
     .ai-header {{ display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #d1b3ff; padding-bottom: 5px; margin-bottom: 10px; }}
     .ai-title {{ color: #6600cc; font-weight: bold; font-size: 16px; text-transform: uppercase; }}
 
-    /* INFO TAGS */
+    /* TAGS & STATUS */
     .tag-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }}
-    .info-tag {{ 
-        background: #ffffff; /* FUNDO BRANCO */
-        border: 1px solid #ccc; 
-        padding: 8px; 
-        border-radius: 4px; 
-        display: flex; 
-        flex-direction: column; 
-        justify-content: center; 
-    }}
-    .info-label {{ font-size: 11px; text-transform: uppercase; color: #009926; margin-bottom: 2px; font-weight: bold; }} /* VERDE ESCURO */
-    .info-val {{ color: #000; font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }} /* PRETO */
+    .info-tag {{ background: #ffffff; border: 1px solid #ccc; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; }}
+    .info-label {{ font-size: 11px; text-transform: uppercase; color: #009926; margin-bottom: 2px; font-weight: bold; }}
+    .info-val {{ color: #000; font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
     
-    /* STATUS BOXES */
     .status-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }}
     .status-box {{ padding: 10px; border-radius: 4px; text-align: center; border: 1px solid #ccc; background: #fff; }}
     .status-title {{ font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #000; }}
@@ -169,17 +159,16 @@ st.markdown(f"""
     .risk-alert {{ background-color: #ffe6e6; color: #cc0000 !important; border: 2px solid #ff0000; padding: 20px; border-radius: 6px; margin-top: 15px; animation: pulse 2s infinite; }}
     .risk-title {{ color: #cc0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
 
-    /* MODAIS MATEMÁTICOS */
+    /* MODAIS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
-    .modal-math {{ background: #f0f0f0; padding: 15px; border-left: 3px solid #009926; font-family: monospace; font-size: 16px; color: #000; margin-bottom: 15px; }} /* FUNDO CLARO, LETRA PRETA */
+    .modal-math {{ background: #f0f0f0; padding: 15px; border-left: 3px solid #009926; font-family: monospace; font-size: 16px; color: #000; margin-bottom: 15px; }}
     .highlight-val {{ color: #009926; font-weight: bold; font-size: 18px; }}
-    .modal-text {{ font-size: 14px; color: #000; line-height: 1.4; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px; }} /* PRETO */
-    .detail-list {{ font-size: 13px; color: #000; margin-top: 10px; }} /* PRETO */
+    .modal-text {{ font-size: 14px; color: #000; line-height: 1.4; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px; }}
+    .detail-list {{ font-size: 13px; color: #000; margin-top: 10px; }}
     .detail-item {{ margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #009926; }}
-    .detail-key {{ color: #009926; font-weight: bold; font-size: 12px; text-transform: uppercase; }} /* VERDE ESCURO */
+    .detail-key {{ color: #009926; font-weight: bold; font-size: 12px; text-transform: uppercase; }}
     
     .disclaimer {{ text-align: center; color: #aaa; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #555; }}
-    @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }} 70% {{ box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }} }}
     #MainMenu, footer, header {{ visibility: hidden; }}
 </style>
 """, unsafe_allow_html=True)
@@ -228,7 +217,7 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 📂 MODAIS (WIDTH=LARGE, HIGH CONTRAST)
+# 📂 MODAIS (EDUCATIONAL & COMPLIANT)
 # ==============================================================================
 @st.dialog("📂 DOSSIÊ GRAHAM", width="large")
 def show_graham_details(ticker, row):
@@ -377,7 +366,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v9.3</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v10.0</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
@@ -396,8 +385,14 @@ if 'market_data' not in st.session_state:
 else:
     df = st.session_state['market_data']
     st.success(f"BASE OPERACIONAL: {len(df)} ATIVOS.")
+    
+    # SNIPER (AJUSTE UX: MULTISELECT LIMPO)
+    st.markdown("### 🎯 MIRA LASER (IA)")
     c_sel, c_btn, _ = st.columns([2, 1, 6])
-    with c_sel: target = st.selectbox("ALVO:", options=sorted(df['ticker'].unique()))
+    with c_sel: 
+        # Trocado Selectbox por Selectbox padrão (agora com CSS corrigido, ele deve permitir digitação normal)
+        # O problema do backspace era o CSS antigo de input. O novo está limpo.
+        target = st.selectbox("DIGITE O CÓDIGO DO ALVO:", options=sorted(df['ticker'].unique()), index=None, placeholder="Ex: PETR4")
     with c_btn:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🧠 DECODE IA") and target:
@@ -406,9 +401,14 @@ else:
             show_ai_decode(target, row, details)
 
     st.markdown("---")
-    ic1, ic2, ic3 = st.columns([1, 2, 2])
-    with ic2: min_liq = st.number_input("Liquidez Mínima", value=200000, step=50000)
-    with ic3: invest = st.number_input("Simular Investimento (R$)", value=0.0, step=100.0)
+    
+    # SCANNER (AJUSTE UI: LADO A LADO E VISÍVEL)
+    st.markdown("### 📊 SCANNER DE OPORTUNIDADES")
+    # Colocando os inputs lado a lado e ocupando espaço racional
+    ic1, ic2 = st.columns(2)
+    with ic1: min_liq = st.number_input("LIQUIDEZ MÍNIMA (R$)", value=200000, step=50000, help="Volume diário médio de negociação")
+    with ic2: invest = st.number_input("SIMULAR APORTE (R$)", value=0.0, step=100.0, help="Valor que você pretende investir")
+    
     df_fin = df[df['liquidezmediadiaria'] > min_liq].copy()
     t1, t2 = st.tabs(["💎 GRAHAM", "✨ MAGIC FORMULA"])
     
