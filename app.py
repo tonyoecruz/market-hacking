@@ -62,7 +62,7 @@ SAFETY_SETTINGS = {
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
 }
 
-# --- FUNÇÕES DE ANÁLISE ESPECÍFICAS ---
+# --- FUNÇÕES DE ANÁLISE ESPECÍFICAS (COMPLIANCE MODE) ---
 def get_ai_generic_analysis(prompt):
     if not IA_AVAILABLE: return f"⚠️ IA INDISPONÍVEL: {STARTUP_MSG}"
     try:
@@ -73,34 +73,42 @@ def get_ai_generic_analysis(prompt):
 def get_graham_analysis(ticker, price, fair_value, lpa, vpa):
     margin = (fair_value/price) - 1 if price > 0 else 0
     prompt = f"""
-    Analise {ticker} SÓ pelo Método de Benjamin Graham.
-    DADOS: Preço Tela: R${price:.2f} | Preço Justo Graham: R${fair_value:.2f} | Margem: {margin:.1%} | LPA: {lpa} | VPA: {vpa}.
-    Explique se a ação está descontada (barata) ou cara.
-    Máximo 3 linhas. Direto.
+    Analise {ticker} SÓ pelo Método de Benjamin Graham para fins educacionais.
+    DADOS: Preço Tela: R${price:.2f} | Preço Justo Teórico (Graham): R${fair_value:.2f} | Margem Teórica: {margin:.1%} | LPA: {lpa} | VPA: {vpa}.
+    
+    Explique tecnicamente se a ação está descontada (abaixo do valor intrínseco) ou com prêmio (acima).
+    NÃO dê recomendação de compra ou venda. Use termos como "potencial de valor", "desconto teórico", "margem de segurança".
+    Máximo 3 linhas. Direto e Educacional.
     """
     return get_ai_generic_analysis(prompt)
 
 def get_magic_analysis(ticker, ev_ebit, roic, score):
     prompt = f"""
-    Analise {ticker} SÓ pela Magic Formula (Joel Greenblatt).
+    Analise {ticker} SÓ pela Magic Formula (Joel Greenblatt) para fins educacionais.
     DADOS: EV/EBIT: {ev_ebit} | ROIC: {roic:.1%} | Score Geral: {score}.
-    Explique se é uma "Empresa Boa (ROIC alto) e Barata (EV/EBIT baixo)".
-    Máximo 3 linhas. Direto.
+    
+    Explique se os indicadores sugerem uma empresa "Boa (ROIC alto) e Barata (EV/EBIT baixo)".
+    NÃO dê recomendação de investimento. Fale sobre "qualidade dos fundamentos" e "posição no ranking".
+    Máximo 3 linhas. Direto e Educacional.
     """
     return get_ai_generic_analysis(prompt)
 
 def get_sniper_analysis(ticker, price, fair_value, details):
     prompt = f"""
-    Analise {ticker} ({details.get('Empresa', 'N/A')}).
+    Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
     Dados: Preço R$ {price}, Justo R$ {fair_value}, Setor {details.get('Setor', 'N/A')}.
-    1. SE TIVER RISCO DE FALÊNCIA (Recuperação Judicial): Comece com "ALERTA DE SNIPER 💀".
-    2. SE NÃO: Analise taticamente se é oportunidade.
+    
+    1. SE TIVER RISCO DE FALÊNCIA (Recuperação Judicial): Comece com "ALERTA DE SNIPER 💀" e explique o risco nos demonstrativos.
+    2. SE NÃO: Analise os fundamentos de forma neutra e técnica.
+    
+    IMPORTANTE: Nunca use "Compre" ou "Venda". Use "Atrativa", "Descontada", "Arriscada", "Cara".
+    Foco total em educação financeira.
     Máximo 5 linhas.
     """
     return get_ai_generic_analysis(prompt)
 
 # ==============================================================================
-# 🎨 ESTILOS CSS
+# 🎨 ESTILOS CSS (FONTE MAIS LEGÍVEL)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -119,7 +127,7 @@ st.markdown(f"""
     .card-ticker {{ font-size: 20px; font-weight: bold; color: #fff; }}
     .card-price {{ float: right; font-size: 20px; color: #00ff41; }}
     .metric-row {{ display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px dashed #333; padding-top: 5px; }}
-    .metric-label {{ font-size: 12px; color: #888; }}
+    .metric-label {{ font-size: 12px; color: #bbb; }} /* COR AJUSTADA PARA MAIS CLARO */
     .metric-value {{ font-size: 16px; font-weight: bold; color: #fff; }}
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; }}
 
@@ -131,7 +139,7 @@ st.markdown(f"""
     /* INFO TAGS & STATUS BOXES */
     .tag-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }}
     .info-tag {{ background: #111; border: 1px solid #333; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; }}
-    .info-label {{ font-size: 10px; text-transform: uppercase; color: #888; margin-bottom: 2px; }}
+    .info-label {{ font-size: 10px; text-transform: uppercase; color: #bbb; margin-bottom: 2px; }} /* COR AJUSTADA */
     .info-val {{ color: #fff; font-weight: bold; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
     
     .status-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }}
@@ -144,14 +152,14 @@ st.markdown(f"""
 
     /* MODAIS MATEMÁTICOS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
-    .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #ccc; margin-bottom: 15px; }}
+    .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #fff; margin-bottom: 15px; }} /* FONTE MAIS CLARA */
     .highlight-val {{ color: #00ff41; font-weight: bold; font-size: 18px; }}
-    .modal-text {{ font-size: 13px; color: #aaa; line-height: 1.4; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }}
-    .detail-list {{ font-size: 13px; color: #ccc; margin-top: 10px; }}
+    .modal-text {{ font-size: 14px; color: #ddd; line-height: 1.4; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }} /* FONTE MAIS CLARA */
+    .detail-list {{ font-size: 13px; color: #eee; margin-top: 10px; }} /* FONTE MAIS CLARA */
     .detail-item {{ margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #555; }}
     .detail-key {{ color: #00ff41; font-weight: bold; font-size: 11px; text-transform: uppercase; }}
     
-    .disclaimer {{ text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }}
+    .disclaimer {{ text-align: center; color: #777; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }}
     @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }} 70% {{ box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }} }}
     #MainMenu, footer, header {{ visibility: hidden; }}
 </style>
@@ -201,9 +209,9 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 📂 MODAIS (WIDTH=LARGE PARA MAIS ESPAÇO)
+# 📂 MODAIS (EDUCATIONAL & COMPLIANT)
 # ==============================================================================
-@st.dialog("📂 DOSSIÊ GRAHAM", width="large") # <--- AQUI ESTÁ A MÁGICA
+@st.dialog("📂 DOSSIÊ GRAHAM", width="large")
 def show_graham_details(ticker, row):
     lpa = row['lpa']; vpa = row['vpa']; vi = row['ValorJusto']
     margem = row['Margem']
@@ -222,16 +230,17 @@ def show_graham_details(ticker, row):
         """, unsafe_allow_html=True)
     with c2:
         status_color = "#00ff41" if margem > 0 else "#ff4444"
-        status_txt = "COMPRA" if margem > 0 else "AGUARDE"
+        # MUDANÇA: TERMOS MAIS TÉCNICOS/EDUCACIONAIS
+        status_txt = "DESCONTADA" if margem > 0 else "ACIMA DO VI"
         st.markdown(f"""
         <div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px;">
-            <div style="font-size:12px; color:#aaa">RESULTADO</div>
+            <div style="font-size:12px; color:#aaa">STATUS</div>
             <div style="font-size:20px; font-weight:bold; color:{status_color}">{status_txt}</div>
-            <div style="font-size:14px; margin-top:5px">Upside: {margem:.1%}</div>
+            <div style="font-size:14px; margin-top:5px">Margem: {margem:.1%}</div>
         </div>
         """, unsafe_allow_html=True)
 
-    # 2. GLOSSÁRIO E EXPLICAÇÃO
+    # 2. GLOSSÁRIO E EXPLICAÇÃO (FONTE MAIS CLARA)
     st.markdown("""
     <div class="modal-text">
         <b>🔍 ENTENDENDO A LÓGICA:</b>
@@ -258,7 +267,7 @@ def show_graham_details(ticker, row):
         ai_text = get_graham_analysis(ticker, row['price'], vi, lpa, vpa)
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
-@st.dialog("📂 DOSSIÊ MAGIC FORMULA", width="large") # <--- AQUI ESTÁ A MÁGICA
+@st.dialog("📂 DOSSIÊ MAGIC FORMULA", width="large")
 def show_magic_details(ticker, row):
     rev = int(row.get('R_EV', 0)); rroic = int(row.get('R_ROIC', 0)); sc = int(row.get('Score', 0))
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
@@ -276,6 +285,7 @@ def show_magic_details(ticker, row):
     with c2:
         is_good = (row['roic'] > 0.15) and (row['ev_ebit'] > 0)
         status_color = "#00ff41" if is_good else "#ffaa00"
+        # MUDANÇA: TERMOS MAIS TÉCNICOS/EDUCACIONAIS
         status_txt = "ALTA QUALIDADE" if is_good else "EM OBSERVAÇÃO"
         st.markdown(f"""
         <div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px;">
@@ -285,7 +295,7 @@ def show_magic_details(ticker, row):
         </div>
         """, unsafe_allow_html=True)
 
-    # 2. GLOSSÁRIO E EXPLICAÇÃO
+    # 2. GLOSSÁRIO E EXPLICAÇÃO (FONTE MAIS CLARA)
     st.markdown("""
     <div class="modal-text">
         <b>🔍 ENTENDENDO A LÓGICA:</b>
@@ -331,8 +341,8 @@ def show_ai_decode(ticker, row, details):
     <div class="status-grid">
         <div class="status-box" style="background-color: {'#051a05' if graham_ok else '#1a0505'}; border-color: {'#00ff41' if graham_ok else '#ff4444'};">
             <div class="status-title" style="color:{'#00ff41' if graham_ok else '#ff4444'}">MÉTODO GRAHAM</div>
-            <div class="status-result" style="color:{'#00ff41' if graham_ok else '#ff4444'}">{'✅ APROVADA' if graham_ok else '❌ REPROVADA'}</div>
-            <div style="font-size:10px; color:#aaa; margin-top:2px">{'UPSIDE: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div>
+            <div class="status-result" style="color:{'#00ff41' if graham_ok else '#ff4444'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div>
+            <div style="font-size:10px; color:#aaa; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div>
         </div>
         <div class="status-box" style="background-color: {'#051a05' if magic_ok else '#1a1a05'}; border-color: {'#00ff41' if magic_ok else '#ffaa00'};">
             <div class="status-title" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div>
@@ -356,7 +366,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v8.2</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v9.0</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
@@ -390,9 +400,12 @@ else:
     with ic3: invest = st.number_input("Simular Investimento (R$)", value=0.0, step=100.0)
     df_fin = df[df['liquidezmediadiaria'] > min_liq].copy()
     t1, t2 = st.tabs(["💎 GRAHAM", "✨ MAGIC FORMULA"])
+    
+    # AJUSTE DE COMPLIANCE NO CARD TAMBÉM
     def card(t, p, l1, v1, l2, v2, r, inv=0):
-        buy = f"<div class='buy-section'>COMPRAR: <span class='buy-value'>{int((inv/10)//p)} ações</span></div>" if inv>0 and p>0 else ""
+        buy = f"<div class='buy-section'>APORTE SUGERIDO: <span class='buy-value'>{int((inv/10)//p)} ações</span></div>" if inv>0 and p>0 else ""
         return f"""<div class="hacker-card"><div><span class="card-ticker">#{r} {t}</span><span class="card-price">{format_brl(p)}</span></div><div class="metric-row"><div><div class="metric-label">{l1}</div><div class="metric-value">{v1}</div></div><div style="text-align:right"><div class="metric-label">{l2}</div><div class="metric-value">{v2}</div></div></div>{buy}</div>"""
+    
     with t1:
         df_g = df_fin[(df_fin['lpa']>0)&(df_fin['vpa']>0)].sort_values('Margem', ascending=False).head(10)
         c1, c2 = st.columns(2)
@@ -413,4 +426,4 @@ else:
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer: df_exp.to_excel(writer, index=False)
     st.download_button("📥 DOWNLOAD EXCEL", data=buffer.getvalue(), file_name=f"SCOPE3_{datetime.now().strftime('%Y%m%d')}.xlsx")
 
-st.markdown("""<div class="disclaimer">⚠️ AVISO LEGAL: Ferramenta educacional. Dados públicos podem conter atrasos. Não é recomendação de investimento.</div>""", unsafe_allow_html=True)
+st.markdown("""<div class="disclaimer">⚠️ AVISO LEGAL: ESTA FERRAMENTA É APENAS PARA FINS EDUCACIONAIS E DE CÁLCULO AUTOMATIZADO. OS DADOS SÃO OBTIDOS DE FONTES PÚBLICAS E PODEM CONTER ATRASOS. ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. O INVESTIDOR É RESPONSÁVEL POR SUAS PRÓPRIAS DECISÕES.</div>""", unsafe_allow_html=True)
