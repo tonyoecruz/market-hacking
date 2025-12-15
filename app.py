@@ -3,62 +3,79 @@ import pandas as pd
 import requests
 import io
 import numpy as np
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+import json
+from datetime import datetime
 
 # ==============================================================================
-# 🛠️ CONFIG DO APP
+# 🛠️ CONFIG DO APP E ÍCONE
 # ==============================================================================
 URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
-st.set_page_config(page_title="SCOPE3 DIAGNOSTIC", page_icon=URL_DO_ICONE, layout="wide")
+st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🕵️ DIAGNÓSTICO DE SISTEMA (AUTO-REPARO)
+# 🧠 INTELIGÊNCIA ARTIFICIAL (VIA HTTP DIRETO - INFALÍVEL)
 # ==============================================================================
-st.sidebar.markdown("### 🔧 STATUS DO SISTEMA")
-st.sidebar.text(f"Lib Google Versão: {genai.__version__}")
-
-# Tenta definir a chave
+# Tenta pegar a chave do Secrets ou usa a hardcoded (Backup)
 API_KEY = st.secrets.get("GEMINI_KEY", "AIzaSyB4Xu_ebwghWcUb4QnVFRI4qjYNjWBrk1E")
-genai.configure(api_key=API_KEY)
 
-# Lógica de Seleção de Modelo (Tenta o mais novo, se falhar, lista os disponíveis)
-MODELS_AVAILABLE = []
-try:
-    # Tenta listar para ver o que temos
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            MODELS_AVAILABLE.append(m.name)
-except:
-    pass
+def get_gemini_response_http(prompt):
+    """
+    Função manual para chamar o Gemini 1.5 Flash via HTTP.
+    Ignora erros de biblioteca e vai direto no servidor do Google.
+    """
+    # URL oficial da API REST do Google
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+    
+    headers = {'Content-Type': 'application/json'}
+    
+    # Payload (Dados da mensagem)
+    data = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }],
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+        ]
+    }
+    
+    try:
+        # Faz o envio (POST)
+        response = requests.post(url, headers=headers, json=data, timeout=15)
+        
+        if response.status_code == 200:
+            result = response.json()
+            # Tenta ler a resposta
+            try:
+                text = result['candidates'][0]['content']['parts'][0]['text']
+                return text
+            except:
+                return "⚠️ A IA respondeu mas o formato veio estranho. Tente novamente."
+        else:
+            # Erro do Google (Ex: Chave inválida ou cota excedida)
+            return f"⚠️ ERRO HTTP {response.status_code}: {response.text}"
+            
+    except Exception as e:
+        return f"⚠️ ERRO DE CONEXÃO: {str(e)}"
 
-# Tenta carregar o melhor modelo disponível
-MODEL_NAME = ""
-if 'models/gemini-1.5-flash' in MODELS_AVAILABLE:
-    MODEL_NAME = 'gemini-1.5-flash'
-elif 'models/gemini-pro' in MODELS_AVAILABLE:
-    MODEL_NAME = 'gemini-pro'
-else:
-    # Se a lista falhar, tenta o pro no escuro
-    MODEL_NAME = 'gemini-pro'
-
-try:
-    model = genai.GenerativeModel(MODEL_NAME)
-    IA_STATUS = f"🟢 ONLINE ({MODEL_NAME})"
-    IA_AVAILABLE = True
-except Exception as e:
-    IA_STATUS = f"🔴 OFFLINE: {str(e)}"
-    IA_AVAILABLE = False
-
-st.sidebar.text(IA_STATUS)
-
-# Configuração de Segurança (Safety OFF)
-SAFETY_SETTINGS = {
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-}
+# Wrapper para usar no sistema
+def get_ai_analysis(ticker, price, fair_value, details):
+    prompt = f"""
+    Você é o SCOPE3, um robô de análise financeira.
+    Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
+    Dados: Preço R$ {price}, Justo R$ {fair_value}, Setor {details.get('Setor', 'N/A')}.
+    
+    1. SE ESTIVER EM RECUPERAÇÃO JUDICIAL ou FALÊNCIA (ex: Americanas, Oi, Light):
+       Comece OBRIGATORIAMENTE com "ALERTA DE SNIPER 💀" e explique o risco grave.
+    
+    2. SE FOR EMPRESA NORMAL:
+       Analise se está barata ou cara segundo Graham e cite o setor.
+    
+    Seja curto (max 5 linhas). Direto, técnico e ácido.
+    """
+    return get_gemini_response_http(prompt)
 
 # ==============================================================================
 # 🎨 ESTILOS CSS
@@ -66,11 +83,18 @@ SAFETY_SETTINGS = {
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
 <style>
+    /* BASE DARK */
     .stApp {{ background-color: #000; color: #e0e0e0; font-family: 'Consolas', monospace; }}
     h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; }}
-    .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; }}
+    
+    /* BOTÕES */
+    .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; text-transform: uppercase; transition: 0.3s; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
+    
+    /* INPUTS */
     div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #fff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
+    
+    /* CARDS */
     .hacker-card {{ background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
     .card-ticker {{ font-size: 20px; font-weight: bold; color: #fff; }}
     .card-price {{ float: right; font-size: 20px; color: #00ff41; }}
@@ -78,15 +102,21 @@ st.markdown(f"""
     .metric-label {{ font-size: 12px; color: #888; }}
     .metric-value {{ font-size: 16px; font-weight: bold; color: #fff; }}
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; }}
-    .ai-box {{ border: 1px solid #9933ff; background-color: #1a0526; padding: 20px; border-radius: 4px; margin-top: 15px; border-left: 5px solid #9933ff; color: #fff !important; }}
+
+    /* IA BOXES */
+    .ai-box {{ border: 1px solid #9933ff; background-color: #1a0526; padding: 20px; border-radius: 4px; margin-top: 15px; border-left: 5px solid #9933ff; color: #ffffff !important; }}
     .ai-title {{ color: #c299ff; font-weight: bold; font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }}
-    .risk-alert {{ background-color: #330000; color: #fff !important; border: 2px solid #ff0000; padding: 20px; border-radius: 4px; margin-top: 15px; animation: pulse 2s infinite; }}
+    .risk-alert {{ background-color: #330000; color: #ffffff !important; border: 2px solid #ff0000; padding: 20px; border-radius: 4px; margin-top: 15px; animation: pulse 2s infinite; }}
     .error-box {{ border: 1px solid red; background: #220000; color: #ffcccc; padding: 15px; font-family: monospace; }}
+
+    /* MODAIS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
     .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #ccc; margin-bottom: 15px; }}
     .highlight-val {{ color: #00ff41; font-weight: bold; font-size: 18px; }}
     .modal-text {{ font-size: 14px; color: #aaa; line-height: 1.5; }}
+    
     .disclaimer {{ text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }}
+    @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }} 70% {{ box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }} }}
     #MainMenu, footer, header {{ visibility: hidden; }}
 </style>
 """, unsafe_allow_html=True)
@@ -136,38 +166,7 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 🧠 INTELIGÊNCIA ARTIFICIAL
-# ==============================================================================
-def get_ai_analysis(ticker, price, fair_value, details):
-    if not IA_AVAILABLE:
-        # MENSAGEM DE ERRO DETALHADA PARA DEBUG
-        msg = f"⚠️ ERRO CRÍTICO NA IA:\nVersão Instalada: {genai.__version__}\nErro Inicial: {IA_STATUS}"
-        if len(MODELS_AVAILABLE) > 0:
-            msg += "\n\nModelos Disponíveis no Servidor:\n" + "\n".join(MODELS_AVAILABLE)
-        else:
-            msg += "\n\nNENHUM MODELO ENCONTRADO. (Atualize o requirements.txt)"
-        return msg
-    
-    prompt = f"""
-    Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
-    Dados: Preço R$ {price}, Justo R$ {fair_value}, Setor {details.get('Setor', 'N/A')}.
-    
-    SE ESTIVER EM RECUPERAÇÃO JUDICIAL ou FALÊNCIA (ex: Americanas, Oi, Light):
-    Comece com "ALERTA DE SNIPER 💀" e explique o risco grave.
-    
-    SE FOR EMPRESA NORMAL:
-    Analise brevemente se está barata segundo Graham.
-    
-    Seja curto (max 5 linhas). Direto ao ponto.
-    """
-    try:
-        response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
-        return response.text
-    except Exception as e:
-        return f"⚠️ ERRO DE GERAÇÃO: {str(e)}"
-
-# ==============================================================================
-# 📂 MODAIS E UI (MANTIDOS IGUAIS)
+# 📂 MODAIS DE DECODE
 # ==============================================================================
 @st.dialog("📂 DOSSIÊ GRAHAM")
 def show_graham_details(ticker, row):
@@ -195,16 +194,20 @@ def show_ai_decode(ticker, row, details):
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_ai_analysis(ticker, row['price'], row['ValorJusto'], details)
     
-    if "ERRO" in analise or "CONFIGURAÇÃO" in analise:
+    # Exibição Condicional
+    if "ERRO" in analise or "HTTP" in analise:
         st.markdown(f"<div class='error-box'>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
-    elif "ALERTA" in analise.upper() or "RISCO" in analise.upper():
+    elif "ALERTA" in analise.upper() or "RISCO" in analise.upper() or "CAVEIRA" in analise.upper():
         st.markdown(f"<div class='risk-alert'><div class='risk-title'>⚠️ ALERTA DE RISCO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
     else:
         st.markdown(f"<div class='ai-box'><div class='ai-title'>🧠 ANÁLISE TÁTICA</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
 
+# ==============================================================================
+# 📺 UI PRINCIPAL
+# ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v5.0 (DIAGNOSTIC)</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v6.0</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
@@ -223,6 +226,8 @@ if 'market_data' not in st.session_state:
 else:
     df = st.session_state['market_data']
     st.success(f"BASE OPERACIONAL: {len(df)} ATIVOS.")
+    
+    # SNIPER
     st.markdown("### 🎯 MIRA LASER (IA)")
     c_sel, c_btn, _ = st.columns([2, 1, 6])
     with c_sel: target = st.selectbox("ALVO:", options=sorted(df['ticker'].unique()))
@@ -234,6 +239,8 @@ else:
             show_ai_decode(target, row, details)
 
     st.markdown("---")
+    
+    # SCANNER
     st.markdown("### 📊 SCANNER DE OPORTUNIDADES")
     ic1, ic2, ic3 = st.columns([1, 2, 2])
     with ic2: min_liq = st.number_input("Liquidez Mínima", value=200000, step=50000)
@@ -243,6 +250,7 @@ else:
     def card(t, p, l1, v1, l2, v2, r, inv=0):
         buy = f"<div class='buy-section'>COMPRAR: <span class='buy-value'>{int((inv/10)//p)} ações</span></div>" if inv>0 and p>0 else ""
         return f"""<div class="hacker-card"><div><span class="card-ticker">#{r} {t}</span><span class="card-price">{format_brl(p)}</span></div><div class="metric-row"><div><div class="metric-label">{l1}</div><div class="metric-value">{v1}</div></div><div style="text-align:right"><div class="metric-label">{l2}</div><div class="metric-value">{v2}</div></div></div>{buy}</div>"""
+    
     with t1:
         df_g = df_fin[(df_fin['lpa']>0)&(df_fin['vpa']>0)].sort_values('Margem', ascending=False).head(10)
         c1, c2 = st.columns(2)
@@ -257,6 +265,7 @@ else:
             with (c1 if i%2==0 else c2):
                 st.markdown(card(r['ticker'], r['price'], "EV/EBIT", f"{r['ev_ebit']:.2f}", "ROIC", f"{r['roic']:.1%}", i+1, invest), unsafe_allow_html=True)
                 if st.button(f"📂 DECODE #{i+1}", key=f"m_{r['ticker']}"): show_magic_details(r['ticker'], r)
+    
     st.markdown("---")
     df_exp = df_fin[['ticker', 'price', 'ValorJusto', 'Margem', 'ev_ebit', 'roic', 'MagicRank', 'liquidezmediadiaria']].copy()
     buffer = io.BytesIO(); 
