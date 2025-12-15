@@ -3,7 +3,8 @@ import pandas as pd
 import requests
 import io
 import numpy as np
-import json
+import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from datetime import datetime
 
 # ==============================================================================
@@ -13,57 +14,68 @@ URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🧠 INTELIGÊNCIA ARTIFICIAL (VIA HTTP DIRETO - GEMINI PRO)
+# 🧠 INTELIGÊNCIA ARTIFICIAL (AUTO-DISCOVERY)
 # ==============================================================================
-# Tenta pegar a chave do Secrets ou usa a hardcoded (Backup)
+# Tenta pegar a chave do Secrets ou usa a hardcoded
 API_KEY = st.secrets.get("GEMINI_KEY", "AIzaSyB4Xu_ebwghWcUb4QnVFRI4qjYNjWBrk1E")
 
-def get_gemini_response_http(prompt):
-    """
-    Função manual para chamar o Gemini Pro (Clássico) via HTTP.
-    Modelo alterado para garantir compatibilidade total.
-    """
-    # URL oficial para o modelo CLÁSSICO (gemini-pro) que funciona em todas as contas
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
-    
-    headers = {'Content-Type': 'application/json'}
-    
-    # Payload (Dados da mensagem)
-    data = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }],
-        "safetySettings": [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-        ]
-    }
-    
-    try:
-        # Faz o envio (POST)
-        response = requests.post(url, headers=headers, json=data, timeout=15)
-        
-        if response.status_code == 200:
-            result = response.json()
-            # Tenta ler a resposta
-            try:
-                text = result['candidates'][0]['content']['parts'][0]['text']
-                return text
-            except:
-                return "⚠️ A IA respondeu mas o formato veio estranho. Tente novamente."
-        else:
-            # Erro do Google
-            return f"⚠️ ERRO HTTP {response.status_code}: {response.text}"
-            
-    except Exception as e:
-        return f"⚠️ ERRO DE CONEXÃO: {str(e)}"
+# Variáveis globais de controle
+ACTIVE_MODEL_NAME = None
+IA_AVAILABLE = False
+STARTUP_MSG = ""
 
-# Wrapper para usar no sistema
+try:
+    genai.configure(api_key=API_KEY)
+    
+    # 1. TÁTICA DE AUTO-DESCOBERTA: Pergunta pro Google o que tem disponível
+    available_models = []
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+    except Exception as e:
+        STARTUP_MSG = f"Erro ao listar modelos: {str(e)}"
+
+    # 2. SELEÇÃO INTELIGENTE: Tenta pegar o melhor modelo da lista
+    if available_models:
+        # Prioridade: 1.5 Flash > 1.5 Pro > Pro > Qualquer outro
+        if 'models/gemini-1.5-flash' in available_models:
+            ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
+        elif 'models/gemini-1.5-pro' in available_models:
+            ACTIVE_MODEL_NAME = 'gemini-1.5-pro'
+        elif 'models/gemini-pro' in available_models:
+            ACTIVE_MODEL_NAME = 'gemini-pro'
+        else:
+            # Pega o primeiro que aparecer (ex: gemini-1.0-pro)
+            ACTIVE_MODEL_NAME = available_models[0].replace('models/', '')
+            
+        model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
+        IA_AVAILABLE = True
+        STARTUP_MSG = f"🟢 ONLINE | Conectado em: {ACTIVE_MODEL_NAME}"
+    else:
+        # Se a lista estiver vazia, tenta forçar o flash como última esperança
+        ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
+        model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
+        IA_AVAILABLE = True # Tentativa de fé
+        STARTUP_MSG = "⚠️ Forçando conexão (Lista vazia)"
+
+except Exception as e:
+    IA_AVAILABLE = False
+    STARTUP_MSG = f"🔴 OFFLINE: {str(e)}"
+
+# Configuração de Segurança (Safety OFF)
+SAFETY_SETTINGS = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
+
 def get_ai_analysis(ticker, price, fair_value, details):
+    if not IA_AVAILABLE:
+        return f"⚠️ IA INDISPONÍVEL: {STARTUP_MSG}"
+    
     prompt = f"""
-    Você é o SCOPE3, um robô de análise financeira.
     Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
     Dados: Preço R$ {price}, Justo R$ {fair_value}, Setor {details.get('Setor', 'N/A')}.
     
@@ -75,7 +87,11 @@ def get_ai_analysis(ticker, price, fair_value, details):
     
     Seja curto (max 5 linhas). Direto, técnico e ácido.
     """
-    return get_gemini_response_http(prompt)
+    try:
+        response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
+        return response.text
+    except Exception as e:
+        return f"⚠️ ERRO DE GERAÇÃO ({ACTIVE_MODEL_NAME}): {str(e)}\n\n(Tente atualizar a chave API)"
 
 # ==============================================================================
 # 🎨 ESTILOS CSS
@@ -191,10 +207,18 @@ def show_ai_decode(ticker, row, details):
     with c1: st.markdown(f"**Empresa:** {details.get('Empresa', 'N/A')}")
     with c2: st.markdown(f"**Setor:** {details.get('Setor', 'N/A')}")
     st.markdown("---")
+    
+    # Exibe status da conexão
+    if STARTUP_MSG:
+        if "ONLINE" in STARTUP_MSG:
+            st.caption(STARTUP_MSG)
+        else:
+            st.error(STARTUP_MSG)
+            
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_ai_analysis(ticker, row['price'], row['ValorJusto'], details)
     
-    if "ERRO" in analise or "CONFIGURAÇÃO" in analise:
+    if "ERRO" in analise or "INDISPONÍVEL" in analise:
         st.markdown(f"<div class='error-box'>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
     elif "ALERTA" in analise.upper() or "RISCO" in analise.upper():
         st.markdown(f"<div class='risk-alert'><div class='risk-title'>⚠️ ALERTA DE RISCO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
@@ -206,7 +230,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v6.1</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v7.0</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
