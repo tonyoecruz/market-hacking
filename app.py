@@ -101,7 +101,7 @@ def get_sniper_analysis(ticker, price, fair_value, details):
     return get_ai_generic_analysis(prompt)
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (ALTO CONTRASTE)
+# 🎨 ESTILOS CSS (FUNDO BRANCO / LETRA PRETA)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -116,44 +116,69 @@ st.markdown(f"""
     div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #fff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
     
     /* CARDS */
-    .hacker-card {{ background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
-    .card-ticker {{ font-size: 20px; font-weight: bold; color: #fff; }}
-    .card-price {{ float: right; font-size: 20px; color: #00ff41; }}
-    .metric-row {{ display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px dashed #333; padding-top: 5px; }}
-    .metric-label {{ font-size: 12px; color: #fff; font-weight: bold; opacity: 0.8; }} /* BRANCO */
-    .metric-value {{ font-size: 16px; font-weight: bold; color: #fff; }}
-    .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; }}
+    .hacker-card {{ 
+        background-color: #ffffff; /* FUNDO BRANCO */
+        border: 1px solid #ccc; 
+        border-top: 3px solid #00ff41; 
+        padding: 15px; 
+        margin-bottom: 10px; 
+        border-radius: 4px; 
+    }}
+    .card-ticker {{ font-size: 20px; font-weight: bold; color: #000; }} /* LETRA PRETA */
+    .card-price {{ float: right; font-size: 20px; color: #009926; font-weight: bold; }} /* VERDE ESCURO */
+    .metric-row {{ display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 5px; }}
+    .metric-label {{ font-size: 12px; color: #555; font-weight: bold; }} /* CINZA ESCURO */
+    .metric-value {{ font-size: 16px; font-weight: bold; color: #000; }} /* LETRA PRETA */
+    .buy-section {{ margin-top: 10px; background: #e6ffe6; padding: 5px; text-align: center; border: 1px solid #00cc33; font-size: 14px; color: #006600; font-weight: bold; }}
 
     /* IA BOX */
-    .ai-box {{ border: 1px solid #9933ff; background-color: #0d0214; padding: 15px; border-radius: 6px; margin-top: 10px; border-left: 4px solid #9933ff; color: #fff !important; font-size: 14px; line-height: 1.5; }}
-    .ai-header {{ display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #3d1466; padding-bottom: 5px; margin-bottom: 10px; }}
-    .ai-title {{ color: #c299ff; font-weight: bold; font-size: 16px; text-transform: uppercase; }}
+    .ai-box {{ 
+        border: 1px solid #9933ff; 
+        background-color: #f3e5ff; /* FUNDO ROXO CLARINHO */
+        padding: 15px; 
+        border-radius: 6px; 
+        margin-top: 10px; 
+        border-left: 4px solid #9933ff; 
+        color: #000 !important; /* LETRA PRETA */
+        font-size: 14px; 
+        line-height: 1.5; 
+    }}
+    .ai-header {{ display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #d1b3ff; padding-bottom: 5px; margin-bottom: 10px; }}
+    .ai-title {{ color: #6600cc; font-weight: bold; font-size: 16px; text-transform: uppercase; }}
 
     /* INFO TAGS */
     .tag-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }}
-    .info-tag {{ background: #111; border: 1px solid #555; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; }}
-    .info-label {{ font-size: 11px; text-transform: uppercase; color: #00ff41; margin-bottom: 2px; font-weight: bold; }} /* VERDE NEON */
-    .info-val {{ color: #fff; font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+    .info-tag {{ 
+        background: #ffffff; /* FUNDO BRANCO */
+        border: 1px solid #ccc; 
+        padding: 8px; 
+        border-radius: 4px; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+    }}
+    .info-label {{ font-size: 11px; text-transform: uppercase; color: #009926; margin-bottom: 2px; font-weight: bold; }} /* VERDE ESCURO */
+    .info-val {{ color: #000; font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }} /* PRETO */
     
     /* STATUS BOXES */
     .status-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }}
-    .status-box {{ padding: 10px; border-radius: 4px; text-align: center; border: 1px solid #333; }}
-    .status-title {{ font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #fff; }}
+    .status-box {{ padding: 10px; border-radius: 4px; text-align: center; border: 1px solid #ccc; background: #fff; }}
+    .status-title {{ font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #000; }}
     .status-result {{ font-size: 15px; font-weight: bold; text-transform: uppercase; }}
 
-    .risk-alert {{ background-color: #2b0505; color: #fff !important; border: 2px solid #ff0000; padding: 20px; border-radius: 6px; margin-top: 15px; animation: pulse 2s infinite; }}
-    .risk-title {{ color: #ff0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
+    .risk-alert {{ background-color: #ffe6e6; color: #cc0000 !important; border: 2px solid #ff0000; padding: 20px; border-radius: 6px; margin-top: 15px; animation: pulse 2s infinite; }}
+    .risk-title {{ color: #cc0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
 
     /* MODAIS MATEMÁTICOS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
-    .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #fff; margin-bottom: 15px; }}
-    .highlight-val {{ color: #00ff41; font-weight: bold; font-size: 18px; }}
-    .modal-text {{ font-size: 14px; color: #fff; line-height: 1.4; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }} /* BRANCO */
-    .detail-list {{ font-size: 13px; color: #fff; margin-top: 10px; }} /* BRANCO */
-    .detail-item {{ margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #00ff41; }}
-    .detail-key {{ color: #00ff41; font-weight: bold; font-size: 12px; text-transform: uppercase; }} /* VERDE NEON */
+    .modal-math {{ background: #f0f0f0; padding: 15px; border-left: 3px solid #009926; font-family: monospace; font-size: 16px; color: #000; margin-bottom: 15px; }} /* FUNDO CLARO, LETRA PRETA */
+    .highlight-val {{ color: #009926; font-weight: bold; font-size: 18px; }}
+    .modal-text {{ font-size: 14px; color: #000; line-height: 1.4; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px; }} /* PRETO */
+    .detail-list {{ font-size: 13px; color: #000; margin-top: 10px; }} /* PRETO */
+    .detail-item {{ margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #009926; }}
+    .detail-key {{ color: #009926; font-weight: bold; font-size: 12px; text-transform: uppercase; }} /* VERDE ESCURO */
     
-    .disclaimer {{ text-align: center; color: #aaa; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }}
+    .disclaimer {{ text-align: center; color: #aaa; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #555; }}
     @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }} 70% {{ box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }} }}
     #MainMenu, footer, header {{ visibility: hidden; }}
 </style>
@@ -222,13 +247,13 @@ def show_graham_details(ticker, row):
         </div>
         """, unsafe_allow_html=True)
     with c2:
-        status_color = "#00ff41" if margem > 0 else "#ff4444"
+        status_color = "#009926" if margem > 0 else "#cc0000"
         status_txt = "DESCONTADA" if margem > 0 else "ACIMA DO VI"
         st.markdown(f"""
-        <div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px;">
-            <div style="font-size:12px; color:#fff">STATUS</div>
+        <div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#fff">
+            <div style="font-size:12px; color:#000">STATUS</div>
             <div style="font-size:20px; font-weight:bold; color:{status_color}">{status_txt}</div>
-            <div style="font-size:14px; margin-top:5px; color:#fff">Margem: {margem:.1%}</div>
+            <div style="font-size:14px; margin-top:5px; color:#000">Margem: {margem:.1%}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -273,13 +298,13 @@ def show_magic_details(ticker, row):
         """, unsafe_allow_html=True)
     with c2:
         is_good = (row['roic'] > 0.15) and (row['ev_ebit'] > 0)
-        status_color = "#00ff41" if is_good else "#ffaa00"
+        status_color = "#009926" if is_good else "#ffaa00"
         status_txt = "ALTA QUALIDADE" if is_good else "EM OBSERVAÇÃO"
         st.markdown(f"""
-        <div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px;">
-            <div style="font-size:12px; color:#fff">QUALIDADE</div>
+        <div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#fff">
+            <div style="font-size:12px; color:#000">QUALIDADE</div>
             <div style="font-size:18px; font-weight:bold; color:{status_color}">{status_txt}</div>
-            <div style="font-size:12px; margin-top:5px; color:#fff">ROIC: {row['roic']:.1%}</div>
+            <div style="font-size:12px; margin-top:5px; color:#000">ROIC: {row['roic']:.1%}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -325,15 +350,15 @@ def show_ai_decode(ticker, row, details):
     
     st.markdown(f"""
     <div class="status-grid">
-        <div class="status-box" style="background-color: {'#051a05' if graham_ok else '#1a0505'}; border-color: {'#00ff41' if graham_ok else '#ff4444'};">
-            <div class="status-title" style="color:{'#00ff41' if graham_ok else '#ff4444'}">MÉTODO GRAHAM</div>
-            <div class="status-result" style="color:{'#00ff41' if graham_ok else '#ff4444'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div>
-            <div style="font-size:10px; color:#fff; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div>
+        <div class="status-box" style="border-color: {'#009926' if graham_ok else '#cc0000'};">
+            <div class="status-title" style="color:{'#009926' if graham_ok else '#cc0000'}">MÉTODO GRAHAM</div>
+            <div class="status-result" style="color:{'#009926' if graham_ok else '#cc0000'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div>
+            <div style="font-size:10px; color:#000; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div>
         </div>
-        <div class="status-box" style="background-color: {'#051a05' if magic_ok else '#1a1a05'}; border-color: {'#00ff41' if magic_ok else '#ffaa00'};">
-            <div class="status-title" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div>
-            <div class="status-result" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">{'✅ APROVADA' if magic_ok else '⚠️ ATENÇÃO'}</div>
-            <div style="font-size:10px; color:#fff; margin-top:2px">{'ROIC: ' + f"{row['roic']:.1%}" if magic_ok else 'ROIC BAIXO'}</div>
+        <div class="status-box" style="border-color: {'#009926' if magic_ok else '#ffaa00'};">
+            <div class="status-title" style="color:{'#009926' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div>
+            <div class="status-result" style="color:{'#009926' if magic_ok else '#ffaa00'}">{'✅ APROVADA' if magic_ok else '⚠️ ATENÇÃO'}</div>
+            <div style="font-size:10px; color:#000; margin-top:2px">{'ROIC: ' + f"{row['roic']:.1%}" if magic_ok else 'ROIC BAIXO'}</div>
         </div>
     </div>
     <hr style="border-color: #333; margin: 15px 0;">
@@ -352,7 +377,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v9.1</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v9.3</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
