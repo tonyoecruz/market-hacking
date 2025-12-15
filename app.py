@@ -14,7 +14,7 @@ URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🧠 INTELIGÊNCIA ARTIFICIAL (MOTOR V7.1 - NÃO MEXER)
+# 🧠 INTELIGÊNCIA ARTIFICIAL (MOTOR V7.1)
 # ==============================================================================
 if "GEMINI_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_KEY"]
@@ -82,7 +82,7 @@ def get_ai_analysis(ticker, price, fair_value, details):
     except Exception as e: return f"⚠️ ERRO DE GERAÇÃO: {str(e)}"
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (REFINADO)
+# 🎨 ESTILOS CSS (REFINADO PARA ALINHAMENTO)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -96,7 +96,7 @@ st.markdown(f"""
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
     div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #fff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
     
-    /* CARDS SCANNER */
+    /* CARDS */
     .hacker-card {{ background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
     .card-ticker {{ font-size: 20px; font-weight: bold; color: #fff; }}
     .card-price {{ float: right; font-size: 20px; color: #00ff41; }}
@@ -105,10 +105,10 @@ st.markdown(f"""
     .metric-value {{ font-size: 16px; font-weight: bold; color: #fff; }}
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; }}
 
-    /* DECODE INTELLIGENCE BOX (NOVO DESIGN) */
+    /* IA BOX */
     .ai-box {{ 
         border: 1px solid #9933ff; 
-        background-color: #0d0214; /* Fundo bem escuro roxo */
+        background-color: #0d0214; 
         padding: 20px; 
         border-radius: 6px; 
         margin-top: 15px; 
@@ -117,33 +117,34 @@ st.markdown(f"""
         font-size: 15px;
         line-height: 1.6;
     }}
-    .ai-header {{
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border-bottom: 1px solid #3d1466;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
-    }}
+    .ai-header {{ display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #3d1466; padding-bottom: 10px; margin-bottom: 15px; }}
     .ai-icon {{ font-size: 24px; }}
     .ai-title {{ color: #c299ff; font-weight: bold; font-size: 18px; text-transform: uppercase; }}
 
-    /* ALERTA SNIPER */
-    .risk-alert {{ 
-        background-color: #2b0505; 
-        color: #ffcccc !important; 
-        border: 2px solid #ff0000; 
-        padding: 20px; 
-        border-radius: 6px; 
-        margin-top: 15px; 
-        animation: pulse 2s infinite; 
+    /* TAGS DE INFORMAÇÃO (ALINHADAS) */
+    .tag-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3 Colunas iguais */
+        gap: 10px;
+        margin-bottom: 20px;
     }}
-    .risk-title {{ color: #ff0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
+    .info-tag {{ 
+        background: #111; 
+        border: 1px solid #333; 
+        padding: 8px 12px; 
+        border-radius: 4px; 
+        font-size: 12px; 
+        color: #888; 
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }}
+    .info-label {{ font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }}
+    .info-val {{ color: #fff; font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
 
-    /* INFO TAGS DO MODAL */
-    .tag-container {{ display: flex; gap: 10px; margin-bottom: 20px; }}
-    .info-tag {{ background: #111; border: 1px solid #333; padding: 5px 10px; border-radius: 4px; font-size: 12px; color: #888; }}
-    .info-highlight {{ color: #fff; font-weight: bold; margin-left: 5px; }}
+    /* ALERTA SNIPER */
+    .risk-alert {{ background-color: #2b0505; color: #ffcccc !important; border: 2px solid #ff0000; padding: 20px; border-radius: 6px; margin-top: 15px; animation: pulse 2s infinite; }}
+    .risk-title {{ color: #ff0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
 
     /* MODAIS MATEMÁTICOS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
@@ -201,7 +202,7 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 📂 MODAIS (VISUAL TUNED)
+# 📂 MODAIS (DESIGN AJUSTADO)
 # ==============================================================================
 @st.dialog("📂 DOSSIÊ GRAHAM")
 def show_graham_details(ticker, row):
@@ -221,23 +222,32 @@ def show_magic_details(ticker, row):
 
 @st.dialog("🧠 DECODE INTELLIGENCE", width="large")
 def show_ai_decode(ticker, row, details):
-    # HEADER DO MODAL (LIMPO E DIRETO)
+    # HEADER DO MODAL
     st.markdown(f"### 🎯 ALVO: {ticker}")
     
-    # TAGS DE INFORMAÇÃO (EMPRESA E SETOR)
+    # TAGS DE INFORMAÇÃO (ALINHADAS EM GRID)
+    # Adicionado Segmento que faltava e CSS de grid
     st.markdown(f"""
-    <div class="tag-container">
-        <div class="info-tag">EMPRESA: <span class="info-highlight">{details.get('Empresa', 'N/A')}</span></div>
-        <div class="info-tag">SETOR: <span class="info-highlight">{details.get('Setor', 'N/A')}</span></div>
+    <div class="tag-grid">
+        <div class="info-tag">
+            <span class="info-label">EMPRESA</span>
+            <span class="info-val">{details.get('Empresa', 'N/A')}</span>
+        </div>
+        <div class="info-tag">
+            <span class="info-label">SETOR</span>
+            <span class="info-val">{details.get('Setor', 'N/A')}</span>
+        </div>
+        <div class="info-tag">
+            <span class="info-label">SEGMENTO</span>
+            <span class="info-val">{details.get('Segmento', 'N/A')}</span>
+        </div>
     </div>
-    <hr style="border-color: #333; margin: 10px 0;">
+    <hr style="border-color: #333; margin: 15px 0;">
     """, unsafe_allow_html=True)
     
-    # PROCESSAMENTO DA IA
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_ai_analysis(ticker, row['price'], row['ValorJusto'], details)
     
-    # EXIBIÇÃO DA ANÁLISE (COM O NOVO DESIGN)
     if "ALERTA" in analise.upper() or "RISCO" in analise.upper():
         st.markdown(f"""
         <div class='risk-alert'>
@@ -261,7 +271,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v7.2</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v7.3</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
