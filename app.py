@@ -14,16 +14,13 @@ URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🧠 INTELIGÊNCIA ARTIFICIAL (AUTO-DISCOVERY BLINDADO)
+# 🧠 INTELIGÊNCIA ARTIFICIAL (MOTOR V7.1 - NÃO MEXER)
 # ==============================================================================
-# Pega a chave do COFRE (Secrets). Se colocar direto aqui, o GitHub bloqueia!
 if "GEMINI_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_KEY"]
 else:
-    # Fallback apenas para teste local, NÃO SUBIR PARA O GITHUB COM CHAVE REAL
     API_KEY = "" 
 
-# Variáveis globais
 ACTIVE_MODEL_NAME = None
 IA_AVAILABLE = False
 STARTUP_MSG = ""
@@ -31,44 +28,33 @@ STARTUP_MSG = ""
 if API_KEY:
     try:
         genai.configure(api_key=API_KEY)
-        
-        # 1. AUTO-DESCOBERTA
         available_models = []
         try:
             for m in genai.list_models():
                 if 'generateContent' in m.supported_generation_methods:
                     available_models.append(m.name)
         except Exception as e:
-            STARTUP_MSG = f"Erro ao listar modelos: {str(e)}"
+            STARTUP_MSG = f"Erro lista: {str(e)}"
 
-        # 2. SELEÇÃO INTELIGENTE
         if available_models:
-            if 'models/gemini-1.5-flash' in available_models:
-                ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
-            elif 'models/gemini-1.5-pro' in available_models:
-                ACTIVE_MODEL_NAME = 'gemini-1.5-pro'
-            elif 'models/gemini-pro' in available_models:
-                ACTIVE_MODEL_NAME = 'gemini-pro'
-            else:
-                ACTIVE_MODEL_NAME = available_models[0].replace('models/', '')
-                
+            if 'models/gemini-1.5-flash' in available_models: ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
+            elif 'models/gemini-1.5-pro' in available_models: ACTIVE_MODEL_NAME = 'gemini-1.5-pro'
+            elif 'models/gemini-pro' in available_models: ACTIVE_MODEL_NAME = 'gemini-pro'
+            else: ACTIVE_MODEL_NAME = available_models[0].replace('models/', '')
             model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
             IA_AVAILABLE = True
-            STARTUP_MSG = f"🟢 ONLINE | Conectado em: {ACTIVE_MODEL_NAME}"
         else:
             ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
             model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
             IA_AVAILABLE = True
-            STARTUP_MSG = "⚠️ Forçando conexão (Lista vazia)"
-
+            STARTUP_MSG = "⚠️ Forçando conexão"
     except Exception as e:
         IA_AVAILABLE = False
         STARTUP_MSG = f"🔴 OFFLINE: {str(e)}"
 else:
     IA_AVAILABLE = False
-    STARTUP_MSG = "⚠️ CONFIGURAR SECRET 'GEMINI_KEY'"
+    STARTUP_MSG = "⚠️ CONFIGURAR SECRET"
 
-# Configuração de Segurança (Safety OFF)
 SAFETY_SETTINGS = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -77,9 +63,7 @@ SAFETY_SETTINGS = {
 }
 
 def get_ai_analysis(ticker, price, fair_value, details):
-    if not IA_AVAILABLE:
-        return f"⚠️ IA INDISPONÍVEL: {STARTUP_MSG}"
-    
+    if not IA_AVAILABLE: return f"⚠️ IA INDISPONÍVEL: {STARTUP_MSG}"
     prompt = f"""
     Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
     Dados: Preço R$ {price}, Justo R$ {fair_value}, Setor {details.get('Setor', 'N/A')}.
@@ -95,20 +79,24 @@ def get_ai_analysis(ticker, price, fair_value, details):
     try:
         response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
         return response.text
-    except Exception as e:
-        return f"⚠️ ERRO DE GERAÇÃO: {str(e)}"
+    except Exception as e: return f"⚠️ ERRO DE GERAÇÃO: {str(e)}"
 
 # ==============================================================================
-# 🎨 ESTILOS CSS
+# 🎨 ESTILOS CSS (REFINADO)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
 <style>
+    /* BASE */
     .stApp {{ background-color: #000; color: #e0e0e0; font-family: 'Consolas', monospace; }}
     h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; }}
-    .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; }}
+    
+    /* UI ELEMENTS */
+    .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; text-transform: uppercase; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
     div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #fff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
+    
+    /* CARDS SCANNER */
     .hacker-card {{ background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
     .card-ticker {{ font-size: 20px; font-weight: bold; color: #fff; }}
     .card-price {{ float: right; font-size: 20px; color: #00ff41; }}
@@ -116,20 +104,59 @@ st.markdown(f"""
     .metric-label {{ font-size: 12px; color: #888; }}
     .metric-value {{ font-size: 16px; font-weight: bold; color: #fff; }}
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; }}
-    .ai-box {{ border: 1px solid #9933ff; background-color: #1a0526; padding: 20px; border-radius: 4px; margin-top: 15px; border-left: 5px solid #9933ff; color: #ffffff !important; }}
-    .ai-title {{ color: #c299ff; font-weight: bold; font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }}
-    .risk-alert {{ background-color: #330000; color: #ffffff !important; border: 2px solid #ff0000; padding: 20px; border-radius: 4px; margin-top: 15px; animation: pulse 2s infinite; }}
-    .error-box {{ border: 1px solid red; background: #220000; color: #ffcccc; padding: 15px; font-family: monospace; }}
+
+    /* DECODE INTELLIGENCE BOX (NOVO DESIGN) */
+    .ai-box {{ 
+        border: 1px solid #9933ff; 
+        background-color: #0d0214; /* Fundo bem escuro roxo */
+        padding: 20px; 
+        border-radius: 6px; 
+        margin-top: 15px; 
+        border-left: 4px solid #9933ff; 
+        color: #e0e0e0 !important;
+        font-size: 15px;
+        line-height: 1.6;
+    }}
+    .ai-header {{
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid #3d1466;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }}
+    .ai-icon {{ font-size: 24px; }}
+    .ai-title {{ color: #c299ff; font-weight: bold; font-size: 18px; text-transform: uppercase; }}
+
+    /* ALERTA SNIPER */
+    .risk-alert {{ 
+        background-color: #2b0505; 
+        color: #ffcccc !important; 
+        border: 2px solid #ff0000; 
+        padding: 20px; 
+        border-radius: 6px; 
+        margin-top: 15px; 
+        animation: pulse 2s infinite; 
+    }}
+    .risk-title {{ color: #ff0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
+
+    /* INFO TAGS DO MODAL */
+    .tag-container {{ display: flex; gap: 10px; margin-bottom: 20px; }}
+    .info-tag {{ background: #111; border: 1px solid #333; padding: 5px 10px; border-radius: 4px; font-size: 12px; color: #888; }}
+    .info-highlight {{ color: #fff; font-weight: bold; margin-left: 5px; }}
+
+    /* MODAIS MATEMÁTICOS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
     .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #ccc; margin-bottom: 15px; }}
     .highlight-val {{ color: #00ff41; font-weight: bold; font-size: 18px; }}
     .modal-text {{ font-size: 14px; color: #aaa; line-height: 1.5; }}
+    
     .disclaimer {{ text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }}
+    @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }} 70% {{ box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }} }}
     #MainMenu, footer, header {{ visibility: hidden; }}
 </style>
 """, unsafe_allow_html=True)
 
-# --- HELPER BRL ---
 def format_brl(value):
     if pd.isna(value): return "R$ 0,00"
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -174,7 +201,7 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 📂 MODAIS
+# 📂 MODAIS (VISUAL TUNED)
 # ==============================================================================
 @st.dialog("📂 DOSSIÊ GRAHAM")
 def show_graham_details(ticker, row):
@@ -194,32 +221,47 @@ def show_magic_details(ticker, row):
 
 @st.dialog("🧠 DECODE INTELLIGENCE", width="large")
 def show_ai_decode(ticker, row, details):
+    # HEADER DO MODAL (LIMPO E DIRETO)
     st.markdown(f"### 🎯 ALVO: {ticker}")
-    c1, c2 = st.columns(2)
-    with c1: st.markdown(f"**Empresa:** {details.get('Empresa', 'N/A')}")
-    with c2: st.markdown(f"**Setor:** {details.get('Setor', 'N/A')}")
-    st.markdown("---")
     
-    if STARTUP_MSG:
-        if "ONLINE" in STARTUP_MSG: st.caption(STARTUP_MSG)
-        else: st.error(STARTUP_MSG)
-            
+    # TAGS DE INFORMAÇÃO (EMPRESA E SETOR)
+    st.markdown(f"""
+    <div class="tag-container">
+        <div class="info-tag">EMPRESA: <span class="info-highlight">{details.get('Empresa', 'N/A')}</span></div>
+        <div class="info-tag">SETOR: <span class="info-highlight">{details.get('Setor', 'N/A')}</span></div>
+    </div>
+    <hr style="border-color: #333; margin: 10px 0;">
+    """, unsafe_allow_html=True)
+    
+    # PROCESSAMENTO DA IA
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_ai_analysis(ticker, row['price'], row['ValorJusto'], details)
     
-    if "ERRO" in analise or "INDISPONÍVEL" in analise:
-        st.markdown(f"<div class='error-box'>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
-    elif "ALERTA" in analise.upper() or "RISCO" in analise.upper():
-        st.markdown(f"<div class='risk-alert'><div class='risk-title'>⚠️ ALERTA DE RISCO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
+    # EXIBIÇÃO DA ANÁLISE (COM O NOVO DESIGN)
+    if "ALERTA" in analise.upper() or "RISCO" in analise.upper():
+        st.markdown(f"""
+        <div class='risk-alert'>
+            <div class='risk-title'>💀 ALERTA DE RISCO DETECTADO</div>
+            {analise.replace(chr(10), '<br>')}
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.markdown(f"<div class='ai-box'><div class='ai-title'>🧠 ANÁLISE TÁTICA</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='ai-box'>
+            <div class='ai-header'>
+                <span class='ai-icon'>🧠</span>
+                <span class='ai-title'>ANÁLISE TÁTICA (GEMINI)</span>
+            </div>
+            {analise.replace(chr(10), '<br>')}
+        </div>
+        """, unsafe_allow_html=True)
 
 # ==============================================================================
 # 📺 UI PRINCIPAL
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v7.1</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v7.2</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
@@ -238,7 +280,6 @@ if 'market_data' not in st.session_state:
 else:
     df = st.session_state['market_data']
     st.success(f"BASE OPERACIONAL: {len(df)} ATIVOS.")
-    st.markdown("### 🎯 MIRA LASER (IA)")
     c_sel, c_btn, _ = st.columns([2, 1, 6])
     with c_sel: target = st.selectbox("ALVO:", options=sorted(df['ticker'].unique()))
     with c_btn:
@@ -249,7 +290,6 @@ else:
             show_ai_decode(target, row, details)
 
     st.markdown("---")
-    st.markdown("### 📊 SCANNER DE OPORTUNIDADES")
     ic1, ic2, ic3 = st.columns([1, 2, 2])
     with ic2: min_liq = st.number_input("Liquidez Mínima", value=200000, step=50000)
     with ic3: invest = st.number_input("Simular Investimento (R$)", value=0.0, step=100.0)
