@@ -13,12 +13,13 @@ URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🔑 CONFIGURAÇÃO DA IA (COM RETENTATIVA DE MODELO)
+# 🔑 CONFIGURAÇÃO DA IA (GEMINI PRO - COMPATÍVEL V1BETA)
 # ==============================================================================
 try:
-    # Tenta pegar do Secrets, se não, usa a hardcoded (cuidado com github publico)
+    # Tenta pegar a chave do Cofre (Secrets) ou usa a sua direta
     API_KEY = st.secrets.get("GEMINI_KEY", "AIzaSyB4Xu_ebwghWcUb4QnVFRI4qjYNjWBrk1E")
     
+    # Configuração de Segurança (Safety OFF para permitir análise de Risco)
     SAFETY_SETTINGS = {
         HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
         HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -28,14 +29,8 @@ try:
     
     genai.configure(api_key=API_KEY)
     
-    # Tenta carregar o Flash (Rápido), se falhar, carrega o Pro (Clássico)
-    try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        MODEL_NAME = "GEMINI 1.5 FLASH"
-    except:
-        model = genai.GenerativeModel('gemini-pro')
-        MODEL_NAME = "GEMINI PRO (LEGACY)"
-        
+    # ⚠️ MUDANÇA CRÍTICA: Usando 'gemini-pro' que funciona na API v1beta antiga
+    model = genai.GenerativeModel('gemini-pro')
     IA_AVAILABLE = True
 
 except Exception as e:
@@ -135,7 +130,7 @@ def get_data_direct():
 # ==============================================================================
 def get_ai_analysis(ticker, price, fair_value, details):
     if not IA_AVAILABLE:
-        return f"⚠️ ERRO DE CONFIGURAÇÃO:\n{STARTUP_ERROR}\n\nVerifique se google-generativeai>=0.5.0 está no requirements.txt"
+        return f"⚠️ ERRO DE CONFIGURAÇÃO:\n{STARTUP_ERROR}"
     
     prompt = f"""
     Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
@@ -196,7 +191,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v4.1</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v4.2</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
