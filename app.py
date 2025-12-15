@@ -13,18 +13,18 @@ URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🧠 INTELIGÊNCIA ARTIFICIAL (VIA HTTP DIRETO - INFALÍVEL)
+# 🧠 INTELIGÊNCIA ARTIFICIAL (VIA HTTP DIRETO - GEMINI PRO)
 # ==============================================================================
 # Tenta pegar a chave do Secrets ou usa a hardcoded (Backup)
 API_KEY = st.secrets.get("GEMINI_KEY", "AIzaSyB4Xu_ebwghWcUb4QnVFRI4qjYNjWBrk1E")
 
 def get_gemini_response_http(prompt):
     """
-    Função manual para chamar o Gemini 1.5 Flash via HTTP.
-    Ignora erros de biblioteca e vai direto no servidor do Google.
+    Função manual para chamar o Gemini Pro (Clássico) via HTTP.
+    Modelo alterado para garantir compatibilidade total.
     """
-    # URL oficial da API REST do Google
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+    # URL oficial para o modelo CLÁSSICO (gemini-pro) que funciona em todas as contas
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
     
     headers = {'Content-Type': 'application/json'}
     
@@ -54,7 +54,7 @@ def get_gemini_response_http(prompt):
             except:
                 return "⚠️ A IA respondeu mas o formato veio estranho. Tente novamente."
         else:
-            # Erro do Google (Ex: Chave inválida ou cota excedida)
+            # Erro do Google
             return f"⚠️ ERRO HTTP {response.status_code}: {response.text}"
             
     except Exception as e:
@@ -194,10 +194,9 @@ def show_ai_decode(ticker, row, details):
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_ai_analysis(ticker, row['price'], row['ValorJusto'], details)
     
-    # Exibição Condicional
-    if "ERRO" in analise or "HTTP" in analise:
+    if "ERRO" in analise or "CONFIGURAÇÃO" in analise:
         st.markdown(f"<div class='error-box'>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
-    elif "ALERTA" in analise.upper() or "RISCO" in analise.upper() or "CAVEIRA" in analise.upper():
+    elif "ALERTA" in analise.upper() or "RISCO" in analise.upper():
         st.markdown(f"<div class='risk-alert'><div class='risk-title'>⚠️ ALERTA DE RISCO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
     else:
         st.markdown(f"<div class='ai-box'><div class='ai-title'>🧠 ANÁLISE TÁTICA</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
@@ -207,7 +206,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v6.0</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v6.1</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
