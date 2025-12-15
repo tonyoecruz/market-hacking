@@ -201,9 +201,9 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 📂 MODAIS (FULL EDUCATIONAL)
+# 📂 MODAIS (WIDTH=LARGE PARA MAIS ESPAÇO)
 # ==============================================================================
-@st.dialog("📂 DOSSIÊ GRAHAM")
+@st.dialog("📂 DOSSIÊ GRAHAM", width="large") # <--- AQUI ESTÁ A MÁGICA
 def show_graham_details(ticker, row):
     lpa = row['lpa']; vpa = row['vpa']; vi = row['ValorJusto']
     margem = row['Margem']
@@ -258,7 +258,7 @@ def show_graham_details(ticker, row):
         ai_text = get_graham_analysis(ticker, row['price'], vi, lpa, vpa)
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
-@st.dialog("📂 DOSSIÊ MAGIC FORMULA")
+@st.dialog("📂 DOSSIÊ MAGIC FORMULA", width="large") # <--- AQUI ESTÁ A MÁGICA
 def show_magic_details(ticker, row):
     rev = int(row.get('R_EV', 0)); rroic = int(row.get('R_ROIC', 0)); sc = int(row.get('Score', 0))
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
@@ -356,7 +356,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v8.1</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v8.2</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
