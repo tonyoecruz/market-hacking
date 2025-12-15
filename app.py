@@ -15,6 +15,7 @@ API_KEY = "AIzaSyB--UCOCA6vZg8VTknqJkbQapZ7yFa4agU"
 
 try:
     genai.configure(api_key=API_KEY)
+    # Modelo Flash é mais rápido e estável para contas gratuitas
     model = genai.GenerativeModel('gemini-1.5-flash') 
     IA_AVAILABLE = True
 except Exception as e:
@@ -29,7 +30,7 @@ URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
 
 # ==============================================================================
-# 🎨 ESTILOS CSS
+# 🎨 ESTILOS CSS (CORRIGIDO: FONTE BRANCA FORÇADA)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -54,10 +55,32 @@ st.markdown(f"""
     .metric-value {{ font-size: 16px; font-weight: bold; color: #fff; }}
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; }}
 
-    /* CAIXAS DA IA */
-    .ai-box {{ border: 1px solid #9933ff; background-color: #1a0526; padding: 20px; border-radius: 4px; margin-top: 15px; border-left: 5px solid #9933ff; }}
+    /* CAIXAS DA IA (CORRIGIDO: TEXTO BRANCO) */
+    .ai-box {{ 
+        border: 1px solid #9933ff; 
+        background-color: #1a0526; 
+        padding: 20px; 
+        border-radius: 4px; 
+        margin-top: 15px; 
+        border-left: 5px solid #9933ff;
+        color: #ffffff !important; /* FORÇA FONTE BRANCA */
+    }}
     .ai-title {{ color: #c299ff; font-weight: bold; font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }}
-    .risk-alert {{ background-color: #1a0000; color: #ffcccc; border: 2px solid #ff0000; padding: 20px; border-radius: 4px; margin-top: 15px; animation: pulse 2s infinite; }}
+    
+    /* ALERTA DE RISCO (CORRIGIDO: TEXTO BRANCO) */
+    .risk-alert {{ 
+        background-color: #1a0000; 
+        color: #ffffff !important; /* FORÇA FONTE BRANCA */
+        border: 2px solid #ff0000; 
+        padding: 20px; 
+        border-radius: 4px; 
+        margin-top: 15px; 
+        animation: pulse 2s infinite; 
+    }}
+    .risk-title {{ color: #ff0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; }}
+    
+    /* CAIXA DE ERRO */
+    .error-box {{ border: 1px solid red; background: #220000; color: #ff9999; padding: 15px; font-family: monospace; }}
     
     /* MODAIS MATEMÁTICOS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
@@ -118,27 +141,35 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 🧠 INTELIGÊNCIA ARTIFICIAL
+# 🧠 INTELIGÊNCIA ARTIFICIAL (DEBUG MODE)
 # ==============================================================================
 def get_ai_analysis(ticker, price, fair_value, details):
     if not IA_AVAILABLE:
-        return f"⚠️ ERRO CRÍTICO: Biblioteca da IA indisponível. Detalhe: {STARTUP_ERROR}"
+        return f"⚠️ ERRO CRÍTICO: Biblioteca da IA indisponível.\nDetalhe: {STARTUP_ERROR}\nSOLUÇÃO: Verifique requirements.txt no GitHub."
     
     prompt = f"""
-    Você é o SCOPE3, IA SNIPER da B3. Personalidade: Ácida, Direta e Crítica.
-    ALVO: {ticker} ({details.get('Empresa', 'N/A')})
-    DADOS: Preço R$ {price} | Justo R$ {fair_value} | Setor: {details.get('Setor', 'N/A')}
-    MISSÃO:
-    1. Verifique RECUPERAÇÃO JUDICIAL/FALÊNCIA (Ex: Americanas, Oi, Light).
-    2. SE RISCO: Comece com "ALERTA DE SNIPER 💀" e explique o perigo.
-    3. SE SÓLIDA: Analise a margem de Graham.
-    Máximo 5 linhas.
+    Analise a ação {ticker} ({details.get('Empresa', 'N/A')}).
+    Dados: Preço R$ {price}, Justo R$ {fair_value}, Setor {details.get('Setor', 'N/A')}.
+    
+    SE ESTIVER EM RECUPERAÇÃO JUDICIAL ou FALÊNCIA (ex: Americanas, Oi, Light):
+    Comece com "ALERTA DE SNIPER 💀" e explique o risco grave.
+    
+    SE FOR EMPRESA NORMAL:
+    Analise brevemente se está barata segundo Graham.
+    
+    Seja curto (max 5 linhas). Direto ao ponto.
     """
     try:
+        # Tenta gerar resposta
         response = model.generate_content(prompt)
+        
+        # Verifica se o Google bloqueou a resposta (Safety Filters)
+        if response.prompt_feedback.block_reason:
+            return f"⚠️ ERRO: A IA bloqueou a análise por segurança (Safety Filter).\nMotivo: {response.prompt_feedback.block_reason}"
+            
         return response.text
     except Exception as e:
-        return f"⚠️ ERRO DE CONEXÃO: {str(e)}"
+        return f"⚠️ ERRO TÉCNICO NA IA:\n{str(e)}\n\nDICA: Verifique se sua API KEY está correta e se a conta do Google Cloud está ativa."
 
 # ==============================================================================
 # 📂 MODAIS DE DECODE
@@ -180,9 +211,14 @@ def show_ai_decode(ticker, row, details):
     with c1: st.markdown(f"**Empresa:** {details.get('Empresa', 'N/A')}")
     with c2: st.markdown(f"**Setor:** {details.get('Setor', 'N/A')}")
     st.markdown("---")
+    
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_ai_analysis(ticker, row['price'], row['ValorJusto'], details)
-    if "ALERTA" in analise.upper() or "RISCO" in analise.upper():
+    
+    # Exibição Condicional
+    if "ERRO" in analise:
+        st.markdown(f"<div class='error-box'>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
+    elif "ALERTA" in analise.upper() or "RISCO" in analise.upper() or "CAVEIRA" in analise.upper():
         st.markdown(f"<div class='risk-alert'><div class='risk-title'>⚠️ ALERTA DE RISCO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
     else:
         st.markdown(f"<div class='ai-box'><div class='ai-title'>🧠 ANÁLISE TÁTICA</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
@@ -220,12 +256,9 @@ else:
     df = st.session_state['market_data']
     st.success(f"BASE OPERACIONAL: {len(df)} ATIVOS.")
     
-    # --- ÁREA SNIPER (IA FOCADA) - LAYOUT CORRIGIDO PARA BARRA PEQUENA ---
+    # --- ÁREA SNIPER (BARRA PEQUENA) ---
     st.markdown("### 🎯 MIRA LASER (IA)")
-    
-    # MUDANÇA AQUI: Criamos 3 colunas [2, 1, 6] para "apertar" o input na esquerda
     c_sel, c_btn, c_vazio = st.columns([2, 1, 6])
-    
     with c_sel: 
         target = st.selectbox("ALVO:", options=sorted(df['ticker'].unique()))
     with c_btn:
