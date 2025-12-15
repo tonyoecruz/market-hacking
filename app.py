@@ -13,7 +13,7 @@ st.set_page_config(page_title="SCOPE3 v2.24", page_icon="logo.jpeg", layout="wid
 # ==============================================================================
 # 🍎 ÁREA DE TRANSFORMAÇÃO EM APP IPHONE (PWA)
 # Link direto do SEU GitHub Público
-URL_DO_ICONE = "https://raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
+URL_DO_ICONE = "https://raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg?v=2"
 # ==============================================================================
 
 # --- CSS E METADADOS DO IPHONE ---
@@ -394,3 +394,4 @@ st.markdown("""
     ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. USE COM RESPONSABILIDADE.
 </div>
 """, unsafe_allow_html=True)
+
