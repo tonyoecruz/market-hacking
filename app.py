@@ -75,10 +75,7 @@ def get_graham_analysis(ticker, price, fair_value, lpa, vpa):
     prompt = f"""
     Analise {ticker} SÓ pelo Método de Benjamin Graham.
     DADOS: Preço Tela: R${price:.2f} | Preço Justo Graham: R${fair_value:.2f} | Margem: {margin:.1%} | LPA: {lpa} | VPA: {vpa}.
-    
     Explique se a ação está descontada (barata) ou cara.
-    Se a margem for negativa, alerte sobre o risco.
-    Se for positiva, confirme a oportunidade de valor.
     Máximo 3 linhas. Direto.
     """
     return get_ai_generic_analysis(prompt)
@@ -87,9 +84,7 @@ def get_magic_analysis(ticker, ev_ebit, roic, score):
     prompt = f"""
     Analise {ticker} SÓ pela Magic Formula (Joel Greenblatt).
     DADOS: EV/EBIT: {ev_ebit} | ROIC: {roic:.1%} | Score Geral: {score}.
-    
     Explique se é uma "Empresa Boa (ROIC alto) e Barata (EV/EBIT baixo)".
-    Diga se os números indicam qualidade operacional.
     Máximo 3 linhas. Direto.
     """
     return get_ai_generic_analysis(prompt)
@@ -152,6 +147,9 @@ st.markdown(f"""
     .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #ccc; margin-bottom: 15px; }}
     .highlight-val {{ color: #00ff41; font-weight: bold; font-size: 18px; }}
     .modal-text {{ font-size: 13px; color: #aaa; line-height: 1.4; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }}
+    .detail-list {{ font-size: 13px; color: #ccc; margin-top: 10px; }}
+    .detail-item {{ margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #555; }}
+    .detail-key {{ color: #00ff41; font-weight: bold; font-size: 11px; text-transform: uppercase; }}
     
     .disclaimer {{ text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }}
     @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }} 70% {{ box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }} }}
@@ -203,7 +201,7 @@ def get_data_direct():
     except: return pd.DataFrame()
 
 # ==============================================================================
-# 📂 MODAIS (TURBINADOS COM IA)
+# 📂 MODAIS (FULL EDUCATIONAL)
 # ==============================================================================
 @st.dialog("📂 DOSSIÊ GRAHAM")
 def show_graham_details(ticker, row):
@@ -212,7 +210,7 @@ def show_graham_details(ticker, row):
     
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
     
-    # Cálculos
+    # 1. CÁLCULO E STATUS
     c1, c2 = st.columns([1.5, 1])
     with c1: 
         st.markdown(f"""
@@ -222,7 +220,6 @@ def show_graham_details(ticker, row):
             VI = <span class="highlight-val">{format_brl(vi)}</span>
         </div>
         """, unsafe_allow_html=True)
-    
     with c2:
         status_color = "#00ff41" if margem > 0 else "#ff4444"
         status_txt = "COMPRA" if margem > 0 else "AGUARDE"
@@ -234,17 +231,29 @@ def show_graham_details(ticker, row):
         </div>
         """, unsafe_allow_html=True)
 
-    # Explicação Didática
+    # 2. GLOSSÁRIO E EXPLICAÇÃO
     st.markdown("""
     <div class="modal-text">
-        <b>O QUE É ISSO?</b>
-        O Método de Benjamin Graham busca o "Valor Intrínseco" (VI) da ação. 
-        Ele multiplica o lucro (LPA) e o patrimônio (VPA) por uma constante (22.5) para encontrar o preço "justo".
-        <br><b>Se VI > Preço Atual:</b> A ação está descontada (Barata).
+        <b>🔍 ENTENDENDO A LÓGICA:</b>
+        Benjamin Graham (mentor de Warren Buffett) dizia que o preço justo de uma ação deve ser calculado pelo lucro que ela gera e pelo patrimônio que ela possui.
+    </div>
+    <div class="detail-list">
+        <div class="detail-item">
+            <div class="detail-key">LPA (LUCRO POR AÇÃO)</div>
+            Quanto a empresa lucra para cada ação que você tem. <br>LPA Alto = Empresa Lucrativa.
+        </div>
+        <div class="detail-item">
+            <div class="detail-key">VPA (VALOR PATRIMONIAL POR AÇÃO)</div>
+            Quanto vale tudo que a empresa tem (prédios, caixa, máquinas) dividido pelas ações. <br>VPA Alto = Empresa Rica em Ativos.
+        </div>
+        <div class="detail-item">
+            <div class="detail-key">CONSTANTE 22.5</div>
+            É o "número mágico" de Graham. Ele aceitava pagar no máximo P/L de 15 e P/VP de 1.5 (15 x 1.5 = 22.5).
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Análise IA Específica
+    # 3. ANÁLISE IA
     with st.spinner("🤖 IA: ANALISANDO MÉTODO GRAHAM..."):
         ai_text = get_graham_analysis(ticker, row['price'], vi, lpa, vpa)
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
@@ -254,7 +263,7 @@ def show_magic_details(ticker, row):
     rev = int(row.get('R_EV', 0)); rroic = int(row.get('R_ROIC', 0)); sc = int(row.get('Score', 0))
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
     
-    # Cálculos
+    # 1. CÁLCULO E STATUS
     c1, c2 = st.columns([1.5, 1])
     with c1: 
         st.markdown(f"""
@@ -264,9 +273,7 @@ def show_magic_details(ticker, row):
             TOTAL = <span class="highlight-val">{sc} PONTOS</span>
         </div>
         """, unsafe_allow_html=True)
-        
     with c2:
-        # Critério visual simples: Score baixo é bom, mas vamos ver os fundamentos
         is_good = (row['roic'] > 0.15) and (row['ev_ebit'] > 0)
         status_color = "#00ff41" if is_good else "#ffaa00"
         status_txt = "ALTA QUALIDADE" if is_good else "EM OBSERVAÇÃO"
@@ -278,18 +285,29 @@ def show_magic_details(ticker, row):
         </div>
         """, unsafe_allow_html=True)
 
-    # Explicação Didática
+    # 2. GLOSSÁRIO E EXPLICAÇÃO
     st.markdown("""
     <div class="modal-text">
-        <b>O QUE É ISSO?</b>
-        A Fórmula Mágica de Joel Greenblatt cria um ranking combinando duas forças:
-        1. <b>Preço Barato (EV/EBIT):</b> Quanto menor, melhor.
-        2. <b>Alta Eficiência (ROIC):</b> Quanto maior, melhor.
-        A ação com a <u>menor soma de pontos</u> é a melhor do ranking.
+        <b>🔍 ENTENDENDO A LÓGICA:</b>
+        Joel Greenblatt busca empresas "Boas e Baratas". Ele cria dois rankings separados e soma a posição da empresa em cada um. A empresa com MENOS pontos vence.
+    </div>
+    <div class="detail-list">
+        <div class="detail-item">
+            <div class="detail-key">EV/EBIT (O QUÃO BARATA ELA É)</div>
+            Mede em quanto tempo o lucro operacional (EBIT) paga o valor da empresa (EV). <br>Quanto MENOR, mais barata.
+        </div>
+        <div class="detail-item">
+            <div class="detail-key">ROIC (O QUÃO BOA ELA É)</div>
+            Retorno sobre o Capital Investido. Mede a eficiência da gestão. <br>Quanto MAIOR, melhor a empresa.
+        </div>
+        <div class="detail-item">
+            <div class="detail-key">SCORE FINAL</div>
+            É a soma da posição no ranking de preço + posição no ranking de eficiência. <br>Pontuação Baixa = Top do Ranking.
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Análise IA Específica
+    # 3. ANÁLISE IA
     with st.spinner("🤖 IA: ANALISANDO MAGIC FORMULA..."):
         ai_text = get_magic_analysis(ticker, row['ev_ebit'], row['roic'], sc)
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
@@ -338,7 +356,7 @@ def show_ai_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v8.0</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v8.1</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
