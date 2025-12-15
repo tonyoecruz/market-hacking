@@ -7,79 +7,91 @@ import time
 import random
 from datetime import datetime
 
-# --- CONFIGURAÇÃO VISUAL ---
+# --- CONFIGURAÇÃO INICIAL ---
 st.set_page_config(page_title="SCOPE3", page_icon="logo.jpeg", layout="wide")
 
-# --- CSS INTELIGENTE (DESKTOP vs MOBILE) ---
-st.markdown("""
+# ==============================================================================
+# 🍎 ÁREA DE TRANSFORMAÇÃO EM APP IPHONE (PWA)
+# Link corrigido para a versão RAW (direto na imagem, sem site em volta)
+URL_DO_ICONE = "https://raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
+# ==============================================================================
+
+# --- CSS E METADADOS DO IPHONE ---
+st.markdown(f"""
+<head>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SCOPE3">
+    <link rel="apple-touch-icon" href="{URL_DO_ICONE}">
+</head>
 <style>
     /* ================= ESTILO GERAL (BASE DESKTOP) ================= */
-    .stApp { background-color: #000000; background-image: linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px); background-size: 30px 30px; color: #e0e0e0; }
-    * { font-family: 'Consolas', 'Courier New', monospace !important; }
-    h1, h2, h3 { color: #00ff41 !important; text-shadow: 0 0 10px rgba(0, 255, 65, 0.8); font-weight: 900 !important; text-transform: uppercase; }
+    .stApp {{ background-color: #000000; background-image: linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px); background-size: 30px 30px; color: #e0e0e0; }}
+    * {{ font-family: 'Consolas', 'Courier New', monospace !important; }}
+    h1, h2, h3 {{ color: #00ff41 !important; text-shadow: 0 0 10px rgba(0, 255, 65, 0.8); font-weight: 900 !important; text-transform: uppercase; }}
     
     /* Inputs */
-    div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div { color: #ffffff !important; background-color: #111 !important; border: 2px solid #00ff41 !important; font-size: 20px !important; font-weight: bold !important; }
-    div[data-testid="stSelectbox"] label { color: #00ff41 !important; font-size: 18px !important; }
+    div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #ffffff !important; background-color: #111 !important; border: 2px solid #00ff41 !important; font-size: 20px !important; font-weight: bold !important; }}
+    div[data-testid="stSelectbox"] label {{ color: #00ff41 !important; font-size: 18px !important; }}
     
     /* Botões */
-    .stButton>button { background-color: #000; color: #00ff41; border: 2px solid #00ff41; font-size: 18px !important; font-weight: bold; text-transform: uppercase; height: 50px; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); width: 100%; }
-    .stButton>button:hover { background-color: #00ff41; color: #000; box-shadow: 0 0 25px #00ff41; transform: scale(1.02); }
+    .stButton>button {{ background-color: #000; color: #00ff41; border: 2px solid #00ff41; font-size: 18px !important; font-weight: bold; text-transform: uppercase; height: 50px; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); width: 100%; }}
+    .stButton>button:hover {{ background-color: #00ff41; color: #000; box-shadow: 0 0 25px #00ff41; transform: scale(1.02); }}
     
     /* Cards Gerais */
-    .hacker-card { background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 5px; border-radius: 4px; position: relative; }
+    .hacker-card {{ background-color: #0e0e0e; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 5px; border-radius: 4px; position: relative; }}
     
     /* MIRA LASER (DESKTOP) - Altura Fixa para alinhar lado a lado */
-    .diag-box { height: 340px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; padding: 20px; border-radius: 10px; }
+    .diag-box {{ height: 340px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; padding: 20px; border-radius: 10px; }}
     
     /* Cores das Caixas */
-    .diag-green { border: 4px solid #00ff41; background-color: #051a05; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); }
-    .diag-red { border: 4px solid #ff0000; background-color: #1a0505; box-shadow: 0 0 20px rgba(255, 0, 0, 0.2); }
-    .diag-yellow { border: 4px solid #FFD700; background-color: #1a1a05; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
-    .diag-neutral { border: 2px dashed #444; background-color: #0e0e0e; }
+    .diag-green {{ border: 4px solid #00ff41; background-color: #051a05; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); }}
+    .diag-red {{ border: 4px solid #ff0000; background-color: #1a0505; box-shadow: 0 0 20px rgba(255, 0, 0, 0.2); }}
+    .diag-yellow {{ border: 4px solid #FFD700; background-color: #1a1a05; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }}
+    .diag-neutral {{ border: 2px dashed #444; background-color: #0e0e0e; }}
     
     /* Textos do Diagnóstico */
-    .diag-title { font-size: 24px; font-weight: 900; color: #fff; text-align: center; border-bottom: 1px dashed #555; padding-bottom: 10px; margin-bottom: 10px;}
-    .diag-val { font-size: 20px; margin: 5px 0; }
-    .diag-status { font-weight: bold; font-size: 22px; text-align: center; text-transform: uppercase; margin-top: auto; padding-top: 10px;}
+    .diag-title {{ font-size: 24px; font-weight: 900; color: #fff; text-align: center; border-bottom: 1px dashed #555; padding-bottom: 10px; margin-bottom: 10px;}}
+    .diag-val {{ font-size: 20px; margin: 5px 0; }}
+    .diag-status {{ font-weight: bold; font-size: 22px; text-align: center; text-transform: uppercase; margin-top: auto; padding-top: 10px;}}
 
     /* Terminal */
-    .terminal-box { background-color: #050505; border: 1px solid #00ff41; padding: 15px; font-size: 16px; color: #00ff41; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); font-family: 'Courier New', monospace; height: 350px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+    .terminal-box {{ background-color: #050505; border: 1px solid #00ff41; padding: 15px; font-size: 16px; color: #00ff41; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); font-family: 'Courier New', monospace; height: 350px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }}
 
     /* Modal - Padrão Desktop */
-    div[role="dialog"] { width: 85vw !important; max-width: 90vw !important; }
+    div[role="dialog"] {{ width: 85vw !important; max-width: 90vw !important; }}
     
     /* Ajuste fino para alinhar texto e logo no topo */
-    .header-text { display: flex; flex-direction: column; justify-content: center; height: 100%; }
+    .header-text {{ display: flex; flex-direction: column; justify-content: center; height: 100%; }}
 
     /* ================= INTEELIGÊNCIA MOBILE (O PULO DO GATO) ================= */
-    @media only screen and (max-width: 768px) {
+    @media only screen and (max-width: 768px) {{
         /* 1. Ajuste de Fontes Gigantes */
-        h1 { font-size: 32px !important; }
-        h2, h3 { font-size: 22px !important; }
+        h1 {{ font-size: 32px !important; }}
+        h2, h3 {{ font-size: 22px !important; }}
         /* 2. Ajuste dos Inputs */
-        div[data-testid="stNumberInput"] input { font-size: 18px !important; height: 50px !important; }
+        div[data-testid="stNumberInput"] input {{ font-size: 18px !important; height: 50px !important; }}
         /* 3. Ajuste das Caixas de Diagnóstico */
-        .diag-box { height: auto !important; min-height: 250px; margin-bottom: 15px; }
-        .diag-title { font-size: 20px !important; }
-        .diag-val { font-size: 16px !important; }
-        .diag-status { font-size: 18px !important; margin-top: 15px; }
+        .diag-box {{ height: auto !important; min-height: 250px; margin-bottom: 15px; }}
+        .diag-title {{ font-size: 20px !important; }}
+        .diag-val {{ font-size: 16px !important; }}
+        .diag-status {{ font-size: 18px !important; margin-top: 15px; }}
         /* 4. Ajuste dos Modais */
-        div[role="dialog"] { width: 95vw !important; max-width: 98vw !important; margin: 0 auto; }
-        .modal-header { font-size: 20px !important; }
-        .modal-math { font-size: 18px !important; padding: 15px !important; }
-        .modal-text { font-size: 14px !important; }
+        div[role="dialog"] {{ width: 95vw !important; max-width: 98vw !important; margin: 0 auto; }}
+        .modal-header {{ font-size: 20px !important; }}
+        .modal-math {{ font-size: 18px !important; padding: 15px !important; }}
+        .modal-text {{ font-size: 14px !important; }}
         /* 5. Terminal menor no celular */
-        .terminal-box { height: 250px !important; font-size: 12px !important; }
+        .terminal-box {{ height: 250px !important; font-size: 12px !important; }}
         /* 6. Cards da Lista */
-        .card-ticker { font-size: 20px !important; }
-        .card-price { font-size: 22px !important; }
-        .metric-value { font-size: 16px !important; }
-    }
+        .card-ticker {{ font-size: 20px !important; }}
+        .card-price {{ font-size: 22px !important; }}
+        .metric-value {{ font-size: 16px !important; }}
+    }}
 
     /* --- PROTOCOLO FANTASMA (Remover marcas) --- */
-    #MainMenu, footer, header, div[data-testid="stToolbar"], div[data-testid="stDecoration"], div[data-testid="stStatusWidget"] {visibility: hidden; display: none;}
-    .disclaimer { text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }
+    #MainMenu, footer, header, div[data-testid="stToolbar"], div[data-testid="stDecoration"], div[data-testid="stStatusWidget"] {{visibility: hidden; display: none;}}
+    .disclaimer {{ text-align: center; color: #555; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #222; }}
 </style>
 """, unsafe_allow_html=True)
 
