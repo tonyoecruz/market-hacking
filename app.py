@@ -7,12 +7,12 @@ import time
 import random
 from datetime import datetime
 
-# --- CONFIGURAÇÃO INICIAL ---
-st.set_page_config(page_title="SCOPE3", page_icon="logo.jpeg", layout="wide")
+# --- CONFIGURAÇÃO INICIAL (Versão na Aba do Navegador) ---
+st.set_page_config(page_title="SCOPE3 v2.24", page_icon="logo.jpeg", layout="wide")
 
 # ==============================================================================
 # 🍎 ÁREA DE TRANSFORMAÇÃO EM APP IPHONE (PWA)
-# Link corrigido para a versão RAW (direto na imagem, sem site em volta)
+# Link direto do SEU GitHub Público
 URL_DO_ICONE = "https://raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
 # ==============================================================================
 
@@ -240,11 +240,11 @@ with c_head_logo:
     st.image("logo.jpeg", width=70)
 
 with c_head_text:
-    # Texto alinhado ao lado da logo
+    # Texto alinhado ao lado da logo - AGORA COM A VERSÃO v2.24
     st.markdown("""
     <div class='header-text'>
         <h2 style='color: #00ff41; margin: 0; padding: 0; line-height: 1.2;'>SCOPE3</h2>
-        <span style='color: #888; font-weight: bold; font-size: 14px;'>PROTOCOLO: SNIPER & SCAN</span>
+        <span style='color: #888; font-weight: bold; font-size: 14px;'>PROTOCOLO: SNIPER & SCAN | v2.24</span>
     </div>
     """, unsafe_allow_html=True)
 
