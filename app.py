@@ -154,109 +154,85 @@ def get_data_fiis():
         return df
     except: return pd.DataFrame()
 
-# ==============================================================================
-# 🕯️ CRAWLER DE GRÁFICO (YFINANCE CORRIGIDO V2)
-# ==============================================================================
 @st.cache_data(ttl=3600)
 def get_candle_chart(ticker):
-    # Tenta obter dados de forma robusta
     try:
-        # 1. Define o ticker com sufixo .SA
-        symbol = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
-        
-        # 2. Usa Ticker().history() que é mais estável
-        stock = yf.Ticker(symbol)
-        df = stock.history(period="6mo", interval="1d")
-        
-        # 3. Se falhar, tenta sem .SA (Fallback)
+        yf_ticker = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
+        df = yf.download(yf_ticker, period="6mo", interval="1d", progress=False)
         if df.empty:
-            stock = yf.Ticker(ticker)
-            df = stock.history(period="6mo", interval="1d")
-            
-        # 4. Se tiver dados, monta o gráfico
+            df = yf.download(ticker, period="6mo", interval="1d", progress=False)
         if not df.empty and len(df) > 5:
-            fig = go.Figure(data=[go.Candlestick(
-                x=df.index,
-                open=df['Open'], high=df['High'],
-                low=df['Low'], close=df['Close'],
-                increasing_line_color='#00ff41', # Verde Hacker
-                decreasing_line_color='#ff4444'  # Vermelho Queda
-            )])
-            
-            fig.update_layout(
-                xaxis_rangeslider_visible=False,
-                plot_bgcolor='black', 
-                paper_bgcolor='black',
-                font=dict(color='white'),
-                margin=dict(l=10, r=10, t=30, b=10),
-                height=350,
-                title=dict(text=f"GRÁFICO DIÁRIO: {ticker}", x=0.5, font=dict(size=14, color='#00ff41'))
-            )
+            fig = go.Figure(data=[go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], increasing_line_color='#00ff41', decreasing_line_color='#ff4444')])
+            fig.update_layout(xaxis_rangeslider_visible=False, plot_bgcolor='black', paper_bgcolor='black', font=dict(color='white'), margin=dict(l=10, r=10, t=30, b=10), height=350, title=dict(text=f"GRÁFICO DIÁRIO: {ticker}", x=0.5, font=dict(size=14, color='#00ff41')))
             return fig
-            
         return None
-    except Exception as e:
-        return None
+    except: return None
 
 # ==============================================================================
-# 🎨 ESTILOS CSS
+# 🎨 ESTILOS CSS (CORREÇÃO DE CORES NOS CARDS)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
 <style>
+    /* FUNDO ESCURO */
     .stApp {{ background-color: #000; color: #fff; font-family: 'Consolas', monospace; }}
     h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; }}
+    
+    /* INPUTS */
+    div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
+    .stSelectbox div[data-baseweb="select"] > div, .stSelectbox div[data-baseweb="select"] span {{ color: #ffffff !important; }}
+    .stSelectbox label, .stNumberInput label {{ color: #00ff41 !important; font-weight: bold; font-size: 14px; }}
+    
+    /* BOTÕES */
     .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
     
-    /* INPUTS E SELECTBOXES - CORREÇÃO DE COR */
-    div[data-testid="stNumberInput"] input {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
-    div[data-testid="stSelectbox"] > div > div {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
-    
-    /* ABAS NO TOPO (TABS) */
+    /* ABAS */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; }}
-    .stTabs [data-baseweb="tab"] {{
-        height: 50px; white-space: pre-wrap; background-color: #111; border-radius: 4px 4px 0 0; gap: 1px; padding-top: 10px; padding-bottom: 10px; color: #fff; border: 1px solid #333;
-    }}
+    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: #111; color: #fff; border: 1px solid #333; }}
     .stTabs [aria-selected="true"] {{ background-color: #00ff41 !important; color: #000 !important; font-weight: bold; }}
     
-    /* GARANTE QUE O TEXTO DIGITADO SEJA BRANCO */
-    .stSelectbox div[data-baseweb="select"] > div {{ color: #ffffff !important; }}
-    .stSelectbox div[data-baseweb="select"] span {{ color: #ffffff !important; }}
-    .stSelectbox label, .stNumberInput label {{ color: #00ff41 !important; font-weight: bold; font-size: 14px; }}
-    
-    .hacker-card {{ background-color: #ffffff; border: 1px solid #ccc; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
-    .card-ticker {{ font-size: 20px; font-weight: bold; color: #000; }}
-    .card-price {{ float: right; font-size: 20px; color: #009926; font-weight: bold; }}
-    .metric-row {{ display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 5px; }}
-    .metric-label {{ font-size: 12px; color: #555; font-weight: bold; }}
-    .metric-value {{ font-size: 16px; font-weight: bold; color: #000; }}
-    .buy-section {{ margin-top: 10px; background: #e6ffe6; padding: 5px; text-align: center; border: 1px solid #00cc33; font-size: 14px; color: #006600; font-weight: bold; }}
+    /* CARDS - AQUI ESTÁ A CORREÇÃO DA FONTE */
+    .hacker-card {{ 
+        background-color: #111 !important; /* Mudei para escuro para garantir contraste com fonte branca */
+        border: 1px solid #333; 
+        border-top: 3px solid #00ff41; 
+        padding: 15px; 
+        margin-bottom: 10px; 
+        border-radius: 4px; 
+    }}
+    .card-ticker {{ font-size: 20px; font-weight: bold; color: #ffffff !important; }} /* BRANCO */
+    .card-price {{ float: right; font-size: 20px; color: #00ff41 !important; font-weight: bold; }} /* VERDE */
+    .metric-row {{ display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px dashed #333; padding-top: 5px; }}
+    .metric-label {{ font-size: 12px; color: #aaaaaa !important; font-weight: bold; }} /* CINZA CLARO */
+    .metric-value {{ font-size: 16px; font-weight: bold; color: #ffffff !important; }} /* BRANCO PURO */
+    .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; font-weight: bold; }}
 
-    .ai-box {{ border: 1px solid #9933ff; background-color: #f3e5ff; padding: 15px; border-radius: 6px; margin-top: 10px; border-left: 4px solid #9933ff; color: #000 !important; font-size: 14px; line-height: 1.5; }}
-    .ai-header {{ display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #d1b3ff; padding-bottom: 5px; margin-bottom: 10px; }}
-    .ai-title {{ color: #6600cc; font-weight: bold; font-size: 16px; text-transform: uppercase; }}
+    /* O RESTO MANTÉM O PADRÃO ESCURO/NEON */
+    .ai-box {{ border: 1px solid #9933ff; background-color: #0d0214; padding: 15px; border-radius: 6px; margin-top: 10px; border-left: 4px solid #9933ff; color: #fff !important; font-size: 14px; line-height: 1.5; }}
+    .ai-header {{ display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #3d1466; padding-bottom: 5px; margin-bottom: 10px; }}
+    .ai-title {{ color: #c299ff; font-weight: bold; font-size: 16px; text-transform: uppercase; }}
 
     .tag-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }}
-    .info-tag {{ background: #ffffff; border: 1px solid #ccc; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; }}
-    .info-label {{ font-size: 11px; text-transform: uppercase; color: #009926; margin-bottom: 2px; font-weight: bold; }}
-    .info-val {{ color: #000; font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+    .info-tag {{ background: #111; border: 1px solid #333; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; }}
+    .info-label {{ font-size: 11px; text-transform: uppercase; color: #00ff41; margin-bottom: 2px; font-weight: bold; }}
+    .info-val {{ color: #fff; font-weight: bold; font-size: 13px; }}
     
     .status-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }}
-    .status-box {{ padding: 10px; border-radius: 4px; text-align: center; border: 1px solid #ccc; background: #fff; }}
-    .status-title {{ font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #000; }}
+    .status-box {{ padding: 10px; border-radius: 4px; text-align: center; border: 1px solid #333; background: #111; }}
+    .status-title {{ font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #fff; }}
     .status-result {{ font-size: 15px; font-weight: bold; text-transform: uppercase; }}
 
-    .risk-alert {{ background-color: #ffe6e6; color: #cc0000 !important; border: 2px solid #ff0000; padding: 20px; border-radius: 6px; margin-top: 15px; animation: pulse 2s infinite; }}
-    .risk-title {{ color: #cc0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
+    .risk-alert {{ background-color: #330000; color: #ffcccc !important; border: 2px solid #ff0000; padding: 20px; border-radius: 6px; margin-top: 15px; animation: pulse 2s infinite; }}
+    .risk-title {{ color: #ff0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
 
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
-    .modal-math {{ background: #f0f0f0; padding: 15px; border-left: 3px solid #009926; font-family: monospace; font-size: 16px; color: #000; margin-bottom: 15px; }}
-    .highlight-val {{ color: #009926; font-weight: bold; font-size: 18px; }}
-    .modal-text {{ font-size: 14px; color: #000; line-height: 1.4; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px; }}
-    .detail-list {{ font-size: 13px; color: #000; margin-top: 10px; }}
-    .detail-item {{ margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #009926; }}
-    .detail-key {{ color: #009926; font-weight: bold; font-size: 12px; text-transform: uppercase; }}
+    .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #fff; margin-bottom: 15px; }}
+    .highlight-val {{ color: #00ff41; font-weight: bold; font-size: 18px; }}
+    .modal-text {{ font-size: 14px; color: #ddd; line-height: 1.4; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }}
+    .detail-list {{ font-size: 13px; color: #ddd; margin-top: 10px; }}
+    .detail-item {{ margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #00ff41; }}
+    .detail-key {{ color: #00ff41; font-weight: bold; font-size: 12px; text-transform: uppercase; }}
     .disclaimer {{ text-align: center; color: #aaa; font-size: 12px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #555; }}
     #MainMenu, footer, header {{ visibility: hidden; }}
 </style>
@@ -276,9 +252,9 @@ def show_graham_details(ticker, row):
     c1, c2 = st.columns([1.5, 1])
     with c1: st.markdown(f"""<div class="modal-math">VI = √(22.5 × LPA × VPA)<br>VI = √(22.5 × {lpa:.2f} × {vpa:.2f})<br>VI = <span class="highlight-val">{format_brl(vi)}</span></div>""", unsafe_allow_html=True)
     with c2:
-        status_color = "#009926" if margem > 0 else "#cc0000"
+        status_color = "#00ff41" if margem > 0 else "#ff4444"
         status_txt = "DESCONTADA" if margem > 0 else "ACIMA DO VI"
-        st.markdown(f"""<div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#fff"><div style="font-size:12px; color:#000">STATUS</div><div style="font-size:20px; font-weight:bold; color:{status_color}">{status_txt}</div><div style="font-size:14px; margin-top:5px; color:#000">Margem: {margem:.1%}</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#111"><div style="font-size:12px; color:#aaa">STATUS</div><div style="font-size:20px; font-weight:bold; color:{status_color}">{status_txt}</div><div style="font-size:14px; margin-top:5px; color:#fff">Margem: {margem:.1%}</div></div>""", unsafe_allow_html=True)
     st.markdown("""<div class="modal-text"><b>🔍 ENTENDENDO A LÓGICA:</b> Benjamin Graham...</div>""", unsafe_allow_html=True)
     with st.spinner("🤖 IA: ANALISANDO..."):
         ai_text = get_graham_analysis(ticker, row['price'], vi, lpa, vpa)
@@ -292,9 +268,9 @@ def show_magic_details(ticker, row):
     with c1: st.markdown(f"""<div class="modal-math">SCORE = RANK(EV) + RANK(ROIC)<br>SCORE = #{rev} + #{rroic}<br>TOTAL = <span class="highlight-val">{sc} PONTOS</span></div>""", unsafe_allow_html=True)
     with c2:
         is_good = (row['roic'] > 0.15) and (row['ev_ebit'] > 0)
-        status_color = "#009926" if is_good else "#ffaa00"
+        status_color = "#00ff41" if is_good else "#ffaa00"
         status_txt = "ALTA QUALIDADE" if is_good else "EM OBSERVAÇÃO"
-        st.markdown(f"""<div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#fff"><div style="font-size:12px; color:#000">QUALIDADE</div><div style="font-size:18px; font-weight:bold; color:{status_color}">{status_txt}</div><div style="font-size:12px; margin-top:5px; color:#000">ROIC: {row['roic']:.1%}</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#111"><div style="font-size:12px; color:#aaa">QUALIDADE</div><div style="font-size:18px; font-weight:bold; color:{status_color}">{status_txt}</div><div style="font-size:12px; margin-top:5px; color:#fff">ROIC: {row['roic']:.1%}</div></div>""", unsafe_allow_html=True)
     st.markdown("""<div class="modal-text"><b>🔍 ENTENDENDO A LÓGICA:</b> Joel Greenblatt...</div>""", unsafe_allow_html=True)
     with st.spinner("🤖 IA: ANALISANDO..."):
         ai_text = get_magic_analysis(ticker, row['ev_ebit'], row['roic'], sc)
@@ -306,7 +282,7 @@ def show_ai_decode(ticker, row, details):
     st.markdown(f"""<div class="tag-grid"><div class="info-tag"><span class="info-label">EMPRESA</span><span class="info-val">{details.get('Empresa', 'N/A')}</span></div><div class="info-tag"><span class="info-label">SETOR</span><span class="info-val">{details.get('Setor', 'N/A')}</span></div><div class="info-tag"><span class="info-label">SEGMENTO</span><span class="info-val">{details.get('Segmento', 'N/A')}</span></div></div>""", unsafe_allow_html=True)
     
     graham_ok = row['Margem'] > 0; magic_ok = (row['roic'] > 0.10) and (row['ev_ebit'] > 0)
-    st.markdown(f"""<div class="status-grid"><div class="status-box" style="border-color: {'#009926' if graham_ok else '#cc0000'};"><div class="status-title" style="color:{'#009926' if graham_ok else '#cc0000'}">MÉTODO GRAHAM</div><div class="status-result" style="color:{'#009926' if graham_ok else '#cc0000'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div><div style="font-size:10px; color:#000; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div></div><div class="status-box" style="border-color: {'#009926' if magic_ok else '#ffaa00'};"><div class="status-title" style="color:{'#009926' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div><div class="status-result" style="color:{'#009926' if magic_ok else '#ffaa00'}">{'✅ APROVADA' if magic_ok else '⚠️ ATENÇÃO'}</div><div style="font-size:10px; color:#000; margin-top:2px">{'ROIC: ' + f"{row['roic']:.1%}" if magic_ok else 'ROIC BAIXO'}</div></div></div><hr style="border-color: #333; margin: 15px 0;">""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="status-grid"><div class="status-box" style="border-color: {'#00ff41' if graham_ok else '#ff4444'};"><div class="status-title" style="color:{'#00ff41' if graham_ok else '#ff4444'}">MÉTODO GRAHAM</div><div class="status-result" style="color:{'#00ff41' if graham_ok else '#ff4444'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div></div><div class="status-box" style="border-color: {'#00ff41' if magic_ok else '#ffaa00'};"><div class="status-title" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div><div class="status-result" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">{'✅ APROVADA' if magic_ok else '⚠️ ATENÇÃO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{'ROIC: ' + f"{row['roic']:.1%}" if magic_ok else 'ROIC BAIXO'}</div></div></div><hr style="border-color: #333; margin: 15px 0;">""", unsafe_allow_html=True)
     
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_sniper_analysis(ticker, row['price'], row['ValorJusto'], details)
@@ -323,7 +299,7 @@ def show_fii_decode(ticker, row, details):
     
     pvp_bom = 0.8 <= row['pvp'] <= 1.10
     dy_bom = row['dy'] > 0.08
-    st.markdown(f"""<div class="status-grid"><div class="status-box" style="border-color: {'#009926' if pvp_bom else '#ffaa00'};"><div class="status-title" style="color:{'#009926' if pvp_bom else '#ffaa00'}">P/VP (PREÇO JUSTO)</div><div class="status-result" style="color:{'#009926' if pvp_bom else '#ffaa00'}">{'✅ NO PREÇO' if pvp_bom else '⚠️ DESCOLADO'}</div><div style="font-size:10px; color:#000; margin-top:2px">{row['pvp']:.2f}</div></div><div class="status-box" style="border-color: {'#009926' if dy_bom else '#ffaa00'};"><div class="status-title" style="color:{'#009926' if dy_bom else '#ffaa00'}">DIVIDENDOS</div><div class="status-result" style="color:{'#009926' if dy_bom else '#ffaa00'}">{'✅ ATRATIVO' if dy_bom else '⚠️ BAIXO'}</div><div style="font-size:10px; color:#000; margin-top:2px">{row['dy']:.1%} a.a.</div></div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="status-grid"><div class="status-box" style="border-color: {'#00ff41' if pvp_bom else '#ffaa00'};"><div class="status-title" style="color:{'#00ff41' if pvp_bom else '#ffaa00'}">P/VP (PREÇO JUSTO)</div><div class="status-result" style="color:{'#00ff41' if pvp_bom else '#ffaa00'}">{'✅ NO PREÇO' if pvp_bom else '⚠️ DESCOLADO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{row['pvp']:.2f}</div></div><div class="status-box" style="border-color: {'#00ff41' if dy_bom else '#ffaa00'};"><div class="status-title" style="color:{'#00ff41' if dy_bom else '#ffaa00'}">DIVIDENDOS</div><div class="status-result" style="color:{'#00ff41' if dy_bom else '#ffaa00'}">{'✅ ATRATIVO' if dy_bom else '⚠️ BAIXO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{row['dy']:.1%} a.a.</div></div></div>""", unsafe_allow_html=True)
     
     with st.spinner("🤖 IA: ANALISANDO FII..."):
         ai_text = get_fii_analysis(ticker, row['price'], row['pvp'], row['dy'], details)
@@ -334,10 +310,10 @@ def show_fii_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v13.1</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v13.2</span></h2>", unsafe_allow_html=True)
 st.divider()
 
-# ABAS FIXAS NO TOPO (SUBSTITUINDO SIDEBAR)
+# ABAS FIXAS NO TOPO
 tab_acoes, tab_fiis, tab_arena = st.tabs(["AÇÕES (GRAHAM/MAGIC)", "FIIs (RENDA)", "ARENA (BATALHA)"])
 
 # ------------------------------------------------------------------------------
@@ -361,7 +337,6 @@ with tab_acoes:
         df = st.session_state['market_data']
         st.success(f"BASE AÇÕES: {len(df)} ATIVOS.")
         
-        # SNIPER + GRÁFICO
         st.markdown("### 🎯 MIRA LASER (IA)")
         c_sel, c_btn, _ = st.columns([2, 1, 6])
         with c_sel: target = st.selectbox("CÓDIGO:", options=sorted(df['ticker'].unique()), index=None, placeholder="Ex: VALE3", key="target_acoes")
@@ -374,7 +349,6 @@ with tab_acoes:
             with st.spinner(f"Carregando Gráfico {target}..."):
                 fig = get_candle_chart(target)
                 if fig: st.plotly_chart(fig, use_container_width=True)
-                else: st.warning(f"Gráfico não disponível para {target}")
             if btn_decode:
                 with st.spinner("Analisando..."): details = get_stock_details(target)
                 show_ai_decode(target, row_t, details)
@@ -420,7 +394,6 @@ with tab_fiis:
         df_fii = st.session_state['fiis_data']
         st.success(f"BASE FIIs: {len(df_fii)} FUNDOS.")
         
-        # MIRA LASER FII
         c_sel, c_btn, _ = st.columns([2, 1, 6])
         with c_sel: target_fii = st.selectbox("CÓDIGO FII:", options=sorted(df_fii['ticker'].unique()), index=None, placeholder="Ex: MXRF11", key="target_fii")
         
