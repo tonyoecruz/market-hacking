@@ -154,33 +154,46 @@ def get_data_fiis():
         return df
     except: return pd.DataFrame()
 
-# CRAWLER DE GRÁFICO (YFINANCE BLINDADO)
+# ==============================================================================
+# 🕯️ CRAWLER DE GRÁFICO (YFINANCE CORRIGIDO V2)
+# ==============================================================================
+@st.cache_data(ttl=3600)
 def get_candle_chart(ticker):
-    # Não cachear se der erro, pra tentar de novo
+    # Tenta obter dados de forma robusta
     try:
-        # Tenta com .SA
-        yf_ticker = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
-        df = yf.download(yf_ticker, period="6mo", interval="1d", progress=False)
+        # 1. Define o ticker com sufixo .SA
+        symbol = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
         
-        # Se vazio, tenta SEM .SA (alguns BDRs ou casos raros)
-        if df.empty or len(df) < 5:
-            df = yf.download(ticker, period="6mo", interval="1d", progress=False)
+        # 2. Usa Ticker().history() que é mais estável
+        stock = yf.Ticker(symbol)
+        df = stock.history(period="6mo", interval="1d")
+        
+        # 3. Se falhar, tenta sem .SA (Fallback)
+        if df.empty:
+            stock = yf.Ticker(ticker)
+            df = stock.history(period="6mo", interval="1d")
             
+        # 4. Se tiver dados, monta o gráfico
         if not df.empty and len(df) > 5:
-            fig = go.Figure(data=[go.Candlestick(x=df.index,
+            fig = go.Figure(data=[go.Candlestick(
+                x=df.index,
                 open=df['Open'], high=df['High'],
                 low=df['Low'], close=df['Close'],
-                increasing_line_color= '#00ff41', decreasing_line_color= '#ff4444'
+                increasing_line_color='#00ff41', # Verde Hacker
+                decreasing_line_color='#ff4444'  # Vermelho Queda
             )])
+            
             fig.update_layout(
                 xaxis_rangeslider_visible=False,
-                plot_bgcolor='black', paper_bgcolor='black',
+                plot_bgcolor='black', 
+                paper_bgcolor='black',
                 font=dict(color='white'),
-                margin=dict(l=10, r=10, t=10, b=10),
+                margin=dict(l=10, r=10, t=30, b=10),
                 height=350,
-                title=f"GRÁFICO DIÁRIO: {ticker}"
+                title=dict(text=f"GRÁFICO DIÁRIO: {ticker}", x=0.5, font=dict(size=14, color='#00ff41'))
             )
             return fig
+            
         return None
     except Exception as e:
         return None
@@ -321,7 +334,7 @@ def show_fii_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v13.0</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v13.1</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 # ABAS FIXAS NO TOPO (SUBSTITUINDO SIDEBAR)
