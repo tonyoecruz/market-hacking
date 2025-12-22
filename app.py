@@ -157,19 +157,46 @@ def get_data_fiis():
 @st.cache_data(ttl=3600)
 def get_candle_chart(ticker):
     try:
-        yf_ticker = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
-        df = yf.download(yf_ticker, period="6mo", interval="1d", progress=False)
-        if df.empty:
-            df = yf.download(ticker, period="6mo", interval="1d", progress=False)
+        # Tenta duas formas: Com sufixo e sem sufixo
+        symbols_to_try = [f"{ticker}.SA", ticker]
+        df = pd.DataFrame()
+        
+        for sym in symbols_to_try:
+            # Tenta download direto primeiro (mais robusto que Ticker)
+            df = yf.download(sym, period="6mo", interval="1d", progress=False)
+            if not df.empty and len(df) > 5:
+                break
+        
         if not df.empty and len(df) > 5:
-            fig = go.Figure(data=[go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], increasing_line_color='#00ff41', decreasing_line_color='#ff4444')])
-            fig.update_layout(xaxis_rangeslider_visible=False, plot_bgcolor='black', paper_bgcolor='black', font=dict(color='white'), margin=dict(l=10, r=10, t=30, b=10), height=350, title=dict(text=f"GRÁFICO DIÁRIO: {ticker}", x=0.5, font=dict(size=14, color='#00ff41')))
-            return fig
+            # Correção para MultiIndex do YFinance novo (às vezes retorna colunas duplas)
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            
+            # Garante que as colunas existem
+            if 'Open' in df.columns and 'Close' in df.columns:
+                fig = go.Figure(data=[go.Candlestick(
+                    x=df.index,
+                    open=df['Open'], high=df['High'],
+                    low=df['Low'], close=df['Close'],
+                    increasing_line_color='#00ff41',
+                    decreasing_line_color='#ff4444'
+                )])
+                fig.update_layout(
+                    xaxis_rangeslider_visible=False,
+                    plot_bgcolor='black', 
+                    paper_bgcolor='black', 
+                    font=dict(color='white'), 
+                    margin=dict(l=10, r=10, t=30, b=10), 
+                    height=350, 
+                    title=dict(text=f"GRÁFICO: {ticker}", x=0.5, font=dict(size=14, color='#00ff41'))
+                )
+                return fig
         return None
-    except: return None
+    except Exception as e:
+        return None
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (POLIMENTO FINAL UI/UX)
+# 🎨 ESTILOS CSS
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -186,43 +213,24 @@ st.markdown(f"""
     .stSelectbox div[data-baseweb="select"] > div, .stSelectbox div[data-baseweb="select"] span {{ color: #ffffff !important; }}
     .stSelectbox label, .stNumberInput label {{ color: #00ff41 !important; font-weight: bold; font-size: 14px; }}
     
-    /* BOTÕES DE AÇÃO (SCAN, DECODE) */
+    /* BOTÕES */
     .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; border-radius: 8px; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
     
-    /* --- ESTILIZAÇÃO DAS ABAS COMO BOTÕES --- */
-    .stTabs {{ margin-top: -15px !important; }} /* Sobe as abas */
-    .stTabs [data-baseweb="tab-list"] {{ gap: 15px; }} /* Espaço entre botões */
-    
+    /* ABAS (TABS) */
+    .stTabs {{ margin-top: -15px !important; }}
+    .stTabs [data-baseweb="tab-list"] {{ gap: 15px; }}
     .stTabs [data-baseweb="tab"] {{
-        height: auto !important;
-        padding: 15px 25px !important; /* Mais espaço interno */
-        background-color: #1a1a1a !important; /* Fundo inativo */
-        color: #ffffff !important;
-        border: 2px solid #333 !important; /* Borda visível */
-        border-radius: 8px !important; /* Arredondado */
-        font-weight: bold !important;
-        font-size: 16px !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Sombra de profundidade */
+        height: auto !important; padding: 15px 25px !important; background-color: #1a1a1a !important;
+        color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important;
+        font-weight: bold !important; font-size: 16px !important; transition: all 0.3s ease !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }}
-
-    /* Hover na aba inativa */
-    .stTabs [data-baseweb="tab"]:hover {{
-        border-color: #00ff41 !important;
-        background-color: #222 !important;
-        transform: translateY(-2px); /* Efeito de levantar */
-    }}
-
-    /* Aba Ativa */
+    .stTabs [data-baseweb="tab"]:hover {{ border-color: #00ff41 !important; background-color: #222 !important; transform: translateY(-2px); }}
     .stTabs [aria-selected="true"] {{
-        background-color: #00ff41 !important;
-        color: #000000 !important;
-        border-color: #00ff41 !important;
-        box-shadow: 0 0 15px rgba(0, 255, 65, 0.6) !important; /* Brilho Neon */
-        transform: translateY(0);
+        background-color: #00ff41 !important; color: #000000 !important; border-color: #00ff41 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.6) !important; transform: translateY(0);
     }}
-    /* ---------------------------------------- */
     
     /* CARDS */
     .hacker-card {{ background-color: #111 !important; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
@@ -335,19 +343,18 @@ def show_fii_decode(ticker, row, details):
 # ==============================================================================
 # 📺 UI PRINCIPAL
 # ==============================================================================
-# Cabeçalho compacto
-c_logo, c_title = st.columns([0.5, 8]) # Logo menor, menos espaço
+c_logo, c_title = st.columns([0.5, 8])
 with c_logo: st.image(URL_DO_ICONE, width=60)
-with c_title: st.markdown(f"<h2 style='margin: 15px 0 0 0;'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v14.0</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin: 15px 0 0 0;'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v14.1</span></h2>", unsafe_allow_html=True)
 
-# ABAS (AGORA COM VISUAL DE BOTÕES)
+# ABAS FIXAS NO TOPO
 tab_acoes, tab_fiis, tab_arena = st.tabs(["AÇÕES (GRAHAM/MAGIC)", "FIIs (RENDA)", "ARENA (BATALHA)"])
 
 # ------------------------------------------------------------------------------
 # PÁGINA 1: AÇÕES
 # ------------------------------------------------------------------------------
 with tab_acoes:
-    st.divider() # Separador movido para dentro da aba
+    st.divider()
     if 'market_data' not in st.session_state:
         if st.button("⚡ INICIAR VARREDURA AÇÕES", key="btn_scan_acoes"):
             with st.spinner("Baixando Dados Ações..."):
@@ -377,6 +384,7 @@ with tab_acoes:
             with st.spinner(f"Carregando Gráfico {target}..."):
                 fig = get_candle_chart(target)
                 if fig: st.plotly_chart(fig, use_container_width=True)
+                else: st.warning("Gráfico Indisponível (Sem dados do Yahoo)")
             if btn_decode:
                 with st.spinner("Analisando..."): details = get_stock_details(target)
                 show_ai_decode(target, row_t, details)
