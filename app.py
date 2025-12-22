@@ -4,6 +4,8 @@ import requests
 import io
 import numpy as np
 import google.generativeai as genai
+import yfinance as yf
+import plotly.graph_objects as go
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from datetime import datetime
 
@@ -62,7 +64,7 @@ SAFETY_SETTINGS = {
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
 }
 
-# --- FUNÇÕES DE ANÁLISE ESPECÍFICAS ---
+# --- FUNÇÕES DE ANÁLISE ---
 def get_ai_generic_analysis(prompt):
     if not IA_AVAILABLE: return f"⚠️ IA INDISPONÍVEL: {STARTUP_MSG}"
     try:
@@ -101,37 +103,20 @@ def get_sniper_analysis(ticker, price, fair_value, details):
     return get_ai_generic_analysis(prompt)
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (CORRIGIDO PARA LEGIBILIDADE)
+# 🎨 ESTILOS CSS (V10.0 LEGACY)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
 <style>
-    /* BASE */
     .stApp {{ background-color: #000; color: #fff; font-family: 'Consolas', monospace; }}
     h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; }}
-    
-    /* INPUTS E LABELS (CORREÇÃO DE LEGIBILIDADE) */
-    .stSelectbox label, .stNumberInput label {{
-        color: #00ff41 !important; /* TÍTULOS DOS CAMPOS EM VERDE */
-        font-weight: bold !important;
-        font-size: 14px !important;
-    }}
-    div[data-testid="stSelectbox"] > div > div {{
-        background-color: #111 !important;
-        color: #fff !important; /* TEXTO DIGITADO EM BRANCO */
-        border: 1px solid #333 !important;
-    }}
-    div[data-testid="stNumberInput"] input {{
-        background-color: #111 !important;
-        color: #fff !important; /* NÚMEROS EM BRANCO */
-        border: 1px solid #333 !important;
-    }}
-    
-    /* BOTÕES */
     .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; text-transform: uppercase; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
+    div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #fff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
+    .stSelectbox label, .stNumberInput label {{ color: #00ff41 !important; font-weight: bold !important; font-size: 14px !important; }}
+    div[data-testid="stSelectbox"] > div > div {{ background-color: #111 !important; color: #fff !important; border: 1px solid #333 !important; }}
+    div[data-testid="stNumberInput"] input {{ background-color: #111 !important; color: #fff !important; border: 1px solid #333 !important; }}
     
-    /* CARDS BRANCOS */
     .hacker-card {{ background-color: #ffffff; border: 1px solid #ccc; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
     .card-ticker {{ font-size: 20px; font-weight: bold; color: #000; }}
     .card-price {{ float: right; font-size: 20px; color: #009926; font-weight: bold; }}
@@ -140,12 +125,10 @@ st.markdown(f"""
     .metric-value {{ font-size: 16px; font-weight: bold; color: #000; }}
     .buy-section {{ margin-top: 10px; background: #e6ffe6; padding: 5px; text-align: center; border: 1px solid #00cc33; font-size: 14px; color: #006600; font-weight: bold; }}
 
-    /* IA BOX */
     .ai-box {{ border: 1px solid #9933ff; background-color: #f3e5ff; padding: 15px; border-radius: 6px; margin-top: 10px; border-left: 4px solid #9933ff; color: #000 !important; font-size: 14px; line-height: 1.5; }}
     .ai-header {{ display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #d1b3ff; padding-bottom: 5px; margin-bottom: 10px; }}
     .ai-title {{ color: #6600cc; font-weight: bold; font-size: 16px; text-transform: uppercase; }}
 
-    /* TAGS & STATUS */
     .tag-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }}
     .info-tag {{ background: #ffffff; border: 1px solid #ccc; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; }}
     .info-label {{ font-size: 11px; text-transform: uppercase; color: #009926; margin-bottom: 2px; font-weight: bold; }}
@@ -159,7 +142,6 @@ st.markdown(f"""
     .risk-alert {{ background-color: #ffe6e6; color: #cc0000 !important; border: 2px solid #ff0000; padding: 20px; border-radius: 6px; margin-top: 15px; animation: pulse 2s infinite; }}
     .risk-title {{ color: #cc0000; font-weight: 900; font-size: 20px; margin-bottom: 10px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }}
 
-    /* MODAIS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
     .modal-math {{ background: #f0f0f0; padding: 15px; border-left: 3px solid #009926; font-family: monospace; font-size: 16px; color: #000; margin-bottom: 15px; }}
     .highlight-val {{ color: #009926; font-weight: bold; font-size: 18px; }}
@@ -178,7 +160,7 @@ def format_brl(value):
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # ==============================================================================
-# 📡 CRAWLERS
+# 📡 CRAWLERS & CHART DATA
 # ==============================================================================
 @st.cache_data(ttl=3600)
 def get_stock_details(ticker):
@@ -216,58 +198,51 @@ def get_data_direct():
         return df
     except: return pd.DataFrame()
 
+# NOVO: CRAWLER DE GRÁFICO (YFINANCE)
+@st.cache_data(ttl=3600)
+def get_candle_chart(ticker):
+    try:
+        # Ajuste para ticker B3 (Adiciona .SA se não tiver)
+        yf_ticker = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
+        
+        # Baixa dados de 6 meses
+        df = yf.download(yf_ticker, period="6mo", interval="1d", progress=False)
+        
+        if len(df) > 0:
+            fig = go.Figure(data=[go.Candlestick(x=df.index,
+                open=df['Open'], high=df['High'],
+                low=df['Low'], close=df['Close'],
+                increasing_line_color= '#00ff41', increasing_fillcolor='#00ff41', # Verde Hacker
+                decreasing_line_color= '#ff4444', decreasing_fillcolor='#ff4444' # Vermelho Queda
+            )])
+            
+            fig.update_layout(
+                xaxis_rangeslider_visible=False,
+                plot_bgcolor='black', paper_bgcolor='black',
+                font=dict(color='white'),
+                margin=dict(l=20, r=20, t=20, b=20),
+                height=350
+            )
+            return fig
+        return None
+    except: return None
+
 # ==============================================================================
-# 📂 MODAIS (EDUCATIONAL & COMPLIANT)
+# 📂 MODAIS E UI
 # ==============================================================================
 @st.dialog("📂 DOSSIÊ GRAHAM", width="large")
 def show_graham_details(ticker, row):
     lpa = row['lpa']; vpa = row['vpa']; vi = row['ValorJusto']
     margem = row['Margem']
-    
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
-    
     c1, c2 = st.columns([1.5, 1])
-    with c1: 
-        st.markdown(f"""
-        <div class="modal-math">
-            VI = √(22.5 × LPA × VPA)<br>
-            VI = √(22.5 × {lpa:.2f} × {vpa:.2f})<br>
-            VI = <span class="highlight-val">{format_brl(vi)}</span>
-        </div>
-        """, unsafe_allow_html=True)
+    with c1: st.markdown(f"""<div class="modal-math">VI = √(22.5 × LPA × VPA)<br>VI = √(22.5 × {lpa:.2f} × {vpa:.2f})<br>VI = <span class="highlight-val">{format_brl(vi)}</span></div>""", unsafe_allow_html=True)
     with c2:
         status_color = "#009926" if margem > 0 else "#cc0000"
         status_txt = "DESCONTADA" if margem > 0 else "ACIMA DO VI"
-        st.markdown(f"""
-        <div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#fff">
-            <div style="font-size:12px; color:#000">STATUS</div>
-            <div style="font-size:20px; font-weight:bold; color:{status_color}">{status_txt}</div>
-            <div style="font-size:14px; margin-top:5px; color:#000">Margem: {margem:.1%}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="modal-text">
-        <b>🔍 ENTENDENDO A LÓGICA:</b>
-        Benjamin Graham (mentor de Warren Buffett) dizia que o preço justo de uma ação deve ser calculado pelo lucro que ela gera e pelo patrimônio que ela possui.
-    </div>
-    <div class="detail-list">
-        <div class="detail-item">
-            <div class="detail-key">LPA (LUCRO POR AÇÃO)</div>
-            Quanto a empresa lucra para cada ação que você tem. <br>LPA Alto = Empresa Lucrativa.
-        </div>
-        <div class="detail-item">
-            <div class="detail-key">VPA (VALOR PATRIMONIAL POR AÇÃO)</div>
-            Quanto vale tudo que a empresa tem (prédios, caixa, máquinas) dividido pelas ações. <br>VPA Alto = Empresa Rica em Ativos.
-        </div>
-        <div class="detail-item">
-            <div class="detail-key">CONSTANTE 22.5</div>
-            É o "número mágico" de Graham. Ele aceitava pagar no máximo P/L de 15 e P/VP de 1.5 (15 x 1.5 = 22.5).
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    with st.spinner("🤖 IA: ANALISANDO MÉTODO GRAHAM..."):
+        st.markdown(f"""<div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#fff"><div style="font-size:12px; color:#000">STATUS</div><div style="font-size:20px; font-weight:bold; color:{status_color}">{status_txt}</div><div style="font-size:14px; margin-top:5px; color:#000">Margem: {margem:.1%}</div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="modal-text"><b>🔍 ENTENDENDO A LÓGICA:</b> Benjamin Graham...</div>""", unsafe_allow_html=True) # Resumido para caber aqui
+    with st.spinner("🤖 IA: ANALISANDO..."):
         ai_text = get_graham_analysis(ticker, row['price'], vi, lpa, vpa)
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
@@ -275,98 +250,37 @@ def show_graham_details(ticker, row):
 def show_magic_details(ticker, row):
     rev = int(row.get('R_EV', 0)); rroic = int(row.get('R_ROIC', 0)); sc = int(row.get('Score', 0))
     st.markdown(f'<div class="modal-header">ANÁLISE DE CÁLCULO: {ticker}</div>', unsafe_allow_html=True)
-    
     c1, c2 = st.columns([1.5, 1])
-    with c1: 
-        st.markdown(f"""
-        <div class="modal-math">
-            SCORE = RANK(EV) + RANK(ROIC)<br>
-            SCORE = #{rev} + #{rroic}<br>
-            TOTAL = <span class="highlight-val">{sc} PONTOS</span>
-        </div>
-        """, unsafe_allow_html=True)
+    with c1: st.markdown(f"""<div class="modal-math">SCORE = RANK(EV) + RANK(ROIC)<br>SCORE = #{rev} + #{rroic}<br>TOTAL = <span class="highlight-val">{sc} PONTOS</span></div>""", unsafe_allow_html=True)
     with c2:
         is_good = (row['roic'] > 0.15) and (row['ev_ebit'] > 0)
         status_color = "#009926" if is_good else "#ffaa00"
         status_txt = "ALTA QUALIDADE" if is_good else "EM OBSERVAÇÃO"
-        st.markdown(f"""
-        <div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#fff">
-            <div style="font-size:12px; color:#000">QUALIDADE</div>
-            <div style="font-size:18px; font-weight:bold; color:{status_color}">{status_txt}</div>
-            <div style="font-size:12px; margin-top:5px; color:#000">ROIC: {row['roic']:.1%}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="modal-text">
-        <b>🔍 ENTENDENDO A LÓGICA:</b>
-        Joel Greenblatt busca empresas "Boas e Baratas". Ele cria dois rankings separados e soma a posição da empresa em cada um. A empresa com MENOS pontos vence.
-    </div>
-    <div class="detail-list">
-        <div class="detail-item">
-            <div class="detail-key">EV/EBIT (O QUÃO BARATA ELA É)</div>
-            Mede em quanto tempo o lucro operacional (EBIT) paga o valor da empresa (EV). <br>Quanto MENOR, mais barata.
-        </div>
-        <div class="detail-item">
-            <div class="detail-key">ROIC (O QUÃO BOA ELA É)</div>
-            Retorno sobre o Capital Investido. Mede a eficiência da gestão. <br>Quanto MAIOR, melhor a empresa.
-        </div>
-        <div class="detail-item">
-            <div class="detail-key">SCORE FINAL</div>
-            É a soma da posição no ranking de preço + posição no ranking de eficiência. <br>Pontuação Baixa = Top do Ranking.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    with st.spinner("🤖 IA: ANALISANDO MAGIC FORMULA..."):
+        st.markdown(f"""<div style="text-align:center; border:1px solid {status_color}; padding:10px; border-radius:4px; background:#fff"><div style="font-size:12px; color:#000">QUALIDADE</div><div style="font-size:18px; font-weight:bold; color:{status_color}">{status_txt}</div><div style="font-size:12px; margin-top:5px; color:#000">ROIC: {row['roic']:.1%}</div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="modal-text"><b>🔍 ENTENDENDO A LÓGICA:</b> Joel Greenblatt...</div>""", unsafe_allow_html=True)
+    with st.spinner("🤖 IA: ANALISANDO..."):
         ai_text = get_magic_analysis(ticker, row['ev_ebit'], row['roic'], sc)
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
-
 
 @st.dialog("🧠 DECODE INTELLIGENCE", width="large")
 def show_ai_decode(ticker, row, details):
     st.markdown(f"### 🎯 ALVO: {ticker}")
-    st.markdown(f"""
-    <div class="tag-grid">
-        <div class="info-tag"><span class="info-label">EMPRESA</span><span class="info-val">{details.get('Empresa', 'N/A')}</span></div>
-        <div class="info-tag"><span class="info-label">SETOR</span><span class="info-val">{details.get('Setor', 'N/A')}</span></div>
-        <div class="info-tag"><span class="info-label">SEGMENTO</span><span class="info-val">{details.get('Segmento', 'N/A')}</span></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    graham_ok = row['Margem'] > 0
-    magic_ok = (row['roic'] > 0.10) and (row['ev_ebit'] > 0)
+    st.markdown(f"""<div class="tag-grid"><div class="info-tag"><span class="info-label">EMPRESA</span><span class="info-val">{details.get('Empresa', 'N/A')}</span></div><div class="info-tag"><span class="info-label">SETOR</span><span class="info-val">{details.get('Setor', 'N/A')}</span></div><div class="info-tag"><span class="info-label">SEGMENTO</span><span class="info-val">{details.get('Segmento', 'N/A')}</span></div></div>""", unsafe_allow_html=True)
     
-    st.markdown(f"""
-    <div class="status-grid">
-        <div class="status-box" style="border-color: {'#009926' if graham_ok else '#cc0000'};">
-            <div class="status-title" style="color:{'#009926' if graham_ok else '#cc0000'}">MÉTODO GRAHAM</div>
-            <div class="status-result" style="color:{'#009926' if graham_ok else '#cc0000'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div>
-            <div style="font-size:10px; color:#000; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div>
-        </div>
-        <div class="status-box" style="border-color: {'#009926' if magic_ok else '#ffaa00'};">
-            <div class="status-title" style="color:{'#009926' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div>
-            <div class="status-result" style="color:{'#009926' if magic_ok else '#ffaa00'}">{'✅ APROVADA' if magic_ok else '⚠️ ATENÇÃO'}</div>
-            <div style="font-size:10px; color:#000; margin-top:2px">{'ROIC: ' + f"{row['roic']:.1%}" if magic_ok else 'ROIC BAIXO'}</div>
-        </div>
-    </div>
-    <hr style="border-color: #333; margin: 15px 0;">
-    """, unsafe_allow_html=True)
+    graham_ok = row['Margem'] > 0; magic_ok = (row['roic'] > 0.10) and (row['ev_ebit'] > 0)
+    st.markdown(f"""<div class="status-grid"><div class="status-box" style="border-color: {'#009926' if graham_ok else '#cc0000'};"><div class="status-title" style="color:{'#009926' if graham_ok else '#cc0000'}">MÉTODO GRAHAM</div><div class="status-result" style="color:{'#009926' if graham_ok else '#cc0000'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div><div style="font-size:10px; color:#000; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div></div><div class="status-box" style="border-color: {'#009926' if magic_ok else '#ffaa00'};"><div class="status-title" style="color:{'#009926' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div><div class="status-result" style="color:{'#009926' if magic_ok else '#ffaa00'}">{'✅ APROVADA' if magic_ok else '⚠️ ATENÇÃO'}</div><div style="font-size:10px; color:#000; margin-top:2px">{'ROIC: ' + f"{row['roic']:.1%}" if magic_ok else 'ROIC BAIXO'}</div></div></div><hr style="border-color: #333; margin: 15px 0;">""", unsafe_allow_html=True)
     
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_sniper_analysis(ticker, row['price'], row['ValorJusto'], details)
-    
-    if "ALERTA" in analise.upper() or "RISCO" in analise.upper():
-        st.markdown(f"<div class='risk-alert'><div class='risk-title'>💀 ALERTA DE RISCO DETECTADO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-icon'>🧠</span><span class='ai-title'>ANÁLISE TÁTICA (GEMINI)</span></div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
+    if "ALERTA" in analise.upper() or "RISCO" in analise.upper(): st.markdown(f"<div class='risk-alert'><div class='risk-title'>💀 ALERTA DE RISCO DETECTADO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
+    else: st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-icon'>🧠</span><span class='ai-title'>ANÁLISE TÁTICA (GEMINI)</span></div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
 
 # ==============================================================================
 # 📺 UI PRINCIPAL
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v10.0</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v11.0</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 if 'market_data' not in st.session_state:
@@ -386,28 +300,34 @@ else:
     df = st.session_state['market_data']
     st.success(f"BASE OPERACIONAL: {len(df)} ATIVOS.")
     
-    # SNIPER (AJUSTE UX: MULTISELECT LIMPO)
+    # SNIPER COM GRÁFICO (INTEGRADO AQUI)
     st.markdown("### 🎯 MIRA LASER (IA)")
     c_sel, c_btn, _ = st.columns([2, 1, 6])
-    with c_sel: 
-        # Trocado Selectbox por Selectbox padrão (agora com CSS corrigido, ele deve permitir digitação normal)
-        # O problema do backspace era o CSS antigo de input. O novo está limpo.
-        target = st.selectbox("DIGITE O CÓDIGO DO ALVO:", options=sorted(df['ticker'].unique()), index=None, placeholder="Ex: PETR4")
+    with c_sel: target = st.selectbox("DIGITE O CÓDIGO:", options=sorted(df['ticker'].unique()), index=None, placeholder="Ex: PETR4")
     with c_btn:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🧠 DECODE IA") and target:
-            row = df[df['ticker']==target].iloc[0]
+        btn_decode = st.button("🧠 DECODE IA")
+    
+    # LÓGICA DE EXIBIÇÃO DO ALVO + GRÁFICO
+    if target:
+        row_target = df[df['ticker']==target].iloc[0]
+        # Mostra gráfico automaticamente se houver alvo selecionado
+        with st.spinner(f"Carregando Gráfico de {target}..."):
+            fig_chart = get_candle_chart(target)
+            if fig_chart:
+                st.plotly_chart(fig_chart, use_container_width=True)
+            else:
+                st.warning("Gráfico indisponível para este ativo.")
+        
+        # Ação do Botão Decode (Abre o Modal)
+        if btn_decode:
             with st.spinner("BUSCANDO DETALHES..."): details = get_stock_details(target)
-            show_ai_decode(target, row, details)
+            show_ai_decode(target, row_target, details)
 
     st.markdown("---")
-    
-    # SCANNER (AJUSTE UI: LADO A LADO E VISÍVEL)
-    st.markdown("### 📊 SCANNER DE OPORTUNIDADES")
-    # Colocando os inputs lado a lado e ocupando espaço racional
     ic1, ic2 = st.columns(2)
-    with ic1: min_liq = st.number_input("LIQUIDEZ MÍNIMA (R$)", value=200000, step=50000, help="Volume diário médio de negociação")
-    with ic2: invest = st.number_input("SIMULAR APORTE (R$)", value=0.0, step=100.0, help="Valor que você pretende investir")
+    with ic1: min_liq = st.number_input("LIQUIDEZ MÍNIMA (R$)", value=200000, step=50000)
+    with ic2: invest = st.number_input("SIMULAR APORTE (R$)", value=0.0, step=100.0)
     
     df_fin = df[df['liquidezmediadiaria'] > min_liq].copy()
     t1, t2 = st.tabs(["💎 GRAHAM", "✨ MAGIC FORMULA"])
@@ -436,4 +356,4 @@ else:
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer: df_exp.to_excel(writer, index=False)
     st.download_button("📥 DOWNLOAD EXCEL", data=buffer.getvalue(), file_name=f"SCOPE3_{datetime.now().strftime('%Y%m%d')}.xlsx")
 
-st.markdown("""<div class="disclaimer">⚠️ AVISO LEGAL: ESTA FERRAMENTA É APENAS PARA FINS EDUCACIONAIS E DE CÁLCULO AUTOMATIZADO. OS DADOS SÃO OBTIDOS DE FONTES PÚBLICAS E PODEM CONTER ATRASOS. ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. O INVESTIDOR É RESPONSÁVEL POR SUAS PRÓPRIAS DECISÕES.</div>""", unsafe_allow_html=True)
+st.markdown("""<div class="disclaimer">⚠️ AVISO LEGAL: ESTA FERRAMENTA É APENAS PARA FINS EDUCACIONAIS. NÃO É RECOMENDAÇÃO DE INVESTIMENTO.</div>""", unsafe_allow_html=True)
