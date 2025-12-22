@@ -81,6 +81,18 @@ def get_magic_analysis(ticker, ev_ebit, roic, score):
     prompt = f"Analise {ticker} SÓ pela Magic Formula. DADOS: EV/EBIT {ev_ebit} | ROIC {roic:.1%} | Score {score}. Resuma qualidade e preço. Max 3 linhas."
     return get_ai_generic_analysis(prompt)
 
+def get_mix_analysis(ticker, price, fair_value, ev_ebit, roic):
+    margin = (fair_value/price) - 1 if price > 0 else 0
+    prompt = f"""
+    Analise {ticker} como uma AÇÃO DE ELITE (Passou no Graham E na Magic Formula).
+    DADOS: 
+    - Graham: Margem de {margin:.1%} (Positiva)
+    - Magic: ROIC {roic:.1%} (Alto) e EV/EBIT {ev_ebit} (Baixo).
+    
+    Por que essa combinação é poderosa? É uma compra óbvia ou tem pegadinha? Max 4 linhas. Direto.
+    """
+    return get_ai_generic_analysis(prompt)
+
 def get_sniper_analysis(ticker, price, fair_value, details):
     prompt = f"Analise {ticker} ({details.get('Empresa','N/A')}) Setor {details.get('Setor','N/A')}. Se tiver risco de falência (RJ), ALERTA DE SNIPER. Senão, analise fundamentos. Max 5 linhas."
     return get_ai_generic_analysis(prompt)
@@ -157,43 +169,19 @@ def get_data_fiis():
 @st.cache_data(ttl=3600)
 def get_candle_chart(ticker):
     try:
-        # Tenta duas formas: Com sufixo e sem sufixo
         symbols_to_try = [f"{ticker}.SA", ticker]
         df = pd.DataFrame()
-        
         for sym in symbols_to_try:
-            # Tenta download direto primeiro (mais robusto que Ticker)
             df = yf.download(sym, period="6mo", interval="1d", progress=False)
-            if not df.empty and len(df) > 5:
-                break
-        
+            if not df.empty and len(df) > 5: break
         if not df.empty and len(df) > 5:
-            # Correção para MultiIndex do YFinance novo (às vezes retorna colunas duplas)
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-            
-            # Garante que as colunas existem
+            if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
             if 'Open' in df.columns and 'Close' in df.columns:
-                fig = go.Figure(data=[go.Candlestick(
-                    x=df.index,
-                    open=df['Open'], high=df['High'],
-                    low=df['Low'], close=df['Close'],
-                    increasing_line_color='#00ff41',
-                    decreasing_line_color='#ff4444'
-                )])
-                fig.update_layout(
-                    xaxis_rangeslider_visible=False,
-                    plot_bgcolor='black', 
-                    paper_bgcolor='black', 
-                    font=dict(color='white'), 
-                    margin=dict(l=10, r=10, t=30, b=10), 
-                    height=350, 
-                    title=dict(text=f"GRÁFICO: {ticker}", x=0.5, font=dict(size=14, color='#00ff41'))
-                )
+                fig = go.Figure(data=[go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], increasing_line_color='#00ff41', decreasing_line_color='#ff4444')])
+                fig.update_layout(xaxis_rangeslider_visible=False, plot_bgcolor='black', paper_bgcolor='black', font=dict(color='white'), margin=dict(l=10, r=10, t=30, b=10), height=350, title=dict(text=f"GRÁFICO DIÁRIO: {ticker}", x=0.5, font=dict(size=14, color='#00ff41')))
                 return fig
         return None
-    except Exception as e:
-        return None
+    except: return None
 
 # ==============================================================================
 # 🎨 ESTILOS CSS
@@ -201,38 +189,21 @@ def get_candle_chart(ticker):
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
 <style>
-    /* REMOVE ESPAÇO EXTRA NO TOPO */
     .block-container {{ padding-top: 1rem !important; }}
-    
-    /* FUNDO GERAL */
     .stApp {{ background-color: #000; color: #fff; font-family: 'Consolas', monospace; }}
     h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; margin-top: 0 !important; }}
-    
-    /* INPUTS & SELECTBOXES */
     div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
     .stSelectbox div[data-baseweb="select"] > div, .stSelectbox div[data-baseweb="select"] span {{ color: #ffffff !important; }}
     .stSelectbox label, .stNumberInput label {{ color: #00ff41 !important; font-weight: bold; font-size: 14px; }}
-    
-    /* BOTÕES */
     .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; border-radius: 8px; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
     
-    /* ABAS (TABS) */
     .stTabs {{ margin-top: -15px !important; }}
     .stTabs [data-baseweb="tab-list"] {{ gap: 15px; }}
-    .stTabs [data-baseweb="tab"] {{
-        height: auto !important; padding: 15px 25px !important; background-color: #1a1a1a !important;
-        color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important;
-        font-weight: bold !important; font-size: 16px !important; transition: all 0.3s ease !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    }}
+    .stTabs [data-baseweb="tab"] {{ height: auto !important; padding: 15px 25px !important; background-color: #1a1a1a !important; color: #ffffff !important; border: 2px solid #333 !important; border-radius: 8px !important; font-weight: bold !important; font-size: 16px !important; transition: all 0.3s ease !important; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
     .stTabs [data-baseweb="tab"]:hover {{ border-color: #00ff41 !important; background-color: #222 !important; transform: translateY(-2px); }}
-    .stTabs [aria-selected="true"] {{
-        background-color: #00ff41 !important; color: #000000 !important; border-color: #00ff41 !important;
-        box-shadow: 0 0 15px rgba(0, 255, 65, 0.6) !important; transform: translateY(0);
-    }}
+    .stTabs [aria-selected="true"] {{ background-color: #00ff41 !important; color: #000000 !important; border-color: #00ff41 !important; box-shadow: 0 0 15px rgba(0, 255, 65, 0.6) !important; transform: translateY(0); }}
     
-    /* CARDS */
     .hacker-card {{ background-color: #111 !important; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
     .card-ticker {{ font-size: 20px; font-weight: bold; color: #ffffff !important; }}
     .card-price {{ float: right; font-size: 20px; color: #00ff41 !important; font-weight: bold; }}
@@ -241,12 +212,10 @@ st.markdown(f"""
     .metric-value {{ font-size: 16px; font-weight: bold; color: #ffffff !important; }}
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; font-weight: bold; }}
 
-    /* TABELA ARENA */
     div[data-testid="stTable"] {{ color: #ffffff !important; background-color: #111 !important; }}
     div[data-testid="stTable"] th {{ background-color: #222 !important; color: #00ff41 !important; font-weight: bold !important; border-bottom: 1px solid #444 !important; }}
     div[data-testid="stTable"] td {{ background-color: #111 !important; color: #ffffff !important; border-bottom: 1px solid #333 !important; }}
 
-    /* OUTROS ELEMENTOS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
     .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #fff; margin-bottom: 15px; }}
     .highlight-val {{ color: #00ff41; font-weight: bold; font-size: 18px; }}
@@ -311,14 +280,22 @@ def show_magic_details(ticker, row):
         ai_text = get_magic_analysis(ticker, row['ev_ebit'], row['roic'], sc)
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
+# NOVO MODAL: ELITE MIX
+@st.dialog("🏆 DOSSIÊ ELITE MIX", width="large")
+def show_mix_details(ticker, row):
+    st.markdown(f'<div class="modal-header">ANÁLISE DE ELITE: {ticker}</div>', unsafe_allow_html=True)
+    st.markdown(f"""<div class="tag-grid"><div class="info-tag"><span class="info-label">MARGEM GRAHAM</span><span class="info-val">{row['Margem']:.1%} (Positiva)</span></div><div class="info-tag"><span class="info-label">ROIC</span><span class="info-val">{row['roic']:.1%} (Eficiente)</span></div><div class="info-tag"><span class="info-label">EV/EBIT</span><span class="info-val">{row['ev_ebit']:.2f} (Barata)</span></div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="modal-text" style="color:#00ff41; border:1px solid #00ff41; padding:10px; border-radius:4px; text-align:center; font-weight:bold;">🏆 ESTE ATIVO PASSOU NOS DOIS FILTROS MAIS RÍGIDOS DO MERCADO.</div>""", unsafe_allow_html=True)
+    with st.spinner("🤖 IA: VALIDANDO ELITE..."):
+        ai_text = get_mix_analysis(ticker, row['price'], row['ValorJusto'], row['ev_ebit'], row['roic'])
+        st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
+
 @st.dialog("🧠 DECODE INTELLIGENCE", width="large")
 def show_ai_decode(ticker, row, details):
     st.markdown(f"### 🎯 ALVO: {ticker}")
     st.markdown(f"""<div class="tag-grid"><div class="info-tag"><span class="info-label">EMPRESA</span><span class="info-val">{details.get('Empresa', 'N/A')}</span></div><div class="info-tag"><span class="info-label">SETOR</span><span class="info-val">{details.get('Setor', 'N/A')}</span></div><div class="info-tag"><span class="info-label">SEGMENTO</span><span class="info-val">{details.get('Segmento', 'N/A')}</span></div></div>""", unsafe_allow_html=True)
-    
     graham_ok = row['Margem'] > 0; magic_ok = (row['roic'] > 0.10) and (row['ev_ebit'] > 0)
     st.markdown(f"""<div class="status-grid"><div class="status-box" style="border-color: {'#00ff41' if graham_ok else '#ff4444'};"><div class="status-title" style="color:{'#00ff41' if graham_ok else '#ff4444'}">MÉTODO GRAHAM</div><div class="status-result" style="color:{'#00ff41' if graham_ok else '#ff4444'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div></div><div class="status-box" style="border-color: {'#00ff41' if magic_ok else '#ffaa00'};"><div class="status-title" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div><div class="status-result" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">{'✅ APROVADA' if magic_ok else '⚠️ ATENÇÃO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{'ROIC: ' + f"{row['roic']:.1%}" if magic_ok else 'ROIC BAIXO'}</div></div></div><hr style="border-color: #333; margin: 15px 0;">""", unsafe_allow_html=True)
-    
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
         analise = get_sniper_analysis(ticker, row['price'], row['ValorJusto'], details)
     if "ALERTA" in analise.upper() or "RISCO" in analise.upper(): st.markdown(f"<div class='risk-alert'><div class='risk-title'>💀 ALERTA DE RISCO DETECTADO</div>{analise.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
@@ -331,11 +308,8 @@ def show_ai_decode(ticker, row, details):
 def show_fii_decode(ticker, row, details):
     st.markdown(f"### 🏢 ALVO: {ticker}")
     st.markdown(f"""<div class="tag-grid"><div class="info-tag"><span class="info-label">SEGMENTO</span><span class="info-val">{row['segmento']}</span></div><div class="info-tag"><span class="info-label">Cotação</span><span class="info-val">{format_brl(row['price'])}</span></div><div class="info-tag"><span class="info-label">DY (12M)</span><span class="info-val">{row['dy']:.2%}</span></div></div>""", unsafe_allow_html=True)
-    
-    pvp_bom = 0.8 <= row['pvp'] <= 1.10
-    dy_bom = row['dy'] > 0.08
+    pvp_bom = 0.8 <= row['pvp'] <= 1.10; dy_bom = row['dy'] > 0.08
     st.markdown(f"""<div class="status-grid"><div class="status-box" style="border-color: {'#00ff41' if pvp_bom else '#ffaa00'};"><div class="status-title" style="color:{'#00ff41' if pvp_bom else '#ffaa00'}">P/VP (PREÇO JUSTO)</div><div class="status-result" style="color:{'#00ff41' if pvp_bom else '#ffaa00'}">{'✅ NO PREÇO' if pvp_bom else '⚠️ DESCOLADO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{row['pvp']:.2f}</div></div><div class="status-box" style="border-color: {'#00ff41' if dy_bom else '#ffaa00'};"><div class="status-title" style="color:{'#00ff41' if dy_bom else '#ffaa00'}">DIVIDENDOS</div><div class="status-result" style="color:{'#00ff41' if dy_bom else '#ffaa00'}">{'✅ ATRATIVO' if dy_bom else '⚠️ BAIXO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{row['dy']:.1%} a.a.</div></div></div>""", unsafe_allow_html=True)
-    
     with st.spinner("🤖 IA: ANALISANDO FII..."):
         ai_text = get_fii_analysis(ticker, row['price'], row['pvp'], row['dy'], details)
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>ANÁLISE DE RENDA (IA)</span></div>{ai_text}</div>", unsafe_allow_html=True)
@@ -345,13 +319,12 @@ def show_fii_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([0.5, 8])
 with c_logo: st.image(URL_DO_ICONE, width=60)
-with c_title: st.markdown(f"<h2 style='margin: 15px 0 0 0;'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v14.1</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin: 15px 0 0 0;'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v15.0</span></h2>", unsafe_allow_html=True)
 
-# ABAS FIXAS NO TOPO
-tab_acoes, tab_fiis, tab_arena = st.tabs(["AÇÕES (GRAHAM/MAGIC)", "FIIs (RENDA)", "ARENA (BATALHA)"])
+tab_acoes, tab_mix, tab_fiis, tab_arena = st.tabs(["AÇÕES", "🏆 ELITE (MIX)", "FIIs", "ARENA"])
 
 # ------------------------------------------------------------------------------
-# PÁGINA 1: AÇÕES
+# PÁGINA 1: AÇÕES (O ORIGINAL)
 # ------------------------------------------------------------------------------
 with tab_acoes:
     st.divider()
@@ -417,7 +390,57 @@ with tab_acoes:
                     if st.button(f"📂 DECODE #{i+1}", key=f"m_{r['ticker']}"): show_magic_details(r['ticker'], r)
 
 # ------------------------------------------------------------------------------
-# PÁGINA 2: FIIs
+# PÁGINA 2: ELITE MIX (NOVO!!!)
+# ------------------------------------------------------------------------------
+with tab_mix:
+    st.divider()
+    st.markdown("### 🏆 ELITE MIX: O FILTRO SUPREMO")
+    st.info("Este módulo cruza as duas estratégias: A empresa deve ser BARATA (Graham) E EFICIENTE (Magic Formula) ao mesmo tempo.")
+    
+    if 'market_data' in st.session_state:
+        df = st.session_state['market_data']
+        # Lógica do Filtro MIX
+        # 1. Margem Graham Positiva (> 0)
+        # 2. Magic Rank existente (ou seja, tem EV/EBIT e ROIC positivos)
+        # 3. Liquidez ok
+        df_mix = df[
+            (df['Margem'] > 0) & 
+            (df['MagicRank'].notnull()) & 
+            (df['liquidezmediadiaria'] > 200000)
+        ].copy()
+        
+        # Ordenação: Prioridade para o Magic Rank (Qualidade), mas garantindo que passou no Graham (Preço)
+        df_mix = df_mix.sort_values('MagicRank', ascending=True).head(10)
+        
+        if len(df_mix) > 0:
+            st.success(f"{len(df_mix)} ATIVOS ENCONTRADOS NA ELITE.")
+            c1, c2 = st.columns(2)
+            for i, r in df_mix.reset_index().iterrows():
+                with (c1 if i%2==0 else c2):
+                    # Card Personalizado da Elite
+                    st.markdown(f"""
+                    <div class="hacker-card" style="border-top: 3px solid #FFD700;">
+                        <div><span class="card-ticker">#{i+1} {r['ticker']}</span><span class="card-price">{format_brl(r['price'])}</span></div>
+                        <div class="metric-row">
+                            <div><div class="metric-label">MARGEM GRAHAM</div><div class="metric-value" style="color:#00ff41">{r['Margem']:.1%}</div></div>
+                            <div style="text-align:right"><div class="metric-label">RANK MAGIC</div><div class="metric-value">#{int(r['MagicRank'])}</div></div>
+                        </div>
+                        <div class="metric-row" style="border-top:none; padding-top:0;">
+                            <div><div class="metric-label">ROIC</div><div class="metric-value">{r['roic']:.1%}</div></div>
+                            <div style="text-align:right"><div class="metric-label">EV/EBIT</div><div class="metric-value">{r['ev_ebit']:.2f}</div></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if st.button(f"🏆 DECODE ELITE #{i+1}", key=f"mix_{r['ticker']}"):
+                        show_mix_details(r['ticker'], r)
+        else:
+            st.warning("Nenhum ativo passou nos dois filtros rigorosos simultaneamente hoje.")
+            
+    else:
+        st.warning("⚠️ Por favor, vá na aba AÇÕES e clique em 'INICIAR VARREDURA' primeiro para carregar os dados.")
+
+# ------------------------------------------------------------------------------
+# PÁGINA 3: FIIs
 # ------------------------------------------------------------------------------
 with tab_fiis:
     st.divider()
@@ -430,10 +453,8 @@ with tab_fiis:
     else:
         df_fii = st.session_state['fiis_data']
         st.success(f"BASE FIIs: {len(df_fii)} FUNDOS.")
-        
         c_sel, c_btn, _ = st.columns([2, 1, 6])
         with c_sel: target_fii = st.selectbox("CÓDIGO FII:", options=sorted(df_fii['ticker'].unique()), index=None, placeholder="Ex: MXRF11", key="target_fii")
-        
         if target_fii:
             row_fii = df_fii[df_fii['ticker']==target_fii].iloc[0]
             with st.spinner(f"Carregando Gráfico {target_fii}..."):
@@ -441,16 +462,13 @@ with tab_fiis:
                 if fig: st.plotly_chart(fig, use_container_width=True)
             if st.button("🧠 DECODE FII", key="btn_decode_fii"):
                 show_fii_decode(target_fii, row_fii, {'Segmento': row_fii['segmento']})
-
         st.markdown("---")
         c1, c2, c3 = st.columns(3)
         with c1: min_dy = st.number_input("DY MÍNIMO (%)", value=6.0, step=0.5, key="min_dy")
         with c2: max_pvp = st.number_input("P/VP MÁXIMO", value=1.10, step=0.05, key="max_pvp")
         with c3: tipo = st.selectbox("SEGMENTO", ["TODOS"] + sorted(df_fii['segmento'].dropna().unique().tolist()), key="seg_fii")
-        
         df_f = df_fii[(df_fii['dy'] >= min_dy/100) & (df_fii['pvp'] <= max_pvp) & (df_fii['liquidezmediadiaria'] > 200000)].copy()
         if tipo != "TODOS": df_f = df_f[df_f['segmento'] == tipo]
-        
         st.markdown("---")
         for i, row in df_f.sort_values('dy', ascending=False).head(10).reset_index().iterrows():
             st.markdown(f"""<div class="hacker-card"><div><span class="card-ticker">{row['ticker']}</span><span class="card-price">{format_brl(row['price'])}</span></div><div class="metric-row"><div><div class="metric-label">DY (12M)</div><div class="metric-value">{row['dy']:.1%}</div></div><div style="text-align:center"><div class="metric-label">P/VP</div><div class="metric-value">{row['pvp']:.2f}</div></div><div style="text-align:right"><div class="metric-label">SEGMENTO</div><div class="metric-value" style="font-size:12px">{row['segmento']}</div></div></div></div>""", unsafe_allow_html=True)
@@ -458,7 +476,7 @@ with tab_fiis:
                 show_fii_decode(row['ticker'], row, {'Segmento': row['segmento']})
 
 # ------------------------------------------------------------------------------
-# PÁGINA 3: ARENA
+# PÁGINA 4: ARENA
 # ------------------------------------------------------------------------------
 with tab_arena:
     st.divider()
@@ -468,7 +486,6 @@ with tab_arena:
         c1, c2 = st.columns(2)
         with c1: t1 = st.selectbox("LUTADOR 1", options=sorted(df['ticker'].unique()), key="t1")
         with c2: t2 = st.selectbox("LUTADOR 2", options=sorted(df['ticker'].unique()), key="t2")
-        
         if t1 and t2 and t1 != t2:
             d1 = df[df['ticker']==t1].iloc[0]; d2 = df[df['ticker']==t2].iloc[0]
             comp_data = {
