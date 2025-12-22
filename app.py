@@ -169,30 +169,62 @@ def get_candle_chart(ticker):
     except: return None
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (TABELA CORRIGIDA)
+# 🎨 ESTILOS CSS (POLIMENTO FINAL UI/UX)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
 <style>
+    /* REMOVE ESPAÇO EXTRA NO TOPO */
+    .block-container {{ padding-top: 1rem !important; }}
+    
     /* FUNDO GERAL */
     .stApp {{ background-color: #000; color: #fff; font-family: 'Consolas', monospace; }}
-    h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; }}
+    h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; margin-top: 0 !important; }}
     
     /* INPUTS & SELECTBOXES */
     div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
     .stSelectbox div[data-baseweb="select"] > div, .stSelectbox div[data-baseweb="select"] span {{ color: #ffffff !important; }}
     .stSelectbox label, .stNumberInput label {{ color: #00ff41 !important; font-weight: bold; font-size: 14px; }}
     
-    /* BOTÕES */
-    .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; }}
+    /* BOTÕES DE AÇÃO (SCAN, DECODE) */
+    .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; border-radius: 8px; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
     
-    /* ABAS (TABS) */
-    .stTabs [data-baseweb="tab-list"] {{ gap: 10px; }}
-    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: #111; color: #fff; border: 1px solid #333; }}
-    .stTabs [aria-selected="true"] {{ background-color: #00ff41 !important; color: #000 !important; font-weight: bold; }}
+    /* --- ESTILIZAÇÃO DAS ABAS COMO BOTÕES --- */
+    .stTabs {{ margin-top: -15px !important; }} /* Sobe as abas */
+    .stTabs [data-baseweb="tab-list"] {{ gap: 15px; }} /* Espaço entre botões */
     
-    /* CARDS (FONTE BRANCA) */
+    .stTabs [data-baseweb="tab"] {{
+        height: auto !important;
+        padding: 15px 25px !important; /* Mais espaço interno */
+        background-color: #1a1a1a !important; /* Fundo inativo */
+        color: #ffffff !important;
+        border: 2px solid #333 !important; /* Borda visível */
+        border-radius: 8px !important; /* Arredondado */
+        font-weight: bold !important;
+        font-size: 16px !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Sombra de profundidade */
+    }}
+
+    /* Hover na aba inativa */
+    .stTabs [data-baseweb="tab"]:hover {{
+        border-color: #00ff41 !important;
+        background-color: #222 !important;
+        transform: translateY(-2px); /* Efeito de levantar */
+    }}
+
+    /* Aba Ativa */
+    .stTabs [aria-selected="true"] {{
+        background-color: #00ff41 !important;
+        color: #000000 !important;
+        border-color: #00ff41 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.6) !important; /* Brilho Neon */
+        transform: translateY(0);
+    }}
+    /* ---------------------------------------- */
+    
+    /* CARDS */
     .hacker-card {{ background-color: #111 !important; border: 1px solid #333; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
     .card-ticker {{ font-size: 20px; font-weight: bold; color: #ffffff !important; }}
     .card-price {{ float: right; font-size: 20px; color: #00ff41 !important; font-weight: bold; }}
@@ -201,24 +233,12 @@ st.markdown(f"""
     .metric-value {{ font-size: 16px; font-weight: bold; color: #ffffff !important; }}
     .buy-section {{ margin-top: 10px; background: #051a05; padding: 5px; text-align: center; border: 1px solid #00ff41; font-size: 14px; color: #00ff41; font-weight: bold; }}
 
-    /* TABELA ARENA (FIX CRÍTICO) */
-    div[data-testid="stTable"] {{
-        color: #ffffff !important;
-        background-color: #111 !important;
-    }}
-    div[data-testid="stTable"] th {{
-        background-color: #222 !important; 
-        color: #00ff41 !important; /* Cabeçalho Verde Hacker */
-        font-weight: bold !important;
-        border-bottom: 1px solid #444 !important;
-    }}
-    div[data-testid="stTable"] td {{
-        background-color: #111 !important; 
-        color: #ffffff !important; /* Células Brancas */
-        border-bottom: 1px solid #333 !important;
-    }}
+    /* TABELA ARENA */
+    div[data-testid="stTable"] {{ color: #ffffff !important; background-color: #111 !important; }}
+    div[data-testid="stTable"] th {{ background-color: #222 !important; color: #00ff41 !important; font-weight: bold !important; border-bottom: 1px solid #444 !important; }}
+    div[data-testid="stTable"] td {{ background-color: #111 !important; color: #ffffff !important; border-bottom: 1px solid #333 !important; }}
 
-    /* MODAIS */
+    /* OUTROS ELEMENTOS */
     .modal-header {{ font-size: 22px; color: #00ff41; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }}
     .modal-math {{ background: #111; padding: 15px; border-left: 3px solid #00ff41; font-family: monospace; font-size: 16px; color: #fff; margin-bottom: 15px; }}
     .highlight-val {{ color: #00ff41; font-weight: bold; font-size: 18px; }}
@@ -315,18 +335,19 @@ def show_fii_decode(ticker, row, details):
 # ==============================================================================
 # 📺 UI PRINCIPAL
 # ==============================================================================
-c_logo, c_title = st.columns([1, 8])
-with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v13.3</span></h2>", unsafe_allow_html=True)
-st.divider()
+# Cabeçalho compacto
+c_logo, c_title = st.columns([0.5, 8]) # Logo menor, menos espaço
+with c_logo: st.image(URL_DO_ICONE, width=60)
+with c_title: st.markdown(f"<h2 style='margin: 15px 0 0 0;'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v14.0</span></h2>", unsafe_allow_html=True)
 
-# ABAS FIXAS NO TOPO
+# ABAS (AGORA COM VISUAL DE BOTÕES)
 tab_acoes, tab_fiis, tab_arena = st.tabs(["AÇÕES (GRAHAM/MAGIC)", "FIIs (RENDA)", "ARENA (BATALHA)"])
 
 # ------------------------------------------------------------------------------
 # PÁGINA 1: AÇÕES
 # ------------------------------------------------------------------------------
 with tab_acoes:
+    st.divider() # Separador movido para dentro da aba
     if 'market_data' not in st.session_state:
         if st.button("⚡ INICIAR VARREDURA AÇÕES", key="btn_scan_acoes"):
             with st.spinner("Baixando Dados Ações..."):
@@ -391,6 +412,7 @@ with tab_acoes:
 # PÁGINA 2: FIIs
 # ------------------------------------------------------------------------------
 with tab_fiis:
+    st.divider()
     st.markdown("### 🏢 FORTALEZA DE RENDA (FIIs)")
     if 'fiis_data' not in st.session_state:
         if st.button("⚡ INICIAR VARREDURA FIIs", key="btn_scan_fiis"):
@@ -431,6 +453,7 @@ with tab_fiis:
 # PÁGINA 3: ARENA
 # ------------------------------------------------------------------------------
 with tab_arena:
+    st.divider()
     st.markdown("### ⚔️ ARENA DE BATALHA: COMPARADOR")
     if 'market_data' in st.session_state:
         df = st.session_state['market_data']
