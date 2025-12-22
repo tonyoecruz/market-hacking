@@ -13,7 +13,7 @@ from datetime import datetime
 # 🛠️ CONFIG DO APP
 # ==============================================================================
 URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
-st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide")
+st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide", initial_sidebar_state="collapsed")
 
 # ==============================================================================
 # 🧠 INTELIGÊNCIA ARTIFICIAL (MOTOR V7.1)
@@ -154,20 +154,39 @@ def get_data_fiis():
         return df
     except: return pd.DataFrame()
 
-@st.cache_data(ttl=3600)
+# CRAWLER DE GRÁFICO (YFINANCE BLINDADO)
 def get_candle_chart(ticker):
+    # Não cachear se der erro, pra tentar de novo
     try:
+        # Tenta com .SA
         yf_ticker = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
         df = yf.download(yf_ticker, period="6mo", interval="1d", progress=False)
-        if len(df) > 0:
-            fig = go.Figure(data=[go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], increasing_line_color='#00ff41', decreasing_line_color='#ff4444')])
-            fig.update_layout(xaxis_rangeslider_visible=False, plot_bgcolor='black', paper_bgcolor='black', font=dict(color='white'), margin=dict(l=20, r=20, t=20, b=20), height=350)
+        
+        # Se vazio, tenta SEM .SA (alguns BDRs ou casos raros)
+        if df.empty or len(df) < 5:
+            df = yf.download(ticker, period="6mo", interval="1d", progress=False)
+            
+        if not df.empty and len(df) > 5:
+            fig = go.Figure(data=[go.Candlestick(x=df.index,
+                open=df['Open'], high=df['High'],
+                low=df['Low'], close=df['Close'],
+                increasing_line_color= '#00ff41', decreasing_line_color= '#ff4444'
+            )])
+            fig.update_layout(
+                xaxis_rangeslider_visible=False,
+                plot_bgcolor='black', paper_bgcolor='black',
+                font=dict(color='white'),
+                margin=dict(l=10, r=10, t=10, b=10),
+                height=350,
+                title=f"GRÁFICO DIÁRIO: {ticker}"
+            )
             return fig
         return None
-    except: return None
+    except Exception as e:
+        return None
 
 # ==============================================================================
-# 🎨 ESTILOS CSS (CORRIGIDO: INPUTS COM TEXTO BRANCO)
+# 🎨 ESTILOS CSS
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -181,10 +200,16 @@ st.markdown(f"""
     div[data-testid="stNumberInput"] input {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
     div[data-testid="stSelectbox"] > div > div {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
     
+    /* ABAS NO TOPO (TABS) */
+    .stTabs [data-baseweb="tab-list"] {{ gap: 10px; }}
+    .stTabs [data-baseweb="tab"] {{
+        height: 50px; white-space: pre-wrap; background-color: #111; border-radius: 4px 4px 0 0; gap: 1px; padding-top: 10px; padding-bottom: 10px; color: #fff; border: 1px solid #333;
+    }}
+    .stTabs [aria-selected="true"] {{ background-color: #00ff41 !important; color: #000 !important; font-weight: bold; }}
+    
     /* GARANTE QUE O TEXTO DIGITADO SEJA BRANCO */
     .stSelectbox div[data-baseweb="select"] > div {{ color: #ffffff !important; }}
     .stSelectbox div[data-baseweb="select"] span {{ color: #ffffff !important; }}
-    
     .stSelectbox label, .stNumberInput label {{ color: #00ff41 !important; font-weight: bold; font-size: 14px; }}
     
     .hacker-card {{ background-color: #ffffff; border: 1px solid #ccc; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
@@ -292,22 +317,22 @@ def show_fii_decode(ticker, row, details):
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>ANÁLISE DE RENDA (IA)</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
 # ==============================================================================
-# 📺 UI PRINCIPAL (NAVEGAÇÃO)
+# 📺 UI PRINCIPAL (NAVEGAÇÃO POR ABAS SUPERIORES)
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v12.1</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v13.0</span></h2>", unsafe_allow_html=True)
 st.divider()
 
-# NAVEGAÇÃO LATERAL
-page = st.sidebar.radio("NAVEGAÇÃO", ["AÇÕES (GRAHAM/MAGIC)", "FIIs (RENDA)", "ARENA (BATALHA)"])
+# ABAS FIXAS NO TOPO (SUBSTITUINDO SIDEBAR)
+tab_acoes, tab_fiis, tab_arena = st.tabs(["AÇÕES (GRAHAM/MAGIC)", "FIIs (RENDA)", "ARENA (BATALHA)"])
 
 # ------------------------------------------------------------------------------
-# PÁGINA 1: AÇÕES (O ORIGINAL)
+# PÁGINA 1: AÇÕES
 # ------------------------------------------------------------------------------
-if page == "AÇÕES (GRAHAM/MAGIC)":
+with tab_acoes:
     if 'market_data' not in st.session_state:
-        if st.button("⚡ INICIAR VARREDURA AÇÕES"):
+        if st.button("⚡ INICIAR VARREDURA AÇÕES", key="btn_scan_acoes"):
             with st.spinner("Baixando Dados Ações..."):
                 df = get_data_acoes()
                 df = df[(df['liquidezmediadiaria']>0) & (df['price']>0)].copy()
@@ -326,25 +351,25 @@ if page == "AÇÕES (GRAHAM/MAGIC)":
         # SNIPER + GRÁFICO
         st.markdown("### 🎯 MIRA LASER (IA)")
         c_sel, c_btn, _ = st.columns([2, 1, 6])
-        with c_sel: target = st.selectbox("CÓDIGO:", options=sorted(df['ticker'].unique()), index=None, placeholder="Ex: VALE3")
+        with c_sel: target = st.selectbox("CÓDIGO:", options=sorted(df['ticker'].unique()), index=None, placeholder="Ex: VALE3", key="target_acoes")
         with c_btn:
             st.markdown("<br>", unsafe_allow_html=True)
-            btn_decode = st.button("🧠 DECODE")
+            btn_decode = st.button("🧠 DECODE", key="btn_decode_acoes")
         
         if target:
             row_t = df[df['ticker']==target].iloc[0]
             with st.spinner(f"Carregando Gráfico {target}..."):
                 fig = get_candle_chart(target)
                 if fig: st.plotly_chart(fig, use_container_width=True)
-                else: st.warning("Gráfico indisponível.")
+                else: st.warning(f"Gráfico não disponível para {target}")
             if btn_decode:
                 with st.spinner("Analisando..."): details = get_stock_details(target)
                 show_ai_decode(target, row_t, details)
 
         st.markdown("---")
         ic1, ic2 = st.columns(2)
-        with ic1: min_liq = st.number_input("LIQUIDEZ MÍNIMA", value=200000, step=50000)
-        with ic2: invest = st.number_input("SIMULAR APORTE", value=0.0, step=100.0)
+        with ic1: min_liq = st.number_input("LIQUIDEZ MÍNIMA", value=200000, step=50000, key="min_liq_acoes")
+        with ic2: invest = st.number_input("SIMULAR APORTE", value=0.0, step=100.0, key="invest_acoes")
         
         df_fin = df[df['liquidezmediadiaria'] > min_liq].copy()
         t1, t2 = st.tabs(["💎 GRAHAM", "✨ MAGIC FORMULA"])
@@ -369,12 +394,12 @@ if page == "AÇÕES (GRAHAM/MAGIC)":
                     if st.button(f"📂 DECODE #{i+1}", key=f"m_{r['ticker']}"): show_magic_details(r['ticker'], r)
 
 # ------------------------------------------------------------------------------
-# PÁGINA 2: FIIs (NOVO!)
+# PÁGINA 2: FIIs
 # ------------------------------------------------------------------------------
-elif page == "FIIs (RENDA)":
+with tab_fiis:
     st.markdown("### 🏢 FORTALEZA DE RENDA (FIIs)")
     if 'fiis_data' not in st.session_state:
-        if st.button("⚡ INICIAR VARREDURA FIIs"):
+        if st.button("⚡ INICIAR VARREDURA FIIs", key="btn_scan_fiis"):
             with st.spinner("Baixando Dados FIIs..."):
                 st.session_state['fiis_data'] = get_data_fiis()
                 st.rerun()
@@ -382,28 +407,38 @@ elif page == "FIIs (RENDA)":
         df_fii = st.session_state['fiis_data']
         st.success(f"BASE FIIs: {len(df_fii)} FUNDOS.")
         
-        # FILTROS FII
-        c1, c2, c3 = st.columns(3)
-        with c1: min_dy = st.number_input("DY MÍNIMO (%)", value=6.0, step=0.5)
-        with c2: max_pvp = st.number_input("P/VP MÁXIMO", value=1.10, step=0.05)
-        with c3: tipo = st.selectbox("SEGMENTO", ["TODOS"] + sorted(df_fii['segmento'].dropna().unique().tolist()))
+        # MIRA LASER FII
+        c_sel, c_btn, _ = st.columns([2, 1, 6])
+        with c_sel: target_fii = st.selectbox("CÓDIGO FII:", options=sorted(df_fii['ticker'].unique()), index=None, placeholder="Ex: MXRF11", key="target_fii")
         
-        # FILTRAGEM
+        if target_fii:
+            row_fii = df_fii[df_fii['ticker']==target_fii].iloc[0]
+            with st.spinner(f"Carregando Gráfico {target_fii}..."):
+                fig = get_candle_chart(target_fii)
+                if fig: st.plotly_chart(fig, use_container_width=True)
+            if st.button("🧠 DECODE FII", key="btn_decode_fii"):
+                show_fii_decode(target_fii, row_fii, {'Segmento': row_fii['segmento']})
+
+        st.markdown("---")
+        c1, c2, c3 = st.columns(3)
+        with c1: min_dy = st.number_input("DY MÍNIMO (%)", value=6.0, step=0.5, key="min_dy")
+        with c2: max_pvp = st.number_input("P/VP MÁXIMO", value=1.10, step=0.05, key="max_pvp")
+        with c3: tipo = st.selectbox("SEGMENTO", ["TODOS"] + sorted(df_fii['segmento'].dropna().unique().tolist()), key="seg_fii")
+        
         df_f = df_fii[(df_fii['dy'] >= min_dy/100) & (df_fii['pvp'] <= max_pvp) & (df_fii['liquidezmediadiaria'] > 200000)].copy()
         if tipo != "TODOS": df_f = df_f[df_f['segmento'] == tipo]
         
         st.markdown("---")
         for i, row in df_f.sort_values('dy', ascending=False).head(10).reset_index().iterrows():
             st.markdown(f"""<div class="hacker-card"><div><span class="card-ticker">{row['ticker']}</span><span class="card-price">{format_brl(row['price'])}</span></div><div class="metric-row"><div><div class="metric-label">DY (12M)</div><div class="metric-value">{row['dy']:.1%}</div></div><div style="text-align:center"><div class="metric-label">P/VP</div><div class="metric-value">{row['pvp']:.2f}</div></div><div style="text-align:right"><div class="metric-label">SEGMENTO</div><div class="metric-value" style="font-size:12px">{row['segmento']}</div></div></div></div>""", unsafe_allow_html=True)
-            if st.button(f"🏢 ANALISAR {row['ticker']}", key=f"fii_{row['ticker']}"):
+            if st.button(f"🏢 ANALISAR {row['ticker']}", key=f"fii_list_{row['ticker']}"):
                 show_fii_decode(row['ticker'], row, {'Segmento': row['segmento']})
 
 # ------------------------------------------------------------------------------
-# PÁGINA 3: ARENA DE BATALHA (NOVO!)
+# PÁGINA 3: ARENA
 # ------------------------------------------------------------------------------
-elif page == "ARENA (BATALHA)":
+with tab_arena:
     st.markdown("### ⚔️ ARENA DE BATALHA: COMPARADOR")
-    
     if 'market_data' in st.session_state:
         df = st.session_state['market_data']
         c1, c2 = st.columns(2)
@@ -412,16 +447,13 @@ elif page == "ARENA (BATALHA)":
         
         if t1 and t2 and t1 != t2:
             d1 = df[df['ticker']==t1].iloc[0]; d2 = df[df['ticker']==t2].iloc[0]
-            
-            # TABELA COMPARATIVA
             comp_data = {
                 "INDICADOR": ["PREÇO", "P/L", "P/VP", "EV/EBIT", "ROIC", "MARGEM GRAHAM"],
                 f"{t1}": [format_brl(d1['price']), f"{d1['pl']:.1f}", f"{d1['pvp']:.1f}", f"{d1['ev_ebit']:.1f}", f"{d1['roic']:.1%}", f"{d1['Margem']:.1%}"],
                 f"{t2}": [format_brl(d2['price']), f"{d2['pl']:.1f}", f"{d2['pvp']:.1f}", f"{d2['ev_ebit']:.1f}", f"{d2['roic']:.1%}", f"{d2['Margem']:.1%}"]
             }
             st.table(pd.DataFrame(comp_data).set_index("INDICADOR"))
-            
-            if st.button("⚔️ INICIAR COMBATE (IA)"):
+            if st.button("⚔️ INICIAR COMBATE (IA)", key="btn_battle"):
                 with st.spinner("A IA ESTÁ DECIDINDO O VENCEDOR..."):
                     res = get_battle_analysis(t1, str(d1.to_dict()), t2, str(d2.to_dict()))
                     st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>VEREDITO DO ÁRBITRO</span></div>{res}</div>", unsafe_allow_html=True)
