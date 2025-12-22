@@ -167,7 +167,7 @@ def get_candle_chart(ticker):
     except: return None
 
 # ==============================================================================
-# 🎨 ESTILOS CSS
+# 🎨 ESTILOS CSS (CORRIGIDO: INPUTS COM TEXTO BRANCO)
 # ==============================================================================
 st.markdown(f"""
 <head><link rel="apple-touch-icon" href="{URL_DO_ICONE}"></head>
@@ -176,7 +176,15 @@ st.markdown(f"""
     h1, h2, h3 {{ color: #00ff41 !important; text-transform: uppercase; }}
     .stButton>button {{ border: 2px solid #00ff41; color: #00ff41; background: #000; font-weight: bold; height: 50px; width: 100%; transition: 0.3s; }}
     .stButton>button:hover {{ background: #00ff41; color: #000; box-shadow: 0 0 20px #00ff41; }}
-    div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] > div > div {{ color: #fff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
+    
+    /* INPUTS E SELECTBOXES - CORREÇÃO DE COR */
+    div[data-testid="stNumberInput"] input {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
+    div[data-testid="stSelectbox"] > div > div {{ color: #ffffff !important; background-color: #111 !important; border: 1px solid #00ff41 !important; }}
+    
+    /* GARANTE QUE O TEXTO DIGITADO SEJA BRANCO */
+    .stSelectbox div[data-baseweb="select"] > div {{ color: #ffffff !important; }}
+    .stSelectbox div[data-baseweb="select"] span {{ color: #ffffff !important; }}
+    
     .stSelectbox label, .stNumberInput label {{ color: #00ff41 !important; font-weight: bold; font-size: 14px; }}
     
     .hacker-card {{ background-color: #ffffff; border: 1px solid #ccc; border-top: 3px solid #00ff41; padding: 15px; margin-bottom: 10px; border-radius: 4px; }}
@@ -288,7 +296,7 @@ def show_fii_decode(ticker, row, details):
 # ==============================================================================
 c_logo, c_title = st.columns([1, 8])
 with c_logo: st.image(URL_DO_ICONE, width=70)
-with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v12.0</span></h2>", unsafe_allow_html=True)
+with c_title: st.markdown(f"<h2 style='margin-top:10px'>SCOPE3 <span style='font-size:14px;color:#9933ff'>| ULTIMATE v12.1</span></h2>", unsafe_allow_html=True)
 st.divider()
 
 # NAVEGAÇÃO LATERAL
