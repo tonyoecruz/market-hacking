@@ -242,7 +242,14 @@ def get_battle_analysis(t1, d1, t2, d2):
     
     REGRA DE NARRAÇÃO:
     Comece EXATAMENTE com a frase: "E QUEM GANHOOOOU ESSA BATALHA FOI O ATIVO [NOME_DO_VENCEDOR]!" (Substitua [NOME_DO_VENCEDOR] pelo código real, ex: VALE3).
-    Em seguida, explique tecnicamente o PORQUÊ (P/L, ROIC, Dívida). Seja direto. Max 5 linhas.
+    
+    Em seguida, faça uma ANÁLISE COMPARATIVA PROFUNDA para justificar a vitória:
+    1. Compare Margens (Quem é mais eficiente?).
+    2. Compare Endividamento (Quem é mais segura?).
+    3. Compare Valor (Quem está mais barata no P/L e EV/EBIT?).
+    4. Conclusão: Por que a vencedora é superior no Longo Prazo?
+    
+    Seja vibrante mas tecnicamente rigoroso. Max 8 linhas.
     """
     return get_ai_generic_analysis(prompt)
 
@@ -1255,6 +1262,31 @@ tab_carteira, tab_acoes, tab_etfs, tab_mix, tab_fiis, tab_arena = st.tabs(["CART
 # PÁGINA 0: CARTEIRA PESSOAL (HERO DASHBOARD)
 # ------------------------------------------------------------------------------
 with tab_carteira:
+    # --- BACKUP & RESTORE SECTION ---
+    with st.expander("☁️ BACKUP & PERSISTÊNCIA (ATENÇÃO)", expanded=False):
+        st.warning("⚠️ IMPORTANTE: Como este App roda na Nuvem (Streamlit Cloud), os dados locais são APAGADOS a cada atualização (Deploy). Para não perder sua carteira, faça o download do banco de dados regularmente e restaure quando necessário.")
+        
+        b1, b2 = st.columns(2)
+        with b1:
+            st.markdown("##### 1. SALVAR DADOS (BACKUP)")
+            with open("market_hacking.db", "rb") as f:
+                st.download_button(
+                    label="⬇️ BAIXAR MEU BANCO DE DADOS (.db)",
+                    data=f,
+                    file_name=f"market_hacking_backup_{datetime.now().strftime('%Y%m%d')}.db",
+                    mime="application/x-sqlite3",
+                    key="btn_backup_db"
+                )
+        with b2:
+            st.markdown("##### 2. RESTAURAR DADOS")
+            uploaded_db = st.file_uploader("Carregar backup (.db)", type=['db'], key="upload_db_restore")
+            if uploaded_db:
+                if st.button("⚠️ CONFIRMAR RESTAURAÇÃO"):
+                    with open("market_hacking.db", "wb") as f:
+                        f.write(uploaded_db.getbuffer())
+                    st.success("Banco de dados restaurado com sucesso! Reiniciando...")
+                    time.sleep(2)
+                    st.rerun()
     # 1. Fetch Data
     df_w = db.get_portfolio(st.session_state['user_id'])
     
@@ -1891,16 +1923,32 @@ with tab_arena:
                 f"{t2}": [format_brl(d2['price']), f"{d2['pl']:.1f}", f"{d2['pvp']:.1f}", f"{d2['ev_ebit']:.1f}", f"{d2['roic']:.1%}", f"{d2['Margem']:.1%}"]
             }
             st.dataframe(pd.DataFrame(comp_data).set_index("INDICADOR"), width='stretch')
+            # SESSION STATE MANAGEMENT FOR BATTLE
+            if 'battle_res' not in st.session_state: st.session_state['battle_res'] = None
+            if 'battle_t1' not in st.session_state: st.session_state['battle_t1'] = ""
+            if 'battle_t2' not in st.session_state: st.session_state['battle_t2'] = ""
+
+            # Check if inputs changed, if so, reset result
+            if st.session_state['battle_t1'] != t1 or st.session_state['battle_t2'] != t2:
+                st.session_state['battle_res'] = None
+                st.session_state['battle_t1'] = t1
+                st.session_state['battle_t2'] = t2
+
             if st.button("⚔️ INICIAR COMBATE (IA)", key="btn_battle"):
                 with st.spinner("A IA ESTÁ DECIDINDO O VENCEDOR..."):
                     res = get_battle_analysis(t1, str(d1.to_dict()), t2, str(d2.to_dict()))
-                    
-                    # TTS
-                    if st.button("🔊 Ouvir Veredito", key=f"speak_battle_{t1}_{t2}"):
-                        audio_path = generate_audio(res, f"battle_{t1}_{t2}")
-                        st.audio(audio_path, format="audio/mp3", autoplay=True)
+                    st.session_state['battle_res'] = res
+            
+            # Display Result if exists
+            if st.session_state['battle_res']:
+                res = st.session_state['battle_res']
+                
+                # TTS
+                if st.button("🔊 Ouvir Veredito", key=f"speak_battle_{t1}_{t2}"):
+                    audio_path = generate_audio(res, f"battle_{t1}_{t2}")
+                    st.audio(audio_path, format="audio/mp3", autoplay=True)
 
-                    st.markdown(f"<div class='glass-card'><div class='ai-header'><span class='ai-title'>VEREDITO DO ÁRBITRO</span></div>{res}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='glass-card'><div class='ai-header'><span class='ai-title'>VEREDITO DO ÁRBITRO</span></div>{res}</div>", unsafe_allow_html=True)
             
             st.markdown("---")
             ac1, ac2 = st.columns(2)
