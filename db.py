@@ -2,91 +2,53 @@ import streamlit as st
 import bcrypt
 import datetime
 import pandas as pd
-import sqlalchemy
-from sqlalchemy import create_engine, text, MetaData, Table, Column, Integer, String, Float, DateTime, UniqueConstraint, inspect
+import uuid
+from sqlalchemy import text
 
-# --- DATABASE CONNECTION & CONFIG ---
+# --- DATABASE CONNECTION (Native Streamlit/Supabase) ---
 
-def get_db_engine():
-    """
-    Returns a SQLAlchemy Engine.
-    Prioritizes Supabase/Postgres configuration.
-    Falls back to local SQLite if not found.
-    """
+def get_db_connection():
+    """Conecta ao Supabase usando a configuração [connections.postgresql] do secrets.toml"""
     try:
-        # 1. Try Streamlit Connection (Native)
-        if "connections" in st.secrets and "postgresql" in st.secrets["connections"]:
-            conn = st.connection("postgresql", type="sql")
-            return conn.engine
-            
-        # 2. Try Manual URL from Secrets (Supabase specific)
-        # Supabase provides a direct connection string
-        elif "SUPABASE_DB_URL" in st.secrets:
-            url = st.secrets["SUPABASE_DB_URL"]
-            # Fix protocol for SQLAlchemy if needed
-            if url.startswith("postgres://"):
-                url = url.replace("postgres://", "postgresql://", 1)
-            return create_engine(url)
-
+        # ttl=0 garante que não cacheie a conexão incorretamente
+        conn = st.connection("postgresql", type="sql")
+        return conn
     except Exception as e:
-        print(f"Postgres/Supabase not configured or connection failed: {e}")
-
-    # 3. Fallback to SQLite
-    print("⚠️ Using Local SQLite (Ephemeral)")
-    return create_engine("sqlite:///market_hacking.db", connect_args={"check_same_thread": False})
-
-# Global/Singleton Engine
-engine = get_db_engine()
-metadata = MetaData()
-
-# --- SCHEMA DEFINITIONS (SQLAlchemy Core) ---
-# This ensures DDL works for both SQLite and Postgres
-
-users = Table(
-    'users', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True), # Serial in PG, Autoinc in SQLite
-    Column('username', String, unique=True, nullable=False),
-    Column('email', String, unique=True),
-    Column('password_hash', String, nullable=False), # hex/bytes stored as string
-    Column('google_id', String),
-    Column('created_at', DateTime, default=datetime.datetime.utcnow)
-)
-
-sessions = Table(
-    'sessions', metadata,
-    Column('token', String, primary_key=True),
-    Column('user_id', Integer, nullable=False),
-    Column('created_at', DateTime, default=datetime.datetime.utcnow)
-)
-
-portfolio = Table(
-    'portfolio', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('user_id', Integer, nullable=False),
-    Column('ticker', String, nullable=False),
-    Column('quantity', Integer, nullable=False),
-    Column('avg_price', Float, nullable=False),
-    Column('last_updated_at', DateTime, default=datetime.datetime.utcnow),
-    UniqueConstraint('user_id', 'ticker', name='uq_user_ticker')
-)
-
-transactions = Table(
-    'transactions', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('user_id', Integer, nullable=False),
-    Column('ticker', String, nullable=False),
-    Column('quantity', Integer, nullable=False),
-    Column('price', Float, nullable=False),
-    Column('type', String, nullable=False), # BUY, SELL
-    Column('date', DateTime, default=datetime.datetime.utcnow)
-)
+        st.error(f"Erro ao conectar ao banco de dados: {e}")
+        return None
 
 def init_db():
-    """Creates tables if they don't exist."""
+    """Função para inicializar/verificar o banco"""
+    conn = get_db_connection()
+    if conn is None:
+        return
+    
+    # Teste simples de conexão
     try:
-        metadata.create_all(engine)
+        with conn.session as session:
+            session.execute(text("SELECT 1"))
+            session.commit()
     except Exception as e:
-        print(f"Error initializing DB: {e}")
+        st.error(f"Erro ao verificar o banco de dados: {e}")
+
+def run_query(query, params=None):
+    """Função genérica para rodar comandos SQL de LEITURA (Retorna DataFrame)"""
+    conn = get_db_connection()
+    # ttl=0 desativa cache global para evitar dados obsoletos em sessões dinâmicas
+    if params:
+        return conn.query(query, params=params, ttl=0)
+    return conn.query(query, ttl=0)
+
+def run_transaction(query, params=None):
+    """Função auxiliar para ESCRITA (INSERT/UPDATE/DELETE)"""
+    conn = get_db_connection()
+    try:
+        with conn.session as session:
+            session.execute(text(query), params if params else {})
+            session.commit()
+        return True, None
+    except Exception as e:
+        return False, str(e)
 
 # --- AUTHENTICATION ---
 
@@ -97,217 +59,189 @@ def create_user(username, password, email=None):
             
         hashed = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8') # Store as string
         
-        with engine.connect() as conn:
-            stmt = users.insert().values(
-                username=username, 
-                password_hash=hashed, 
-                email=email
-            )
-            conn.execute(stmt)
-            conn.commit()
-            
-        return True, "Usuário criado com sucesso!"
-    except sqlalchemy.exc.IntegrityError:
-        return False, "Usuário já existe!"
+        sql = """
+            INSERT INTO users (username, password_hash, email) 
+            VALUES (:u, :p, :e)
+        """
+        success, error = run_transaction(sql, {"u": username, "p": hashed, "e": email})
+        
+        if success:
+            return True, "Usuário criado com sucesso!"
+        
+        # Check integrity error manually from error string (simple approach) or re-raise
+        if "unique constraint" in str(error).lower():
+            return False, "Usuário já existe!"
+        return False, str(error)
+
     except Exception as e:
         return False, str(e)
 
 def verify_user(username, password):
-    with engine.connect() as conn:
-        stmt = users.select().where(users.c.username == username)
-        result = conn.execute(stmt).fetchone()
-        
-    if result:
-        # result is a Row object/tuple. 
-        # columns: id(0), username(1), email(2), pass(3)...
-        stored_hash = result.password_hash
-        # Ensure bytes
+    sql = "SELECT id, username, password_hash FROM users WHERE username = :u"
+    df = run_query(sql, {"u": username})
+    
+    if not df.empty:
+        user = df.iloc[0]
+        stored_hash = user['password_hash']
         if isinstance(stored_hash, str): stored_hash = stored_hash.encode('utf-8')
         
         if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
-            return {"id": result.id, "username": result.username}
+            return {"id": int(user['id']), "username": user['username']}
     return None
 
 def login_google_user(email, google_id):
     """Loga ou cria usuário via Google"""
-    with engine.connect() as conn:
-        # Check Exists
-        # Using text() for OR condition across columns is easiest with Core mix
-        # Or using or_()
-        from sqlalchemy import or_
-        stmt = users.select().where(or_(users.c.email == email, users.c.google_id == google_id))
-        user = conn.execute(stmt).fetchone()
+    # 1. Check user exists
+    sql_check = "SELECT id, username, google_id FROM users WHERE email = :e OR google_id = :g"
+    df = run_query(sql_check, {"e": email, "g": google_id})
+    
+    if not df.empty:
+        user = df.iloc[0]
+        user_id = int(user['id'])
         
-        if user:
-            # Update Google ID if valid
-            if not user.google_id:
-                upd = users.update().where(users.c.id == user.id).values(google_id=google_id)
-                conn.execute(upd)
-                conn.commit()
-            return {"id": user.id, "username": user.username}
-        else:
-            # Create
-            username = email.split('@')[0]
+        # Update Google ID if missing
+        if not user['google_id']:
+            upd_sql = "UPDATE users SET google_id = :g WHERE id = :i"
+            run_transaction(upd_sql, {"g": google_id, "i": user_id})
             
-            # Check username collision
-            check = conn.execute(users.select().where(users.c.username == username)).fetchone()
-            if check: 
-                username = f"{username}_{int(datetime.datetime.now().timestamp())}"
-            
-            # Insert
-            ins = users.insert().values(
-                username=username,
-                email=email,
-                google_id=google_id,
-                password_hash="GOOGLE_AUTH_NO_PASS"
-            )
-            res = conn.execute(ins)
-            conn.commit()
-            
-            # Fetch back (res.inserted_primary_key gives ID)
-            # Different drivers behave differently. Safer to fetch ID.
-            # Or use res.inserted_primary_key[0]
-            new_id = res.inserted_primary_key[0]
-            
-            return {"id": new_id, "username": username}
+        return {"id": user_id, "username": user['username']}
+    else:
+        # Create User
+        username = email.split('@')[0]
+        
+        # Collision Check
+        collision_check = "SELECT id FROM users WHERE username = :u"
+        if not run_query(collision_check, {"u": username}).empty:
+            username = f"{username}_{int(datetime.datetime.now().timestamp())}"
+        
+        ins_sql = """
+            INSERT INTO users (username, email, google_id, password_hash)
+            VALUES (:u, :e, :g, 'GOOGLE_AUTH_NO_PASS')
+        """
+        success, err = run_transaction(ins_sql, {"u": username, "e": email, "g": google_id})
+        
+        if success:
+             # Fetch ID back
+             df_new = run_query("SELECT id FROM users WHERE username = :u", {"u": username})
+             if not df_new.empty:
+                 return {"id": int(df_new.iloc[0]['id']), "username": username}
+        
+        return None
 
 # --- SESSIONS ---
-import uuid
 
 def create_session(user_id):
     token = str(uuid.uuid4())
-    with engine.connect() as conn:
-        conn.execute(sessions.insert().values(token=token, user_id=user_id))
-        conn.commit()
+    sql = "INSERT INTO sessions (token, user_id) VALUES (:t, :u)"
+    run_transaction(sql, {"t": token, "u": user_id})
     return token
 
 def get_user_by_session(token):
-    with engine.connect() as conn:
-        # Join
-        j = sessions.join(users, sessions.c.user_id == users.c.id)
-        stmt = sqlalchemy.select(users.c.id, users.c.username, users.c.email).select_from(j).where(sessions.c.token == token)
-        user = conn.execute(stmt).fetchone()
-        
-    if user:
-        return {"id": user.id, "username": user.username}
+    sql = """
+        SELECT u.id, u.username, u.email 
+        FROM sessions s
+        JOIN users u ON s.user_id = u.id
+        WHERE s.token = :t
+    """
+    df = run_query(sql, {"t": token})
+    if not df.empty:
+        r = df.iloc[0]
+        return {"id": int(r['id']), "username": r['username']}
     return None
 
 def delete_session(token):
-    with engine.connect() as conn:
-        conn.execute(sessions.delete().where(sessions.c.token == token))
-        conn.commit()
+    sql = "DELETE FROM sessions WHERE token = :t"
+    run_transaction(sql, {"t": token})
 
 def delete_all_user_sessions(user_id):
-    try:
-        with engine.connect() as conn:
-            conn.execute(sessions.delete().where(sessions.c.user_id == user_id))
-            conn.commit()
-    except: pass
+    sql = "DELETE FROM sessions WHERE user_id = :u"
+    run_transaction(sql, {"u": user_id})
 
 # --- WALLET ---
 
 def get_portfolio(user_id):
-    # Pandas read_sql works with Engine
-    try:
-        # Avoid pandas reading entire table if possible, filter in SQL
-        # We need query
-        query = portfolio.select().where(portfolio.c.user_id == user_id)
-        # pd.read_sql requires connection/engine
-        df = pd.read_sql(query, engine)
-        return df
-    except Exception as e:
-        print(f"Error reading portfolio: {e}")
-        return pd.DataFrame()
+    sql = "SELECT ticker, quantity, avg_price, last_updated_at FROM portfolio WHERE user_id = :u"
+    df = run_query(sql, {"u": user_id})
+    return df # Returns empty DF if no rows, which is correct
 
 def add_to_wallet(user_id, ticker, quantity, price):
-    with engine.connect() as conn:
-        try:
-            # Check existing
-            stmt = portfolio.select().where(
-                (portfolio.c.user_id == user_id) & (portfolio.c.ticker == ticker)
-            )
-            row = conn.execute(stmt).fetchone()
+    # 1. Check existing
+    sql_check = "SELECT quantity, avg_price FROM portfolio WHERE user_id = :u AND ticker = :t"
+    df = run_query(sql_check, {"u": user_id, "t": ticker})
+    
+    timestamp = datetime.datetime.now()
+    
+    if not df.empty:
+        # Update
+        row = df.iloc[0]
+        old_qty = row['quantity']
+        old_avg = row['avg_price']
+        new_qty = old_qty + quantity
+        
+        if new_qty > 0:
+            new_avg = ((old_qty * old_avg) + (quantity * price)) / new_qty
+        else:
+            new_avg = 0
             
-            if row:
-                old_qty = row.quantity
-                old_avg = row.avg_price
-                new_qty = old_qty + quantity
-                
-                if new_qty > 0:
-                    new_avg = ((old_qty * old_avg) + (quantity * price)) / new_qty
-                else:
-                    new_avg = 0
-                    
-                upd = portfolio.update().where(
-                    (portfolio.c.user_id == user_id) & (portfolio.c.ticker == ticker)
-                ).values(
-                    quantity=new_qty,
-                    avg_price=new_avg,
-                    last_updated_at=datetime.datetime.now()
-                )
-                conn.execute(upd)
-            else:
-                ins = portfolio.insert().values(
-                    user_id=user_id,
-                    ticker=ticker,
-                    quantity=quantity,
-                    avg_price=price,
-                    last_updated_at=datetime.datetime.now()
-                )
-                conn.execute(ins)
-            
-            # Log Transaction
-            tr_type = "BUY" if quantity > 0 else "SELL"
-            conn.execute(transactions.insert().values(
-                user_id=user_id,
-                ticker=ticker,
-                quantity=quantity,
-                price=price,
-                type=tr_type,
-                date=datetime.datetime.now()
-            ))
-            
-            conn.commit()
-            return True, "Carteira atualizada!"
-        except Exception as e:
-            return False, f"Erro DB: {str(e)}"
+        upd_sql = """
+            UPDATE portfolio 
+            SET quantity = :q, avg_price = :p, last_updated_at = :d 
+            WHERE user_id = :u AND ticker = :t
+        """
+        success, msg = run_transaction(upd_sql, {
+            "q": int(new_qty), "p": float(new_avg), "d": timestamp, "u": user_id, "t": ticker
+        })
+    else:
+        # Insert
+        ins_sql = """
+            INSERT INTO portfolio (user_id, ticker, quantity, avg_price, last_updated_at)
+            VALUES (:u, :t, :q, :p, :d)
+        """
+        success, msg = run_transaction(ins_sql, {
+            "u": user_id, "t": ticker, "q": int(quantity), "p": float(price), "d": timestamp
+        })
+        
+    if success:
+        # Log Transaction
+        tr_type = "BUY" if quantity > 0 else "SELL"
+        log_sql = """
+            INSERT INTO transactions (user_id, ticker, quantity, price, type, date)
+            VALUES (:u, :t, :q, :p, :tp, :d)
+        """
+        run_transaction(log_sql, {
+            "u": user_id, "t": ticker, "q": int(quantity), 
+            "p": float(price), "tp": tr_type, "d": timestamp
+        })
+        return True, "Carteira atualizada!"
+    else:
+        return False, f"Erro DB: {msg}"
 
 def update_wallet_item(user_id, ticker, new_qty, new_price):
-    try:
-        with engine.connect() as conn:
-            upd = portfolio.update().where(
-                (portfolio.c.user_id == user_id) & (portfolio.c.ticker == ticker)
-            ).values(
-                quantity=new_qty,
-                avg_price=new_price,
-                last_updated_at=datetime.datetime.now()
-            )
-            conn.execute(upd)
-            conn.commit()
-        return True, "Atualizado!"
-    except Exception as e:
-        return False, str(e)
+    sql = """
+        UPDATE portfolio 
+        SET quantity = :q, avg_price = :p, last_updated_at = :d 
+        WHERE user_id = :u AND ticker = :t
+    """
+    success, msg = run_transaction(sql, {
+        "q": int(new_qty), "p": float(new_price), 
+        "d": datetime.datetime.now(), "u": user_id, "t": ticker
+    })
+    if success: return True, "Atualizado!"
+    return False, msg
 
 def remove_from_wallet(user_id, ticker):
-    try:
-        with engine.connect() as conn:
-            conn.execute(portfolio.delete().where(
-                (portfolio.c.user_id == user_id) & (portfolio.c.ticker == ticker)
-            ))
-             # Log Transaction
-            conn.execute(transactions.insert().values(
-                user_id=user_id,
-                ticker=ticker,
-                quantity=0,
-                price=0,
-                type="REMOVE",
-                date=datetime.datetime.now()
-            ))
-            conn.commit()
+    sql = "DELETE FROM portfolio WHERE user_id = :u AND ticker = :t"
+    success, msg = run_transaction(sql, {"u": user_id, "t": ticker})
+    
+    if success:
+        # Log Removal
+        log_sql = """
+            INSERT INTO transactions (user_id, ticker, quantity, price, type, date)
+            VALUES (:u, :t, 0, 0, 'REMOVE', :d)
+        """
+        run_transaction(log_sql, {"u": user_id, "t": ticker, "d": datetime.datetime.now()})
         return True, "Removido!"
-    except Exception as e:
-        return False, str(e)
+    return False, msg
 
-
-# Initialize
-init_db()
+# Initialize (Optional now as we don't create tables in code, but good validation)
+# init_db()
