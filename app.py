@@ -990,9 +990,16 @@ def login_page():
                 client_config = None
                 
                 # PRIORITY: Force Redirect URI from Secrets if available (Cloud)
-                # Defaults to localhost for local dev
-                redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
+                redirect_uri = st.secrets.get("REDIRECT_URI")
                 
+                # Fallback: If not explicitly set, but we are in Cloud (detected by internal keys), force Prod URL
+                if not redirect_uri:
+                    # Heuristic: Streamlit Cloud usually has specific env vars or we can assume if GOOGLE_JSON is set manually by user
+                    if "GOOGLE_JSON" in st.secrets: 
+                         redirect_uri = "https://scope3.streamlit.app"
+                    else:
+                         redirect_uri = "http://localhost:8501"
+
                 if "google_auth" in st.secrets:
                     # CLOUD Mode (Secrets Dictionary)
                     client_config = dict(st.secrets["google_auth"])
