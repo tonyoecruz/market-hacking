@@ -19,7 +19,14 @@ import edge_tts
 import asyncio
 import nest_asyncio
 nest_asyncio.apply() # Fix for Streamlit's event loop
+import os
 
+# --- CORREÇÃO PARA O GOOGLE LOGIN NA NUVEM ---
+if not os.path.exists("client_secret.json"):
+    if "GOOGLE_JSON" in st.secrets:
+        with open("client_secret.json", "w") as f:
+            f.write(st.secrets["GOOGLE_JSON"])
+# ---------------------------------------------
 load_dotenv()
 
 # LOCAL DEV ONLY: Allow OAuth over HTTP (fixes "InsecureTransportError")
@@ -1860,3 +1867,4 @@ with tab_arena:
         st.warning("⚠️ Carregue a base de AÇÕES primeiro na aba principal.")
 
 st.markdown("""<div class="disclaimer">⚠️ AVISO LEGAL: ESTA FERRAMENTA É APENAS PARA FINS EDUCACIONAIS E DE CÁLCULO AUTOMATIZADO. OS DADOS SÃO OBTIDOS DE FONTES PÚBLICAS E PODEM CONTER ATRASOS. ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. O INVESTIDOR É RESPONSÁVEL POR SUAS PRÓPRIAS DECISÕES.</div>""", unsafe_allow_html=True)
+
