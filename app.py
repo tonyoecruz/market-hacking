@@ -107,37 +107,51 @@ def get_graham_analysis(ticker, price, fair_value, lpa, vpa):
     margin = (fair_value/price) - 1 if price > 0 else 0
     safe_margin = margin > 0.5
     
-    extra_instruction = "INVESTIGUE O MOTIVO DO DESCONTO (Risco Crônico ou Oportunidade?). Cite DATAS de eventos críticos (Ex: Início RJ, Fraude)." if safe_margin else "Foque na solidez e proteção do capital."
+    # LOGIC UPDATE: EXPLAIN FAILURE
+    if margin <= 0:
+        focus_instruction = f"O ativo REPROVOU no Método Graham (Preço {format_brl(price)} > Justo {format_brl(fair_value)}). EXPLIQUE O MOTIVO: O mercado está pagando ágio por crescimento (Qualidade Premium)? Ou é uma bolha/supervalorização? Seja crítico."
+    else:
+        focus_instruction = "O ativo tem Margem de Segurança. Investigue: É uma oportunidade real ou 'Value Trap' (Barato que sai caro)? Cite riscos"
     
+    extra_instruction = "Cite DATAS de eventos críticos (Ex: Início RJ, Fraude) se houver."
+
     prompt = f"""
     Atue como um Analista Sênior de Value Investing (Estilo Benjamin Graham).
     ALVO: {ticker}
-    DADOS: Preço Atual R${price:.2f} | Preço Justo R${fair_value:.2f} | Margem de Segurança: {margin:.1%}.
+    DADOS: Preço Atual R${price:.2f} | Preço Justo R${fair_value:.2f} | Margem: {margin:.1%}.
     
     Seu Trabalho:
-    1. Explique O QUE a empresa faz.
-    2. {extra_instruction}
-    3. Conclusão: O ativo está descontado em relação aos fundamentos?
-    4. Se houve RJ ou dívida grave, cite QUANDO começou. Se já saiu, informe a data de saída.
+    1. Breve resumo do Business.
+    2. {focus_instruction}
+    3. {extra_instruction}
+    4. Conclusão: O prêmio/desconto se justifica?
     
     REGRAS DE COMPLIANCE:
     - NUNCA use a palavra "Recomendação", "Compra" ou "Venda".
-    - Use termos como "Atrativo", "Descontado", "Arriscado".
+    - Use termos como "Atrativo", "Descontado", "Arriscado", "Ágio por Qualidade".
     - RODAPÉ OBRIGATÓRIO: "Fontes: Análise de Fundamentos, Fatos Relevantes (CVM) e RI da {ticker}."
     - Max 7 linhas.
     """
     return get_ai_generic_analysis(prompt)
 
 def get_magic_analysis(ticker, ev_ebit, roic, score):
+    # LOGIC UPDATE: EXPLAIN POOR METRICS
+    is_good = (roic > 0.15) and (ev_ebit > 0)
+    
+    if not is_good:
+        focus_instruction = "O ativo NÃO SE DESTACA na Magic Formula. Explique: O ROIC é baixo (Ineficiência)? O EV/EBIT é alto (Caro)? Justifique se é um momento ruim do ciclo ou perda de fundamento."
+    else:
+        focus_instruction = "O ativo brilha na Magic Formula (Barato e Bom). Valide: O lucro é recorrente ou houve um 'não-recorrente' inflando os números?"
+
     prompt = f"""
     Atue como um Gestor de Fundo Quantitativo (Estilo Joel Greenblatt).
     ALVO: {ticker}
     DADOS: EV/EBIT {ev_ebit:.2f} (Quanto menor, mais barata) | ROIC {roic:.1%} (Quanto maior, mais qualidade).
     
     Análise Profunda:
-    1. Qualidade: O que torna esse negócio tão rentável (ROIC alto)? Tem vantagens competitivas?
-    2. Preço: O mercado está penalizando o ativo (EV/EBIT baixo)? Há razão para isso? (Cite datas se houver eventos recentes).
-    3. Veredito: A assimetria Valor vs Preço é favorável?
+    1. {focus_instruction}
+    2. Qualidade vs Preço: A assimetria é favorável?
+    3. Cite eventos recentes se relevante.
     
     REGRAS DE COMPLIANCE:
     - NUNCA use a palavra "Recomendação".
@@ -167,10 +181,20 @@ def get_mix_analysis(ticker, price, fair_value, ev_ebit, roic):
     """
     return get_ai_generic_analysis(prompt)
 
-def get_sniper_analysis(ticker, price, fair_value, details):
+def get_sniper_analysis(ticker, price, fair_value, details, graham_ok, magic_ok):
+    
+    method_context = ""
+    if not graham_ok:
+        method_context += f"- FALHOU no Método Graham (Preço > Valor Justo). Explique: É prêmio de qualidade ou bolha?\n"
+    if not magic_ok:
+        method_context += f"- FALHOU/FRACA na Magic Formula. Explique: Problema de eficiência (ROIC) ou Preço?\n"
+    
     prompt = f"""
     RELATÓRIO DE INTELIGÊNCIA TÁTICA: {ticker} ({details.get('Empresa', 'N/A')}).
     Setor: {details.get('Setor', 'N/A')}.
+    
+    CONTEXTO DOS MÉTODOS:
+    {method_context}
     
     1. FUNDAMENTOS: A saúde financeira é robusta? (Dívida, Margens).
     2. POSICIONAMENTO: É líder? Tem diferencial?
@@ -214,7 +238,11 @@ def get_battle_analysis(t1, d1, t2, d2):
     1. {t1}: {d1}
     2. {t2}: {d2}
     
-    Qual vence nos fundamentos? Analise P/L, ROIC, Dívida e Crescimento se tiver. Seja direto. Quem ganha? Max 5 linhas.
+    Qual vence nos fundamentos?
+    
+    REGRA DE NARRAÇÃO:
+    Comece EXATAMENTE com a frase: "E QUEM GANHOOOOU ESSA BATALHA FOI O ATIVO [NOME_DO_VENCEDOR]!" (Substitua [NOME_DO_VENCEDOR] pelo código real, ex: VALE3).
+    Em seguida, explique tecnicamente o PORQUÊ (P/L, ROIC, Dívida). Seja direto. Max 5 linhas.
     """
     return get_ai_generic_analysis(prompt)
 
@@ -228,8 +256,10 @@ def generate_audio(text, key_suffix=""):
     # In a real app we'd manage temp files.
     
     async def _gen():
-        voice = "pt-BR-AntonioNeural" # Male Voice Requested by User
-        comm = edge_tts.Communicate(text.replace("*", ""), voice) 
+        # TTS FIX: Pronounce "RJ" as "Recuperação Judicial" correctly
+        # Also clean markdown asterisks
+        final_text = text.replace("*", "").replace(" RJ ", " Recuperação Judicial ").replace("RJ ", "Recuperação Judicial ").replace(" R.J. ", " Recuperação Judicial ")
+        comm = edge_tts.Communicate(final_text, voice) 
         await comm.save(fname)
         return fname
         
@@ -840,7 +870,7 @@ def show_ai_decode(ticker, row, details):
     graham_ok = row['Margem'] > 0; magic_ok = (row['roic'] > 0.10) and (row['ev_ebit'] > 0)
     st.markdown(f"""<div class="status-grid"><div class="status-box" style="border-color: {'#00ff41' if graham_ok else '#ff4444'};"><div class="status-title" style="color:{'#00ff41' if graham_ok else '#ff4444'}">MÉTODO GRAHAM</div><div class="status-result" style="color:{'#00ff41' if graham_ok else '#ff4444'}">{'✅ POSITIVO' if graham_ok else '❌ NEGATIVO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{'MARGEM: ' + f"{row['Margem']:.1%}" if graham_ok else 'SEM MARGEM'}</div></div><div class="status-box" style="border-color: {'#00ff41' if magic_ok else '#ffaa00'};"><div class="status-title" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">MAGIC FORMULA</div><div class="status-result" style="color:{'#00ff41' if magic_ok else '#ffaa00'}">{'✅ APROVADA' if magic_ok else '⚠️ ATENÇÃO'}</div><div style="font-size:10px; color:#aaa; margin-top:2px">{'ROIC: ' + f"{row['roic']:.1%}" if magic_ok else 'ROIC BAIXO'}</div></div></div><hr style="border-color: #333; margin: 15px 0;">""", unsafe_allow_html=True)
     with st.spinner("🛰️ SATÉLITE: PROCESSANDO..."):
-        analise = get_sniper_analysis(ticker, row['price'], row['ValorJusto'], details)
+        analise = get_sniper_analysis(ticker, row['price'], row['ValorJusto'], details, graham_ok, magic_ok)
         
     # LOGIC UPDATE: Triggers only on CRITICAL keywords, avoiding false positives from headers
     # LOGIC UPDATE: Triggers ONLY if the AI explicitly flagged as [CRITICAL]
@@ -1864,6 +1894,12 @@ with tab_arena:
             if st.button("⚔️ INICIAR COMBATE (IA)", key="btn_battle"):
                 with st.spinner("A IA ESTÁ DECIDINDO O VENCEDOR..."):
                     res = get_battle_analysis(t1, str(d1.to_dict()), t2, str(d2.to_dict()))
+                    
+                    # TTS
+                    if st.button("🔊 Ouvir Veredito", key=f"speak_battle_{t1}_{t2}"):
+                        audio_path = generate_audio(res, f"battle_{t1}_{t2}")
+                        st.audio(audio_path, format="audio/mp3", autoplay=True)
+
                     st.markdown(f"<div class='glass-card'><div class='ai-header'><span class='ai-title'>VEREDITO DO ÁRBITRO</span></div>{res}</div>", unsafe_allow_html=True)
             
             st.markdown("---")
