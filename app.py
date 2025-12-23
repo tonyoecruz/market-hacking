@@ -988,14 +988,16 @@ def login_page():
                 # --- GOOGLE AUTH: WEB FLOW (CLOUD COMPATIBLE) ---
                 # 1. Configuration (Local vs Cloud)
                 client_config = None
-                redirect_uri = "http://localhost:8501" # Default Local
+                
+                # PRIORITY: Force Redirect URI from Secrets if available (Cloud)
+                # Defaults to localhost for local dev
+                redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
                 
                 if "google_auth" in st.secrets:
-                    # CLOUD Mode (Secrets)
+                    # CLOUD Mode (Secrets Dictionary)
                     client_config = dict(st.secrets["google_auth"])
-                    redirect_uri = st.secrets.get("REDIRECT_URI", "https://scope3.streamlit.app")
                 elif os.path.exists('client_secret.json'):
-                    # LOCAL Mode (File)
+                    # LOCAL/HYBRID Mode (File)
                     client_config = 'client_secret.json'
                 
                 if client_config:
