@@ -13,7 +13,7 @@ import db
 import time
 import os
 from dotenv import load_dotenv
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import Flow
 import extra_streamlit_components as stx
 import edge_tts
 import asyncio
@@ -973,42 +973,67 @@ def login_page():
                     else: st.error("ACESSO NEGADO")
                 
                 st.markdown("---")
-                if st.button("🔵 ENTRAR COM GOOGLE", use_container_width=True):
-                    if not os.path.exists('client_secret.json'):
-                        st.warning("⚠️ Arquivo 'client_secret.json' não detectado (Google auth pode falhar na nuvem).")
-                        # Try to proceed if secrets available? For now stop.
-                    else:
-                        try:
-                            flow = InstalledAppFlow.from_client_secrets_file(
-                                'client_secret.json',
-                                scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'])
-                            
-                            # DESKTOP ONLY: Browser Launch
-                            flow.run_local_server(port=0)
-                            
-                            credentials = flow.credentials
-                            
-                            sess = requests.Session()
-                            sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
-                            user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
-                            
-                            user = db.login_google_user(user_info['email'], user_info['id'])
-                            if user:
-                                token = db.create_session(user['id'])
-                                cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
+                st.markdown("---")
+                
+                # --- GOOGLE AUTH: WEB FLOW (CLOUD COMPATIBLE) ---
+                # 1. Configuration (Local vs Cloud)
+                client_config = None
+                redirect_uri = "http://localhost:8501" # Default Local
+                
+                if "google_auth" in st.secrets:
+                    # CLOUD Mode (Secrets)
+                    client_config = dict(st.secrets["google_auth"])
+                    redirect_uri = st.secrets.get("REDIRECT_URI", "https://SEU-APP.streamlit.app")
+                elif os.path.exists('client_secret.json'):
+                    # LOCAL Mode (File)
+                    client_config = 'client_secret.json'
+                
+                if client_config:
+                    try:
+                        # Scopes
+                        SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+                        
+                        # Init Flow
+                        if isinstance(client_config, str):
+                            flow = Flow.from_client_secrets_file(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
+                        else:
+                            flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
+                        
+                        # 2. Check for Callback Code
+                        auth_code = st.query_params.get("code")
+                        
+                        if auth_code:
+                            with st.spinner("Verificando credenciais Google..."):
+                                flow.fetch_token(code=auth_code)
+                                credentials = flow.credentials
                                 
-                                st.session_state['logged_in'] = True
-                                st.session_state['user_id'] = user['id']
-                                st.session_state['username'] = user['username'] 
-                                st.success("AUTENTICADO!")
-                                time.sleep(1)
-                                st.rerun()
-                        except Exception as e:
-                            if "browser" in str(e).lower():
-                                st.error("🚫 Google Login não suportado neste ambiente (Cloud).")
-                                st.info("💡 Por favor, utilize o login por **Usuário e Senha** acima.")
-                            else:
-                                st.error(f"Erro Google: {str(e)}")
+                                sess = requests.Session()
+                                sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
+                                user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
+                                
+                                user = db.login_google_user(user_info['email'], user_info['id'])
+                                if user:
+                                    token = db.create_session(user['id'])
+                                    cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
+                                    
+                                    st.session_state['logged_in'] = True
+                                    st.session_state['user_id'] = user['id']
+                                    st.session_state['username'] = user['username'] 
+                                    st.success("AUTENTICADO!")
+                                    # Clear params to prevent re-trigger
+                                    st.query_params.clear()
+                                    time.sleep(1)
+                                    st.rerun()
+                        else:
+                            # 3. Show Login Link
+                            auth_url, _ = flow.authorization_url(prompt='consent')
+                            st.link_button("🔵 ENTRAR COM GOOGLE", auth_url, use_container_width=True)
+                            
+                    except Exception as e:
+                        st.error(f"Erro Configuração Google: {str(e)}")
+                        st.caption("Verifique se a REDIRECT_URI no console do Google e secrets coincidem.")
+                else:
+                    st.caption("⚠️ Google Login indisponível (Sem config).")
 
             with t_reg:
                 st.markdown("<br>", unsafe_allow_html=True)
