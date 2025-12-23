@@ -1,0 +1,20 @@
+# Environment variables
+.env
+.venv/
+__pycache__/
+
+# Secrets
+client_secret.json
+*.json
+
+# Database and Cache
+*.db
+market_hacking.db
+tts_*.mp3
+
+# Local artifacts
+market_hacking_backup_*.zip
+Empresas.xlsx
+
+# Streamlit
+.streamlit/secrets.toml

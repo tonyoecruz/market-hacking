@@ -9,4 +9,9 @@ beautifulsoup4
 google-generativeai==0.7.2
 yfinance
 plotly
-
+bcrypt
+google-auth-oauthlib
+python-dotenv
+extra-streamlit-components>=0.1.71
+edge-tts
+nest_asyncio
