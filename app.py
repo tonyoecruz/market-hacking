@@ -939,7 +939,7 @@ def login_page():
         # Use st.image with the full path provided by the system for the artifact.
         
         # NOTE: Using the path provided in user context
-        img_path = r"C:\Users\antonio.cruz\.gemini\antigravity\brain\835b9e06-22bc-41b3-9fd6-c5c8a99a37f3\uploaded_image_0_1766453858660.png"
+        img_path = "assets/uploaded_image_0_1766453858660.png"
         
         try:
             st.image(img_path, use_container_width=True)
@@ -986,7 +986,7 @@ def login_page():
                 if "google_auth" in st.secrets:
                     # CLOUD Mode (Secrets)
                     client_config = dict(st.secrets["google_auth"])
-                    redirect_uri = st.secrets.get("REDIRECT_URI", "https://SEU-APP.streamlit.app")
+                    redirect_uri = st.secrets.get("REDIRECT_URI", "https://scope3.streamlit.app")
                 elif os.path.exists('client_secret.json'):
                     # LOCAL Mode (File)
                     client_config = 'client_secret.json'
@@ -1037,6 +1037,9 @@ def login_page():
                         st.caption("Verifique se a REDIRECT_URI no console do Google e secrets coincidem.")
                 else:
                     st.caption("⚠️ Google Login indisponível (Sem config).")
+                    
+                # DEBUG: DELETE THIS AFTER FIXING
+                st.info(f"🔧 DEBUG STATUS:\n- Secrets Detectados: {'google_auth' in st.secrets}\n- Redirect URI usado: {redirect_uri}")
 
             with t_reg:
                 st.markdown("<br>", unsafe_allow_html=True)
