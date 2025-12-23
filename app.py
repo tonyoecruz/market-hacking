@@ -975,13 +975,17 @@ def login_page():
                 st.markdown("---")
                 if st.button("🔵 ENTRAR COM GOOGLE", use_container_width=True):
                     if not os.path.exists('client_secret.json'):
-                        st.error("ERRO: client_secret.json não encontrado.")
+                        st.warning("⚠️ Arquivo 'client_secret.json' não detectado (Google auth pode falhar na nuvem).")
+                        # Try to proceed if secrets available? For now stop.
                     else:
                         try:
                             flow = InstalledAppFlow.from_client_secrets_file(
                                 'client_secret.json',
                                 scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'])
+                            
+                            # DESKTOP ONLY: Browser Launch
                             flow.run_local_server(port=0)
+                            
                             credentials = flow.credentials
                             
                             sess = requests.Session()
@@ -1000,7 +1004,11 @@ def login_page():
                                 time.sleep(1)
                                 st.rerun()
                         except Exception as e:
-                            st.error(f"Erro Google: {str(e)}")
+                            if "browser" in str(e).lower():
+                                st.error("🚫 Google Login não suportado neste ambiente (Cloud).")
+                                st.info("💡 Por favor, utilize o login por **Usuário e Senha** acima.")
+                            else:
+                                st.error(f"Erro Google: {str(e)}")
 
             with t_reg:
                 st.markdown("<br>", unsafe_allow_html=True)
