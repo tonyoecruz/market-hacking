@@ -22,6 +22,9 @@ nest_asyncio.apply() # Fix for Streamlit's event loop
 
 load_dotenv()
 
+# LOCAL DEV ONLY: Allow OAuth over HTTP (fixes "InsecureTransportError")
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 # ==============================================================================
 # 🛠️ CONFIG DO APP
 # ==============================================================================
