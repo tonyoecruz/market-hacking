@@ -56,5 +56,28 @@ redirect_uris = ["https://scope3.streamlit.app"]
 
 Asssim que implantar:
 1. Abra o app na URL pública.
-2. Tente fazer login com o Google.
 3. Se houver erro de "redirect_uri_mismatch", verifique se a URL no navegador é EXATAMENTE igual (http vs https, www vs sem www) à cadastrada no Google Cloud Console e na variável `REDIRECT_URI` nos Secrets.
+
+## 5. Configurando Supabase (Banco de Dados)
+
+Para persistir dados, configuramos o app para conectar ao Postgres do Supabase.
+
+1. **Crie o Projeto**: Crie um novo projeto no [Supabase](https://supabase.com/).
+2. **Crie as Tabelas**: 
+   - Vá em **SQL Editor** no menu esquerdo.
+   - Copie o conteúdo do arquivo `supabase_schema.sql` do seu repositório.
+   - Cole e clique em **Run**.
+3. **Pegue a String de Conexão**:
+   - Vá em **Project Settings (engrenagem) > Database**.
+   - Em "Connection string", selecione **URI**.
+   - Copie a string que se parece com: `postgresql://postgres:[YOUR-PASSWORD]@db.xxxx.supabase.co:5432/postgres`
+   - **IMPORTANTE**: Substitua `[YOUR-PASSWORD]` pela senha que você criou para o banco (não é a senha da conta Supabase).
+4. **Adicione aos Secrets**:
+   - No Streamlit Cloud (ou `.streamlit/secrets.toml` local), adicione:
+   
+   ```toml
+   # ... outras configs ...
+   
+   SUPABASE_DB_URL = "postgresql://postgres:SUA_SENHA@db.xxxx.supabase.co:5432/postgres"
+   ```
+

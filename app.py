@@ -1262,31 +1262,6 @@ tab_carteira, tab_acoes, tab_etfs, tab_mix, tab_fiis, tab_arena = st.tabs(["CART
 # PÁGINA 0: CARTEIRA PESSOAL (HERO DASHBOARD)
 # ------------------------------------------------------------------------------
 with tab_carteira:
-    # --- BACKUP & RESTORE SECTION ---
-    with st.expander("☁️ BACKUP & PERSISTÊNCIA (ATENÇÃO)", expanded=False):
-        st.warning("⚠️ IMPORTANTE: Como este App roda na Nuvem (Streamlit Cloud), os dados locais são APAGADOS a cada atualização (Deploy). Para não perder sua carteira, faça o download do banco de dados regularmente e restaure quando necessário.")
-        
-        b1, b2 = st.columns(2)
-        with b1:
-            st.markdown("##### 1. SALVAR DADOS (BACKUP)")
-            with open("market_hacking.db", "rb") as f:
-                st.download_button(
-                    label="⬇️ BAIXAR MEU BANCO DE DADOS (.db)",
-                    data=f,
-                    file_name=f"market_hacking_backup_{datetime.now().strftime('%Y%m%d')}.db",
-                    mime="application/x-sqlite3",
-                    key="btn_backup_db"
-                )
-        with b2:
-            st.markdown("##### 2. RESTAURAR DADOS")
-            uploaded_db = st.file_uploader("Carregar backup (.db)", type=['db'], key="upload_db_restore")
-            if uploaded_db:
-                if st.button("⚠️ CONFIRMAR RESTAURAÇÃO"):
-                    with open("market_hacking.db", "wb") as f:
-                        f.write(uploaded_db.getbuffer())
-                    st.success("Banco de dados restaurado com sucesso! Reiniciando...")
-                    time.sleep(2)
-                    st.rerun()
     # 1. Fetch Data
     df_w = db.get_portfolio(st.session_state['user_id'])
     
