@@ -30,7 +30,7 @@ if not os.path.exists("client_secret.json"):
 load_dotenv()
 
 # LOCAL DEV ONLY: Allow OAuth over HTTP (fixes "InsecureTransportError")
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' # COMMENTED OUT FOR PROD
 
 # ==============================================================================
 # 🛠️ CONFIG DO APP
