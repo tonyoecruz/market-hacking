@@ -1086,11 +1086,16 @@ def login_page():
                             st.link_button("🔵 ENTRAR COM GOOGLE", auth_url, use_container_width=True)
                             
                     except Exception as e:
-                        st.error(f"Erro no Login: {str(e)}")
-                        # Clear params if code was invalid to prevent loop
-                        st.query_params.clear()
-                        # Optional: Log internal error to console instead of UI if needed, but keeping simple for now
-                        print(f"Google Auth Error: {e}")
+                        err_msg = str(e)
+                        st.query_params.clear() # Always clear to prevent loop
+                        
+                        if "invalid_grant" in err_msg:
+                            st.warning("⚠️ Sessão expirada ou já utilizada. Por favor, clique novamente em 'Entrar com Google'.")
+                        else:
+                            st.error(f"Erro no Login: {err_msg}")
+                        
+                        # Debug info for console only
+                        print(f"Google Auth Error: {err_msg}")
                 else:
                     st.caption("⚠️ Google Login indisponível (Sem config).")
                     
