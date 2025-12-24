@@ -1623,24 +1623,7 @@ with tab_carteira:
                     ]
                 }
                 st_echarts(options=opt_ring, height="280px")
-                    margin=dict(t=20, b=20, l=20, r=20),
-                    showlegend=False,
-                    height=280,
-                    annotations=[
-                        # Main Value (Patrimonio) - COMPACT FONTS
-                        dict(text='<span style="font-size:10px; color:#888;">SALDO BRUTO</span>', x=0.5, y=0.62, showarrow=False),
-                        dict(text=f'<span style="font-size:16px; font-weight:800; color:#FFF;">{val_display}</span>', x=0.5, y=0.52, showarrow=False),
-                        
-                        # Divider Line
-                        dict(text='──────────', x=0.5, y=0.45, showarrow=False, font=dict(color="#333", size=8)),
 
-                        # Rentability (Small)
-                        dict(text='<span style="font-size:9px; color:#888;">RENTABILIDADE</span>', x=0.5, y=0.38, showarrow=False),
-                        dict(text=f'<span style="font-size:13px; font-weight:bold; color:{pct_color};">{pct_fmt}</span><br><span style="font-size:11px; color:#AAA;">{money_diff}</span>', x=0.5, y=0.22, showarrow=False)
-                    ]
-                )
-                
-                st.plotly_chart(fig_ring, width='stretch', config={'displayModeBar': False})
         
         # 4. List Items (Segmented by Type)
         st.markdown("<h5 style='color: white; font-weight: 700;'>🧾 SEUS ATIVOS (POR CATEGORIA)</h5>", unsafe_allow_html=True)
