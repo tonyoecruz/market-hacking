@@ -1067,7 +1067,6 @@ def login_page():
                             if st.session_state.auth_processing == str(auth_code):
                                 with st.spinner("Verificando credenciais Google..."):
                                     try:
-                                    try:
                                         # DEBUG TRACE 1
                                         st.write("1. Verificando código Google...")
                                         flow.fetch_token(code=auth_code)
