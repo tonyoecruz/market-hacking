@@ -1570,12 +1570,12 @@ with tab_carteira:
                 
                 if is_profit:
                     p_data = [
-                        {"value": round(total_invested, 2), "name": "APORTE", "itemStyle": {"color": "#121212"}},
+                        {"value": round(total_invested, 2), "name": "APORTE", "itemStyle": {"color": "#333333"}}, # Lighter Gray for visibility
                         {"value": round(profit_val, 2), "name": "LUCRO", "itemStyle": {"color": "#00ff41"}}
                     ]
                 else:
                     p_data = [
-                        {"value": round(total_current, 2), "name": "SALDO", "itemStyle": {"color": "#121212"}},
+                        {"value": round(total_current, 2), "name": "SALDO", "itemStyle": {"color": "#333333"}}, # Lighter Gray for visibility
                         {"value": round(abs(profit_val), 2), "name": "PREJUÍZO", "itemStyle": {"color": "#ff0055"}}
                     ]
                 
@@ -1588,7 +1588,7 @@ with tab_carteira:
                     "title": {
                         "text": '{label|SALDO BRUTO}\n{val|' + str(val_display) + '}\n{line|────────}\n{sublabel|RENTABILIDADE}\n{subval|' + str(pct_fmt) + ' (' + str(money_diff) + ')}',
                         "left": "center",
-                        "top": "center",
+                        "top": "38%", # Moved Text up to match Chart center
                         "textStyle": {
                             "rich": {
                                 "label": {"fontSize": 10, "color": "#888", "padding": [0,0,5,0]},
@@ -1603,7 +1603,8 @@ with tab_carteira:
                         {
                             "name": "Patrimônio",
                             "type": "pie",
-                            "radius": ["55%", "70%"], # Thinner ring
+                            "radius": ["55%", "70%"], 
+                            "center": ["50%", "50%"], # Standard Center
                             "avoidLabelOverlap": False,
                             "label": {"show": False, "position": "center"},
                             "itemStyle": {
