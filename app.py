@@ -1129,7 +1129,11 @@ def login_page():
                                     st.session_state['username'] = user['username'] 
                                     
                                     status_container.update(label=f"✅ Bem-vindo, {user['username']}!", state="complete", expanded=False)
-                                    time.sleep(0.5)
+                                    
+                                    # Give CookieManager time to sync with browser (Crucial for auto-login)
+                                    st.success("Sessão salva! Redirecionando...")
+                                    time.sleep(2) 
+                                    
                                     st.query_params.clear()
                                     st.rerun()
                                 else:
