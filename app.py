@@ -20,6 +20,8 @@ import asyncio
 import nest_asyncio
 nest_asyncio.apply() # Fix for Streamlit's event loop
 import os
+import tempfile
+import glob
 
 # --- CORREÇÃO PARA O GOOGLE LOGIN NA NUVEM ---
 if not os.path.exists("client_secret.json"):
@@ -37,6 +39,23 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' # Re-enabled for Cloud Proxy com
 # ==============================================================================
 URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide", initial_sidebar_state="collapsed")
+
+# 🧹 CLEANUP DE ÁUDIO (Remove lixo anterior)
+def cleanup_audio_files():
+    try:
+        temp_dir = tempfile.gettempdir()
+        # Remove old tts_*.mp3 files from temp
+        files = glob.glob(os.path.join(temp_dir, "tts_*.mp3"))
+        for f in files:
+            try:
+                os.remove(f)
+            except: pass
+    except: pass
+
+# Run cleanup once per execution
+if 'cleanup_done' not in st.session_state:
+    cleanup_audio_files()
+    st.session_state['cleanup_done'] = True
 
 # 🍪 COOKIE MANAGER
 cookie_manager = stx.CookieManager(key="scope3_auth")
@@ -288,10 +307,14 @@ def generate_audio(text, key_suffix=""):
     # Generate a unique path based on content hash to avoid re-generating
     import hashlib
     h = hashlib.md5(text.encode()).hexdigest()
-    fname = f"tts_{h}_{key_suffix}.mp3"
     
-    # If file already exists today? For now just overwrite or use if exists.
-    # In a real app we'd manage temp files.
+    # USE TEMP DIR (Global standard)
+    temp_dir = tempfile.gettempdir()
+    fname = os.path.join(temp_dir, f"tts_{h}_{key_suffix}.mp3")
+    
+    # If file already exists? Use it.
+    if os.path.exists(fname):
+        return fname
     
     async def _gen():
         # TTS FIX: Pronounce "RJ" as "Recuperação Judicial" correctly
@@ -305,19 +328,22 @@ def generate_audio(text, key_suffix=""):
         # Patch is already applied globally
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            # If loop is running (Streamlit logic), use task?
-            # Creating a task might not return immediately.
-            # Edge-TTS is just a wrapper around web socket.
-            # We can try running it in a new loop request or just await if we were async.
-            # But we are sync here.
-            # Streamlit runs in a loop. nesting asyncio applied allows `loop.run_until_complete`.
             loop.run_until_complete(_gen())
         else:
              loop.run_until_complete(_gen())
+             
+        # Verify if file was actually created
+        if os.path.exists(fname) and os.path.getsize(fname) > 0:
+            return fname
+        else:
+            print("Audio file creation failed (0 bytes or missing).")
+            return None
+            
     except Exception as e:
-         pass # fallback
+         print(f"TTS Gen Error: {e}")
+         return None # Signals failure, do not play
          
-    return fname
+    return None
 @st.cache_data(ttl=3600)
 def get_stock_details(ticker):
     try:
@@ -845,9 +871,13 @@ def show_graham_details(ticker, row):
         ai_text = get_graham_analysis(ticker, row['price'], vi, lpa, vpa)
         
         # TTS
+        # TTS
         if st.button("🔊 Ouvir", key=f"speak_graham_{ticker}"):
-            audio_path = generate_audio(ai_text, f"graham_{ticker}")
-            st.audio(audio_path, format="audio/mp3", autoplay=True)
+             audio_path = generate_audio(ai_text, f"graham_{ticker}")
+             if audio_path:
+                st.audio(audio_path, format="audio/mp3", autoplay=True)
+             else:
+                st.warning("⚠️ Impossível gerar áudio no momento.")
             
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
     
@@ -871,9 +901,13 @@ def show_magic_details(ticker, row):
         ai_text = get_magic_analysis(ticker, row['ev_ebit'], row['roic'], sc)
         
         # TTS
+        # TTS
         if st.button("🔊 Ouvir", key=f"speak_magic_{ticker}"):
             audio_path = generate_audio(ai_text, f"magic_{ticker}")
-            st.audio(audio_path, format="audio/mp3", autoplay=True)
+            if audio_path:
+                st.audio(audio_path, format="audio/mp3", autoplay=True)
+            else:
+                st.warning("⚠️ Impossível gerar áudio no momento.")
 
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
@@ -891,9 +925,13 @@ def show_mix_details(ticker, row):
         ai_text = get_mix_analysis(ticker, row['price'], row['ValorJusto'], row['ev_ebit'], row['roic'])
         
         # TTS
+        # TTS
         if st.button("🔊 Ouvir", key=f"speak_mix_{ticker}"):
             audio_path = generate_audio(ai_text, f"mix_{ticker}")
-            st.audio(audio_path, format="audio/mp3", autoplay=True)
+            if audio_path:
+                st.audio(audio_path, format="audio/mp3", autoplay=True)
+            else:
+                st.warning("⚠️ Impossível gerar áudio no momento.")
 
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
@@ -1998,9 +2036,13 @@ with tab_arena:
                 res = st.session_state['battle_res']
                 
                 # TTS
+                # TTS
                 if st.button("🔊 Ouvir Veredito", key=f"speak_battle_{t1}_{t2}"):
                     audio_path = generate_audio(res, f"battle_{t1}_{t2}")
-                    st.audio(audio_path, format="audio/mp3", autoplay=True)
+                    if audio_path:
+                        st.audio(audio_path, format="audio/mp3", autoplay=True)
+                    else:
+                        st.warning("⚠️ Impossível gerar áudio.")
 
                 st.markdown(f"<div class='glass-card'><div class='ai-header'><span class='ai-title'>VEREDITO DO ÁRBITRO</span></div>{res}</div>", unsafe_allow_html=True)
             
