@@ -1459,135 +1459,133 @@ with tab_carteira:
         # WRAPPER FOR GLASS CARD EFFECT
         with st.container(border=True):
             # 3. HERO DASHBOARD (Glass Layout - RENOVATED)
-            h1, h2 = st.columns([1.2, 1])
+            # Balanced Columns
+            h1, h2 = st.columns([1, 1])
             
             # --- LOGIC: ASSET CLASSIFICATION ---
-        def get_asset_class(ticker):
-            t = ticker.upper().strip()
-            if is_likely_etf(t):
-                return "ETFs"
-            elif t.endswith("11") or t.endswith("11B"):
-                 # If ends in 11 and NOT an ETF (checked above), it's likely FII (or Unit)
-                 return "FIIs"
-            elif t.endswith("3") or t.endswith("4") or t.endswith("5") or t.endswith("6"):
-                 return "AÇÕES"
-            else:
-                 return "OUTROS"
+            def get_asset_class(ticker):
+                t = ticker.upper().strip()
+                if is_likely_etf(t):
+                    return "ETFs"
+                elif t.endswith("11") or t.endswith("11B"):
+                     return "FIIs"
+                elif t.endswith("3") or t.endswith("4") or t.endswith("5") or t.endswith("6"):
+                     return "AÇÕES"
+                else:
+                     return "OUTROS"
 
-        df_w['Tipo'] = df_w['ticker'].apply(get_asset_class)
-        # -----------------------------------
+            df_w['Tipo'] = df_w['ticker'].apply(get_asset_class)
+            # -----------------------------------
 
-        with h1:
-            # CHART 1: ASSET ALLOCATION (BY CLASS)
-            # Group by Type
-            df_pie = df_w.groupby('Tipo')['total_val'].sum().reset_index()
-            
-            # Vivid Colors Map
-            colors_map = {
-                "AÇÕES": "#00f2ff", # Neon Cyan
-                "FIIs": "#b026ff",  # Neon Purple
-                "ETFs": "#ff007f",  # Neon Pink
-                "OUTROS": "#ffd700" # Gold
-            }
-            # Fallback color list if type not matches
-            pie_colors = [colors_map.get(t, "#555") for t in df_pie['Tipo']]
+            with h1:
+                # CHART 1: ASSET ALLOCATION
+                st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>ALOCAÇÃO POR CLASSE</div>", unsafe_allow_html=True)
+                
+                # Group by Type
+                df_pie = df_w.groupby('Tipo')['total_val'].sum().reset_index()
+                
+                # Vivid Colors Map
+                colors_map = {
+                    "AÇÕES": "#00f2ff", # Neon Cyan
+                    "FIIs": "#b026ff",  # Neon Purple
+                    "ETFs": "#ff007f",  # Neon Pink
+                    "OUTROS": "#ffd700" # Gold
+                }
+                pie_colors = [colors_map.get(t, "#555") for t in df_pie['Tipo']]
 
-            fig_alloc = go.Figure(data=[go.Pie(labels=df_pie['Tipo'], values=df_pie['total_val'], hole=0.65,
-                                               marker=dict(colors=pie_colors, line=dict(color='#000000', width=2)),
-                                               textinfo='percent',
-                                               textposition='outside',
-                                               pull=[0.02]*len(df_pie), # Slight explosion for "relief" feel
-                                               hovertemplate = "<b>%{label}</b><br>💰 R$ %{value:,.2f}<br>📊 %{percent}<extra></extra>"
-                                               )])
-            
-            fig_alloc.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white', family="Inter"),
-                margin=dict(t=40, b=20, l=40, r=40), # Balanced margins
-                legend=dict(font=dict(color="#ddd", size=10), orientation="h", y=-0.1, xanchor="center", x=0.5),
-                showlegend=True,
-                height=300,
-                annotations=[dict(text='ALOCAÇÃO', x=0.5, y=0.5, font_size=12, showarrow=False, font_color='#AAA', font_weight='bold')]
-            )
-            
-            st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#FFF; margin-bottom:0px; letter-spacing:1px;'>ALOCAÇÃO POR CLASSE</div>", unsafe_allow_html=True)
-            st.plotly_chart(fig_alloc, width='stretch', config={'displayModeBar': False})
-            
-        with h2:
-            # Privacy Logic
-            if 'privacy_show' not in st.session_state: st.session_state['privacy_show'] = False
-            
-            # Privacy Toggle (Small and discreet)
-            c_priv, _ = st.columns([1, 2])
-            with c_priv:
-                p_icon = "👁️" if st.session_state['privacy_show'] else "🔒"
-                if st.button(f"{p_icon}", key="btn_privacy_icon"):
-                    st.session_state['privacy_show'] = not st.session_state['privacy_show']
-                    st.rerun()
+                fig_alloc = go.Figure(data=[go.Pie(labels=df_pie['Tipo'], values=df_pie['total_val'], hole=0.70,
+                                                   marker=dict(colors=pie_colors, line=dict(color='#000000', width=3)),
+                                                   textinfo='percent',
+                                                   textposition='outside',
+                                                   # Pull 'slices' slightly to give separation/relief look constantly
+                                                   pull=[0.02]*len(df_pie),
+                                                   hoverinfo='label+value+percent',
+                                                   hovertemplate = "<b>%{label}</b><br>💰 R$ %{value:,.2f}<br>📊 %{percent}<extra></extra>"
+                                                   )])
+                
+                fig_alloc.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='white', family="Inter"),
+                    margin=dict(t=20, b=20, l=20, r=20),
+                    legend=dict(font=dict(color="#ddd", size=10), orientation="h", y=-0.1, xanchor="center", x=0.5),
+                    showlegend=True,
+                    height=280,
+                    # annotations=[dict(text='ALOCAÇÃO', x=0.5, y=0.5, font_size=11, showarrow=False, font_color='#AAA')]
+                )
+                
+                st.plotly_chart(fig_alloc, width='stretch', config={'displayModeBar': False})
+                
+            with h2:
+                # Privacy Logic
+                if 'privacy_show' not in st.session_state: st.session_state['privacy_show'] = False
+                
+                # Header with Privacy Button aligned
+                c_head_1, c_head_2 = st.columns([3, 1])
+                with c_head_1:
+                    st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>PATRIMÔNIO TOTAL</div>", unsafe_allow_html=True)
+                with c_head_2:
+                     p_icon = "👁️" if st.session_state['privacy_show'] else "🔒"
+                     if st.button(f"{p_icon}", key="btn_privacy_icon", use_container_width=True):
+                        st.session_state['privacy_show'] = not st.session_state['privacy_show']
+                        st.rerun()
 
-            show = st.session_state['privacy_show']
-            val_display = format_brl(total_current) if show else "R$ ---"
-            
-            # CHART 2: PROFIT RING (DONUT)
-            # Logic: 
-            # If Profit > 0: Segments = [Invested, Profit]
-            # If Loss > 0: Segments = [Remaining, Loss] (To show the 'missing' part)
-            
-            profit_val = total_current - total_invested
-            is_profit = profit_val >= 0
-            
-            if is_profit:
-                # GAIN SCENARIO (Vibrant Green)
-                labels = ["APORTE", "LUCRO"]
-                values = [total_invested, profit_val]
-                colors = ["#1a1a2e", "#00ff41"] # Dark BG vs Neon Green
-            else:
-                # LOSS SCENARIO (Neon Red)
-                labels = ["SALDO ATUAL", "PREJUÍZO"]
-                values = [total_current, abs(profit_val)]
-                colors = ["#1a1a2e", "#ff0055"] # Dark BG vs Neon Red
+                show = st.session_state['privacy_show']
+                val_display = format_brl(total_current) if show else "R$ ---"
+                
+                # CHART 2: PROFIT RING
+                profit_val = total_current - total_invested
+                is_profit = profit_val >= 0
+                
+                # Calc Rentability %
+                var_pct_val = (profit_val / total_invested) if total_invested > 0 else 0
+                pct_fmt = f"{'+' if is_profit else ''}{var_pct_val:.1%}" if show else "XX%"
+                money_diff = format_brl(profit_val) if show else "R$ ---"
+                
+                if is_profit:
+                    labels = ["APORTE", "LUCRO"]
+                    values = [total_invested, profit_val]
+                    colors = ["#121212", "#00ff41"] # Dark vs Green
+                else:
+                    labels = ["SALDO ATUAL", "PREJUÍZO"]
+                    values = [total_current, abs(profit_val)]
+                    colors = ["#121212", "#ff0055"] # Dark vs Red
 
-            # If values need masking
-            if not show:
-                # Mock chart for Privacy Mode
-                values = [100]
-                labels = ["OCULTO"]
-                colors = ["#222"]
-            
-            fig_ring = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.75, 
-                                            marker=dict(colors=colors, line=dict(color='#000000', width=2)),
-                                            textinfo='none', 
-                                            hoverinfo='label+value+percent',
-                                            pull=[0, 0.05] if is_profit else [0.05, 0] # Pull the interesting part slightly
-                                            )])
+                if not show:
+                    values = [100]; labels = ["OCULTO"]; colors = ["#222"]
+                
+                fig_ring = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.75, 
+                                                marker=dict(colors=colors, line=dict(color='#000000', width=3)),
+                                                textinfo='none', 
+                                                hoverinfo='label+value+percent',
+                                                hovertemplate = "<b>%{label}</b><br>💰 R$ %{value:,.2f}<extra></extra>",
+                                                pull=[0]*len(labels)
+                                                )])
 
-            fig_ring.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white'),
-                margin=dict(t=0, b=0, l=10, r=10), # Tighter margins
-                showlegend=False,
-                height=260,
-                annotations=[
-                    dict(text='<span style="font-size:12px; color:#AAA; letter-spacing:1px">PATRIMÔNIO</span><br><span style="font-size:24px; font-weight:800; color:#FFF; text-shadow: 0 0 10px rgba(255,255,255,0.3)">{}</span>'.format(val_display), 
-                         x=0.5, y=0.5, showarrow=False)
-                ]
-            )
-            
-            st.plotly_chart(fig_ring, width='stretch', config={'displayModeBar': False})
-            
-            # Bottom Details (Rentabilidade)
-            var_pct = (profit_val / total_invested) if total_invested > 0 else 0
-            pct_fmt = f"{'+' if is_profit else ''}{var_pct:.1%}" if show else "XX%"
-            
-            st.markdown(f"""
-            <div style="text-align:center; margin-top:-10px;">
-                <div style="font-size:14px; color:#EEE;">RENTABILIDADE</div>
-                <div style="font-size:24px; font-weight:700; color: {'#5DD9C2' if is_profit else '#FF4444'};">
-                    {pct_fmt}
-                </div>
-                <div style="font-size:12px; color:#DDD;">{format_brl(profit_val) if show else 'R$ ---'}</div>
-            </div>
-            """, unsafe_allow_html=True)
+                # Color for the central text
+                pct_color = "#00ff41" if is_profit else "#ff0055"
+                if not show: pct_color = "#AAA"
+                
+                fig_ring.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='white'),
+                    margin=dict(t=20, b=20, l=20, r=20),
+                    showlegend=False,
+                    height=280,
+                    annotations=[
+                        # Main Value (Patrimonio)
+                        dict(text='<span style="font-size:10px; color:#888;">SALDO BRUTO</span>', x=0.5, y=0.65, showarrow=False),
+                        dict(text=f'<span style="font-size:18px; font-weight:800; color:#FFF;">{val_display}</span>', x=0.5, y=0.53, showarrow=False),
+                        
+                        # Divider Line (visual only, hard in plotly annotations, using text to separate)
+                        dict(text='────────────────', x=0.5, y=0.42, showarrow=False, font=dict(color="#333", size=10)),
+
+                        # Rentability (Small)
+                        dict(text='<span style="font-size:10px; color:#888;">RENTABILIDADE</span>', x=0.5, y=0.32, showarrow=False),
+                        dict(text=f'<span style="font-size:14px; font-weight:bold; color:{pct_color};">{pct_fmt} ({money_diff})</span>', x=0.5, y=0.20, showarrow=False)
+                    ]
+                )
+                
+                st.plotly_chart(fig_ring, width='stretch', config={'displayModeBar': False})
         
         # 4. List Items (Segmented by Type)
         st.markdown("<h5 style='color: white; font-weight: 700;'>🧾 SEUS ATIVOS (POR CATEGORIA)</h5>", unsafe_allow_html=True)
