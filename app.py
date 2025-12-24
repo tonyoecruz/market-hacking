@@ -308,6 +308,9 @@ def generate_audio(text, key_suffix=""):
     import hashlib
     h = hashlib.md5(text.encode()).hexdigest()
     
+    # Define voice
+    voice = "pt-BR-AntonioNeural"
+    
     # USE TEMP DIR (Global standard)
     temp_dir = tempfile.gettempdir()
     fname = os.path.join(temp_dir, f"tts_{h}_{key_suffix}.mp3")
