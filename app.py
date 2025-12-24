@@ -1070,6 +1070,9 @@ def login_page():
                                 
                                 try:
                                     st.markdown("### 1️⃣ Trocando Código por Token...")
+                                    st.write(f"ℹ️ Redirect URI Configurada: `{flow.redirect_uri}`")
+                                    st.write(f"ℹ️ Código Recebido (Início): `{auth_code[:10]}...`")
+                                    
                                     flow.fetch_token(code=auth_code)
                                     credentials = flow.credentials
                                     st.success("✅ Token Recebido!")
@@ -1108,9 +1111,19 @@ def login_page():
                                         st.stop()
 
                                 except Exception as e:
-                                    st.error(f"❌ ERRO EXCEÇÃO: {str(e)}")
-                                    st.write(f"Detalhes: {e}")
-                                    st.stop()
+                                    err_msg = str(e)
+                                    if "invalid_grant" in err_msg:
+                                        st.warning("⚠️ ESTE CÓDIGO JÁ FOI USADO OU EXPIROU.")
+                                        st.info("Isso acontece se a página recarregou sozinha. O código antigo ainda está na URL.")
+                                        if st.button("🗑️ LIMPAR URL E TENTAR DE NOVO"):
+                                            st.query_params.clear()
+                                            st.session_state.auth_processing = None
+                                            st.rerun()
+                                        st.stop()
+                                    else:
+                                        st.error(f"❌ ERRO EXCEÇÃO: {str(e)}")
+                                        st.write(f"Detalhes: {e}")
+                                        st.stop()
                             else:
                                 # If code changed or already processing another
                                 st.stop()
