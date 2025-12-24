@@ -1096,6 +1096,15 @@ def login_page():
                         
                         # Debug info for console only
                         print(f"Google Auth Error: {err_msg}")
+                        
+                        # PROVIDE RETRY BUTTON IMMEDIATELY
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        auth_url_retry, _ = flow.authorization_url(prompt='consent')
+                        st.link_button("🔄 TENTAR NOVAMENTE (CLIQUE AQUI)", auth_url_retry, use_container_width=True)
+                        
+                        # Fallback Rerun Option
+                        if st.button("Ou recarregar página"):
+                            st.rerun()
                 else:
                     st.caption("⚠️ Google Login indisponível (Sem config).")
                     
