@@ -41,6 +41,24 @@ st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout=
 # 🍪 COOKIE MANAGER
 cookie_manager = stx.CookieManager(key="scope3_auth")
 
+# --- SESSION RESTORATION (AUTO-LOGIN) ---
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+
+# Try to recover session from cookie if not logged in
+if not st.session_state["logged_in"]:
+    # Check for token in cookies
+    auth_token = cookie_manager.get("auth_token")
+    if auth_token:
+        # Verify token in DB
+        user = db.get_user_by_session(auth_token)
+        if user:
+            st.session_state['logged_in'] = True
+            st.session_state['user_id'] = user['id']
+            st.session_state['username'] = user['username']
+            # Optional: Refresh cookie expiration
+            # cookie_manager.set("auth_token", auth_token, expires_at=datetime.now() + timedelta(days=30))
+
 # ==============================================================================
 # 🧠 INTELIGÊNCIA ARTIFICIAL (MOTOR V7.1)
 # ==============================================================================
