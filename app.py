@@ -304,12 +304,37 @@ def get_battle_analysis(t1, d1, t2, d2):
     return get_ai_generic_analysis(prompt)
 
 def generate_audio(text, key_suffix=""):
-    # Generate a unique path based on content hash to avoid re-generating
     import hashlib
-    h = hashlib.md5(text.encode()).hexdigest()
+    import random
     
-    # Define voice
-    voice = "pt-BR-AntonioNeural"
+    # --- CUSTOMIZATION FOR BATTLE ARENA ---
+    # User Request: "Narração de Campeonato" + "Rufe os Tambores" + "Random Intros"
+    is_battle = "battle" in key_suffix
+    
+    # 1. Select Voice
+    if is_battle:
+        voice = "pt-BR-FabioNeural" # More energetic/younger male voice
+    else:
+        voice = "pt-BR-AntonioNeural" # Standard professional execution
+
+    # 2. Dynamic Intro (Only for Battle)
+    final_text_content = text
+    if is_battle:
+        comm_intros = [
+            "Respeitável público! O ringue pegou fogo hoje! Rufem os tambores para o resultado!",
+            "Senhoras e senhores! Em uma disputa brutal de fundamentos, apenas um sobreviveu! A hora da verdade chegou!",
+            "Extra! Extra! O combate acabou e a poeira baixou! Quem levou a melhor nos números? Vamos descobrir agora!",
+            "Atenção investidores! Tivemos um duelo de titãs, mas a matemática é soberana! Ouçam o veredito do árbitro!",
+            "Preparem seus corações! A análise foi profunda e o resultado é surpreendente! Quem será o campeão?"
+        ]
+        intro = random.choice(comm_intros)
+        # Prepend to text
+        final_text_content = f"{intro} ... {text}"
+
+    # Generate a unique path based on content hash to avoid re-generating
+    # Note: Since intro is random, this hash will change for the same battle if a different intro is picked, 
+    # effectively creating "new" versions on demand if cached isn't hit.
+    h = hashlib.md5(final_text_content.encode()).hexdigest()
     
     # USE TEMP DIR (Global standard)
     temp_dir = tempfile.gettempdir()
@@ -322,8 +347,8 @@ def generate_audio(text, key_suffix=""):
     async def _gen():
         # TTS FIX: Pronounce "RJ" as "Recuperação Judicial" correctly
         # Also clean markdown asterisks
-        final_text = text.replace("*", "").replace(" RJ ", " Recuperação Judicial ").replace("RJ ", "Recuperação Judicial ").replace(" R.J. ", " Recuperação Judicial ")
-        comm = edge_tts.Communicate(final_text, voice) 
+        clean_text = final_text_content.replace("*", "").replace(" RJ ", " Recuperação Judicial ").replace("RJ ", "Recuperação Judicial ").replace(" R.J. ", " Recuperação Judicial ")
+        comm = edge_tts.Communicate(clean_text, voice) 
         await comm.save(fname)
         return fname
         
