@@ -1988,30 +1988,50 @@ with tab_mix:
         
         if len(df_mix) > 0:
             
-        if len(df_mix) > 0:
+            # --- SMART REDISTRIBUTION LOGIC (Iterative) ---
+            allocations = {} # Ticker -> Qty
+            target_value_display = 0
             
-            # --- EQUAL VALUE STRATEGY (Financial Rebalancing) ---
-            # Distribute money equally among all assets.
-            # Example: R$ 1000 invest / 10 assets = R$ 100 per asset.
-            # Asset A (R$ 50): 2 shares. Asset B (R$ 10): 10 shares.
-            val_per_asset = 0
             if invest_mix > 0:
-                val_per_asset = invest_mix / len(df_mix)
+                # Working copy for calculation
+                candidates = df_mix[['ticker', 'price']].copy()
+                total_pot = invest_mix
+                
+                while not candidates.empty:
+                    fair_share = total_pot / len(candidates)
+                    
+                    # Identify EXPENSIVE assets (Price > Share)
+                    # Use a small epsilon to avoid float issues, or strict greater
+                    expensive = candidates[candidates['price'] > fair_share]
+                    
+                    if expensive.empty:
+                        # Stability reached! All active assets fit in the fair_share.
+                        target_value_display = fair_share
+                        for _, row in candidates.iterrows():
+                            qty = int(fair_share // row['price'])
+                            allocations[row['ticker']] = qty
+                        break
+                    else:
+                        # Remove expensive ones (they get 0)
+                        for _, row in expensive.iterrows():
+                            allocations[row['ticker']] = 0
+                        # Drop from candidates and retry loop with same Total Pot
+                        candidates = candidates.drop(expensive.index)
             
-            st.success(f"{len(df_mix)} ATIVOS NA ELITE. ALOCAÇÃO IDEAL: {format_brl(val_per_asset)} POR ATIVO.")
+            st.success(f"{len(df_mix)} ATIVOS NA ELITE. ALOCAÇÃO IDEAL: {format_brl(target_value_display) if invest_mix > 0 else '---'} (Para os ativos aptos).")
 
             c1, c2 = st.columns(2)
             for i, r in df_mix.reset_index().iterrows():
-                # SIMULATION LOGIC (Equal Value)
+                # SIMULATION LOGIC: Use pre-calculated allocations
                 sim_html = ""
-                if val_per_asset > 0:
-                    qtd_sim = int(val_per_asset // r['price'])
-                    total_alloc = qtd_sim * r['price']
+                if invest_mix > 0:
+                    qty = allocations.get(r['ticker'], 0)
+                    total_alloc = qty * r['price']
                     
-                    if qtd_sim > 0:
-                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#5DD9C2'>💰 APORTE: <b>{qtd_sim}</b> AÇÕES ({format_brl(total_alloc)})</div>"
+                    if qty > 0:
+                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#5DD9C2'>💰 APORTE: <b>{qty}</b> AÇÕES ({format_brl(total_alloc)})</div>"
                     else:
-                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#AA4444'>💰 APORTE ({format_brl(val_per_asset)}): <b>INSUFICIENTE</b></div>"
+                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#AA4444'>💰 0 AÇÕES (Preço &gt; Cota Ideal)</div>"
 
                 with (c1 if i%2==0 else c2):
                     # Card Personalizado da Elite
