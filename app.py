@@ -1065,58 +1065,52 @@ def login_page():
                                 
                             # Only proceed if this specific code hasn't been handled yet
                             if st.session_state.auth_processing == str(auth_code):
-                                with st.spinner("Verificando credenciais Google..."):
-                                    try:
-                                        # DEBUG TRACE 1
-                                        st.write("1. Verificando código Google...")
-                                        flow.fetch_token(code=auth_code)
-                                        credentials = flow.credentials
+                                # MANUAL DEBUG MODE - NO SPINNER, NO AUTO-RERUN
+                                st.info("🛑 MODO DEBUG ATIVADO: O sistema vai pausar em cada etapa.")
+                                
+                                try:
+                                    st.markdown("### 1️⃣ Trocando Código por Token...")
+                                    flow.fetch_token(code=auth_code)
+                                    credentials = flow.credentials
+                                    st.success("✅ Token Recebido!")
+                                    
+                                    st.markdown("### 2️⃣ Pegando Dados do Google...")
+                                    sess = requests.Session()
+                                    sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
+                                    user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
+                                    st.json(user_info) # Show exact JSON from Google
+                                    
+                                    st.markdown("### 3️⃣ Conectando no Banco (Supabase)...")
+                                    user = db.login_google_user(user_info['email'], user_info['id'])
+                                    
+                                    if user:
+                                        st.success(f"✅ Usuário Encontrado/Criado: {user}")
                                         
-                                        sess = requests.Session()
-                                        sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
-                                        user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
-                                        st.write(f"2. Google respondeu: {user_info.get('email')}")
+                                        st.markdown("### 4️⃣ Criando Sessão...")
+                                        token = db.create_session(user['id'])
+                                        st.write(f"Token de Sessão: {token}")
                                         
-                                        # DEBUG TRACE 2
-                                        st.write("3. Tentando login/criação no Banco (Supabase)...")
-                                        user = db.login_google_user(user_info['email'], user_info['id'])
-                                        st.write(f"4. Retorno do Banco: {user}")
+                                        st.session_state['logged_in'] = True
+                                        st.session_state['user_id'] = user['id']
+                                        st.session_state['username'] = user['username'] 
                                         
-                                        if user:
-                                            token = db.create_session(user['id'])
-                                            # cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
-                                            st.write("5. Sessão Criada no Banco!")
-                                            
-                                            st.session_state['logged_in'] = True
-                                            st.session_state['user_id'] = user['id']
-                                            st.session_state['username'] = user['username'] 
-                                            st.success("AUTENTICADO! (Modo Debug: Clique abaixo para entrar)")
-                                            
-                                            del st.session_state.auth_processing
-                                            st.session_state['debug_stay'] = True
-                                            
-                                            if st.button(">> ENTRAR NO SISTEMA <<"):
-                                                st.query_params.clear()
-                                                st.rerun()
-                                            
-                                            st.stop() # FORÇA PARADA PARA LERMOS OS LOGS
-                                            
-                                        else:
-                                            st.error("Falha no Login: Retorno do banco foi Vazio (None).")
-                                            st.write("Erro detalhado deve ter aparecido acima.")
-                                            st.session_state.auth_processing = None # Allow retry
-                                    except Exception as e:
-                                        # Error handling inside the block
-                                        err_msg = str(e)
-                                        st.session_state.auth_processing = None # Reset flag on error
+                                        del st.session_state.auth_processing
                                         
-                                        if "invalid_grant" in err_msg:
-                                            st.warning("⚠️ Sessão expirada. Tentando limpar...")
+                                        st.warning("🏁 PROCESSO CONCLUÍDO. CLIQUE ABAIXO PARA ENTRAR.")
+                                        if st.button("🚀 ACESSAR AGORA (FINALMENTE)"):
                                             st.query_params.clear()
-                                            time.sleep(1)
                                             st.rerun()
-                                        else:
-                                            st.error(f"Erro no Login: {err_msg}")
+                                        
+                                        st.stop() # STOP HERE TO PREVENT LOOP
+                                    else:
+                                        st.error("❌ ERRO CRÍTICO: db.login_google_user retornou Vazio!")
+                                        st.write("Isso significa que o INSERT no banco falhou e a função retornou None.")
+                                        st.stop()
+
+                                except Exception as e:
+                                    st.error(f"❌ ERRO EXCEÇÃO: {str(e)}")
+                                    st.write(f"Detalhes: {e}")
+                                    st.stop()
                             else:
                                 # If code changed or already processing another
                                 st.stop()
