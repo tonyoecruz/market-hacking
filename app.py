@@ -30,7 +30,7 @@ if not os.path.exists("client_secret.json"):
 load_dotenv()
 
 # LOCAL DEV ONLY: Allow OAuth over HTTP (fixes "InsecureTransportError")
-# os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' # COMMENTED OUT FOR PROD
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' # Re-enabled for Cloud Proxy compatibility
 
 # ==============================================================================
 # 🛠️ CONFIG DO APP
@@ -1059,27 +1059,53 @@ def login_page():
                         auth_code = st.query_params.get("code")
                         
                         if auth_code:
-                            with st.spinner("Verificando credenciais Google..."):
-                                flow.fetch_token(code=auth_code)
-                                credentials = flow.credentials
+                             # Prevent double-execution (Streamlit race condition)
+                            if "auth_processing" not in st.session_state:
+                                st.session_state.auth_processing = str(auth_code)
                                 
-                                sess = requests.Session()
-                                sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
-                                user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
-                                
-                                user = db.login_google_user(user_info['email'], user_info['id'])
-                                if user:
-                                    token = db.create_session(user['id'])
-                                    cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
-                                    
-                                    st.session_state['logged_in'] = True
-                                    st.session_state['user_id'] = user['id']
-                                    st.session_state['username'] = user['username'] 
-                                    st.success("AUTENTICADO!")
-                                    # Clear params to prevent re-trigger
-                                    st.query_params.clear()
-                                    time.sleep(1)
-                                    st.rerun()
+                            # Only proceed if this specific code hasn't been handled yet
+                            if st.session_state.auth_processing == str(auth_code):
+                                with st.spinner("Verificando credenciais Google..."):
+                                    try:
+                                        flow.fetch_token(code=auth_code)
+                                        credentials = flow.credentials
+                                        
+                                        sess = requests.Session()
+                                        sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
+                                        user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
+                                        
+                                        user = db.login_google_user(user_info['email'], user_info['id'])
+                                        if user:
+                                            token = db.create_session(user['id'])
+                                            cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
+                                            
+                                            st.session_state['logged_in'] = True
+                                            st.session_state['user_id'] = user['id']
+                                            st.session_state['username'] = user['username'] 
+                                            st.success("AUTENTICADO!")
+                                            
+                                            # Mark as done so we don't try again
+                                            del st.session_state.auth_processing
+                                            
+                                            # Clear params to prevent re-trigger
+                                            st.query_params.clear()
+                                            time.sleep(1)
+                                            st.rerun()
+                                    except Exception as e:
+                                        # Error handling inside the block
+                                        err_msg = str(e)
+                                        st.session_state.auth_processing = None # Reset flag on error
+                                        
+                                        if "invalid_grant" in err_msg:
+                                            st.warning("⚠️ Sessão expirada. Tentando limpar...")
+                                            st.query_params.clear()
+                                            time.sleep(1)
+                                            st.rerun()
+                                        else:
+                                            st.error(f"Erro no Login: {err_msg}")
+                            else:
+                                # If code changed or already processing another
+                                st.stop()
                         else:
                             # 3. Show Login Link
                             auth_url, _ = flow.authorization_url(prompt='consent')
