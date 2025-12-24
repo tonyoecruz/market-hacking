@@ -1088,113 +1088,86 @@ def login_page():
                         else:
                             flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
                         
-                        # 2. Check for Callback Code
-                        auth_code = st.query_params.get("code")
+                        # ------------------------------------------------------------------
+                        # TWO-PHASE LOGIN FLOW (Fixes Race Conditions & Loops)
+                        # ------------------------------------------------------------------
                         
-                        if auth_code:
-                            # 1. Idempotency Check: Don't process the same code twice in a row
-                            if "last_auth_code" in st.session_state and st.session_state.last_auth_code == auth_code:
-                                # We already processed this code.
-                                # Case A: Success -> Just redirect
-                                if st.session_state.get('logged_in'):
-                                    st.query_params.clear()
-                                    st.rerun()
-                                
-                                # Case B: Stuck/Failed -> Clear flag and let it retry (or fail with invalid_grant and auto-heal)
-                                del st.session_state.last_auth_code
-                                
-                            st.session_state.last_auth_code = auth_code
-
-                            # 2. Add visual feedback
-                            status_container = st.status("🔐 Realizando Login Automático...", expanded=True)
+                        # PHASE 2: Process User (URL is clean now)
+                        if "login_phase_1_info" in st.session_state:
+                            p1_info = st.session_state.pop("login_phase_1_info") # Get and Clear
                             
-                            try:
-                                status_container.write("🔄 Validando credenciais Google...")
-                                flow.fetch_token(code=auth_code)
-                                credentials = flow.credentials
+                            status_container = st.status("🔐 Finalizando acesso seguro...", expanded=True)
+                            status_container.write("👤 Conectando ao banco de dados...")
+                            
+                            # DB Login
+                            user = db.login_google_user(p1_info['email'], p1_info['id'])
+                            
+                            if user:
+                                status_container.write("🎫 Gerando sessão...")
+                                token, sess_err = db.create_session(user['id'])
                                 
-                                sess = requests.Session()
-                                sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
-                                user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
+                                if not token:
+                                     status_container.update(label="❌ Erro de Sessão", state="error")
+                                     st.error(f"Erro ao Criar Sessão: {sess_err}")
+                                     st.stop()
+                                     
+                                # Set Cookie & State
+                                try:
+                                    cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
+                                except Exception: pass
+
+                                st.session_state['logged_in'] = True
+                                st.session_state['user_id'] = user['id']
+                                st.session_state['username'] = user['username'] 
                                 
-                                status_container.write("👤 Verificando usuário no banco...")
-                                # DB Login
-                                user = db.login_google_user(user_info['email'], user_info['id'])
+                                status_container.update(label=f"✅ Login com Sucesso!", state="complete", expanded=False)
                                 
-                                if user:
-                                    status_container.write("🎫 Criando sessão segura...")
-                                    token, sess_err = db.create_session(user['id'])
+                                # Set pending flag for robustness
+                                st.query_params["login_pending"] = "true"
+                                time.sleep(1.5)
+                                st.rerun()
+                            else:
+                                st.error("Erro fatal: Não foi possível criar o usuário.")
+                                st.stop()
+
+                        # PHASE 1: Capture Code (URL has code)
+                        auth_code = st.query_params.get("code")
+                        if auth_code:
+                            # Show status
+                            with st.status("🔄 Recebendo credenciais Google...", expanded=False) as status:
+                                try:
+                                    flow.fetch_token(code=auth_code)
+                                    credentials = flow.credentials
                                     
-                                    if not token:
-                                            status_container.update(label="❌ Erro de Sessão", state="error")
-                                            st.error(f"Erro ao Criar Sessão no Banco: {sess_err}")
-                                            st.stop()
-                                            
-                                    # Success!
-                                    # CRITICAL: Persist session in cookie so it survives the rerun/redirect
-                                    try:
-                                        cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
-                                    except Exception as c_err:
-                                        print(f"Cookie Error: {c_err}")
-                                        
-                                    st.session_state['logged_in'] = True
-                                    st.session_state['user_id'] = user['id']
-                                    st.session_state['username'] = user['username'] 
+                                    sess = requests.Session()
+                                    sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
+                                    user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
                                     
-                                    status_container.update(label=f"✅ Bem-vindo, {user['username']}!", state="complete", expanded=False)
+                                    # Save info for Phase 2
+                                    st.session_state['login_phase_1_info'] = user_info
                                     
-                                    # Give CookieManager time to sync with browser (Crucial for auto-login)
-                                    st.success("Sessão salva! Redirecionando...")
-                                    time.sleep(2) 
-                                    
-                                    # Use a query param to flag that we are expecting a session on next load
-                                    # This survives the reload even if session_state is wiped
-                                    st.query_params["login_pending"] = "true"
-                                    # We can remove the 'code' now implicitly by overwritting or just setting this new one
-                                    # st.query_params.clear() -> this clears everything. 
-                                    # Let's set the param specifically, which updates the URL.
-                                    # But we want to remove 'code'.
-                                    st.query_params.clear()
-                                    st.query_params["login_pending"] = "true"
-                                    st.rerun()
-                                else:
-                                    status_container.update(label="❌ Erro de Cadastro", state="error")
-                                    st.error("Erro ao salvar usuário no banco.")
-                                    st.stop()
-                                    
-                            except Exception as e:
-                                err_msg = str(e)
-                                if "invalid_grant" in err_msg:
-                                    # Code is stale.
-                                    st.warning("⚠️ Código expirado. Recarregando...")
+                                    status.write("✅ Credenciais validadas! Limpando URL...")
+                                    time.sleep(0.5)
+                                    # CRITICAL: Clear Code immediately
                                     st.query_params.clear()
                                     st.rerun()
-                                else:
-                                    status_container.update(label="❌ Erro no Login", state="error")
-                                    st.error(f"Erro: {err_msg}")
-                                    if st.button("Tentar Novamente"):
-                                        st.query_params.clear()
-                                        st.rerun()
+                                    
+                                except Exception as e:
+                                    # If error (e.g. invalid_grant because of parallel run), just clear and retry
+                                    st.warning("⚠️ Tentativa duplicada detectada. Reiniciando...")
+                                    st.query_params.clear()
+                                    st.rerun()
                         else:
-                            # 3. Show Login Link
+                            # 3. Show Login Link (Idle State)
                             auth_url, _ = flow.authorization_url(prompt='consent')
                             st.link_button("🔵 ENTRAR COM GOOGLE", auth_url, use_container_width=True)
                             
                     except Exception as e:
-                        err_msg = str(e)
-                        # CRITICAL FIX: If code is invalid (expired/used), we MUST clear URL and rerun 
-                        # to give the user a clean state (Login Button) again.
-                        if "invalid_grant" in err_msg:
-                            st.warning("♻️ Sessão expirada. Reiniciando para nova tentativa...")
-                            st.query_params.clear()
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error(f"Erro no Login: {err_msg}")
-                            # Clean Params for other errors too, but let user read message
-                            st.query_params.clear()
-                        
-                        print(f"Google Auth Error: {err_msg}")
+                       # General Safety Net
+                       st.error(f"Erro Auth: {str(e)}")
+                       if st.button("♻️ Reiniciar Login"):
+                           st.query_params.clear()
+                           st.rerun()
                 else:
                     st.caption("⚠️ Google Login indisponível (Sem config).")
                     
