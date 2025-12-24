@@ -31,13 +31,24 @@ def init_db():
     except Exception as e:
         st.error(f"Erro ao verificar o banco de dados: {e}")
 
+from sqlalchemy.exc import OperationalError
+
 def run_query(query, params=None):
     """Função genérica para rodar comandos SQL de LEITURA (Retorna DataFrame)"""
     conn = get_db_connection()
-    # ttl=0 desativa cache global para evitar dados obsoletos em sessões dinâmicas
-    if params:
-        return conn.query(query, params=params, ttl=0)
-    return conn.query(query, ttl=0)
+    try:
+        # ttl=0 desativa cache global para evitar dados obsoletos
+        if params:
+            return conn.query(query, params=params, ttl=0)
+        return conn.query(query, ttl=0)
+    except OperationalError as e:
+        st.error("🔴 ERRO DE CONEXÃO COM SUPABASE")
+        st.warning(
+            "Dica: O Streamlit Cloud usa IPv4. O Supabase direto (porta 5432) pode ser IPv6-only.\n"
+            "Solução: Use a URL do 'Connection Pooler' (porta 6543) no Supabase Settings > Database.\n"
+            "E certifique-se de usar 'postgresql://' em vez de 'postgres://'."
+        )
+        raise e
 
 def run_transaction(query, params=None):
     """Função auxiliar para ESCRITA (INSERT/UPDATE/DELETE)"""

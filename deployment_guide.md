@@ -67,17 +67,22 @@ Para persistir dados, configuramos o app para conectar ao Postgres do Supabase.
    - Vá em **SQL Editor** no menu esquerdo.
    - Copie o conteúdo do arquivo `supabase_schema.sql` do seu repositório.
    - Cole e clique em **Run**.
-3. **Pegue a String de Conexão**:
+3. **Pegue a String de Conexão (IMPORTANTE)**:
    - Vá em **Project Settings (engrenagem) > Database**.
-   - Em "Connection string", selecione **URI**.
-   - Copie a string que se parece com: `postgresql://postgres:[YOUR-PASSWORD]@db.xxxx.supabase.co:5432/postgres`
-   - **IMPORTANTE**: Substitua `[YOUR-PASSWORD]` pela senha que você criou para o banco (não é a senha da conta Supabase).
+   - Em "Connection Method", procure por **Connection Pooler** (ou Transaction Pooler).
+   - Use a **Mode: Session**.
+   - A porta DEVE ser **6543** (isso garante suporte IPv4, necessário para o Streamlit Cloud).
+   - Copie a URI.
+   - **CORREÇÃO DE PROTOCOLO**: Se começar com `postgres://`, mude para `postgresql://`.
+   - Exemplo final correto: `postgresql://postgres.xxxx:senha@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require`
+
 4. **Adicione aos Secrets**:
-   - No Streamlit Cloud (ou `.streamlit/secrets.toml` local), adicione:
-   
+   - No Streamlit Cloud (App Settings > Secrets), edite para ficar assim:
+
    ```toml
-   # ... outras configs ...
-   
-   SUPABASE_DB_URL = "postgresql://postgres:SUA_SENHA@db.xxxx.supabase.co:5432/postgres"
+   [connections.postgresql]
+   dialect = "postgresql"
+   url = "postgresql://postgres.xxxx:[SUA-SENHA]@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
    ```
+   *(Ou se preferir o formato de chave única que configuramos antes, ajuste conforme necessário, mas o padrão `st.connection` prefere a seção toml acima).*
 

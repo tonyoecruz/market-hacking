@@ -1085,14 +1085,16 @@ def login_page():
                             auth_url, _ = flow.authorization_url(prompt='consent')
                             st.link_button("🔵 ENTRAR COM GOOGLE", auth_url, use_container_width=True)
                             
-                    except Exception as e:
-                        st.error(f"Erro Configuração Google: {str(e)}")
-                        st.caption("Verifique se a REDIRECT_URI no console do Google e secrets coincidem.")
+                except Exception as e:
+                        st.error("Erro no Login. Tente novamente.")
+                        # Clear params if code was invalid to prevent loop
+                        st.query_params.clear()
+                        # Optional: Log internal error to console instead of UI if needed, but keeping simple for now
+                        print(f"Google Auth Error: {e}")
                 else:
                     st.caption("⚠️ Google Login indisponível (Sem config).")
                     
-                # DEBUG: DELETE THIS AFTER FIXING
-                st.info(f"🔧 DEBUG STATUS:\n- Secrets Detectados: {'google_auth' in st.secrets}\n- Redirect URI usado: {redirect_uri}")
+
 
             with t_reg:
                 st.markdown("<br>", unsafe_allow_html=True)
