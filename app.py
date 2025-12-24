@@ -1085,7 +1085,7 @@ def login_page():
                             auth_url, _ = flow.authorization_url(prompt='consent')
                             st.link_button("🔵 ENTRAR COM GOOGLE", auth_url, use_container_width=True)
                             
-                except Exception as e:
+                    except Exception as e:
                         st.error("Erro no Login. Tente novamente.")
                         # Clear params if code was invalid to prevent loop
                         st.query_params.clear()
