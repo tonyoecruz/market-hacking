@@ -1067,32 +1067,44 @@ def login_page():
                             if st.session_state.auth_processing == str(auth_code):
                                 with st.spinner("Verificando credenciais Google..."):
                                     try:
+                                    try:
+                                        # DEBUG TRACE 1
+                                        st.write("1. Verificando código Google...")
                                         flow.fetch_token(code=auth_code)
                                         credentials = flow.credentials
                                         
                                         sess = requests.Session()
                                         sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
                                         user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
+                                        st.write(f"2. Google respondeu: {user_info.get('email')}")
                                         
+                                        # DEBUG TRACE 2
+                                        st.write("3. Tentando login/criação no Banco (Supabase)...")
                                         user = db.login_google_user(user_info['email'], user_info['id'])
+                                        st.write(f"4. Retorno do Banco: {user}")
+                                        
                                         if user:
                                             token = db.create_session(user['id'])
-                                            cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
+                                            # cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
+                                            st.write("5. Sessão Criada no Banco!")
                                             
                                             st.session_state['logged_in'] = True
                                             st.session_state['user_id'] = user['id']
                                             st.session_state['username'] = user['username'] 
-                                            st.success("AUTENTICADO!")
+                                            st.success("AUTENTICADO! (Modo Debug: Clique abaixo para entrar)")
                                             
-                                            # Mark as done so we don't try again
                                             del st.session_state.auth_processing
+                                            st.session_state['debug_stay'] = True
                                             
-                                            # Clear params to prevent re-trigger
-                                            st.query_params.clear()
-                                            time.sleep(1)
-                                            st.rerun()
+                                            if st.button(">> ENTRAR NO SISTEMA <<"):
+                                                st.query_params.clear()
+                                                st.rerun()
+                                            
+                                            st.stop() # FORÇA PARADA PARA LERMOS OS LOGS
+                                            
                                         else:
-                                            st.error("Falha no Login: Usuário não pôde ser verificado ou criado.")
+                                            st.error("Falha no Login: Retorno do banco foi Vazio (None).")
+                                            st.write("Erro detalhado deve ter aparecido acima.")
                                             st.session_state.auth_processing = None # Allow retry
                                     except Exception as e:
                                         # Error handling inside the block
