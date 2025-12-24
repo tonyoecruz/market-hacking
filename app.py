@@ -1100,6 +1100,12 @@ def login_page():
                                             st.stop()
                                             
                                     # Success!
+                                    # CRITICAL: Persist session in cookie so it survives the rerun/redirect
+                                    try:
+                                        cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
+                                    except Exception as c_err:
+                                        print(f"Cookie Error: {c_err}")
+                                        
                                     st.session_state['logged_in'] = True
                                     st.session_state['user_id'] = user['id']
                                     st.session_state['username'] = user['username'] 
