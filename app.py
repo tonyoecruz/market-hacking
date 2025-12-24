@@ -1063,10 +1063,14 @@ def login_page():
                         if auth_code:
                             # 1. Idempotency Check: Don't process the same code twice in a row
                             if "last_auth_code" in st.session_state and st.session_state.last_auth_code == auth_code:
-                                # We already processed this code. The URL just hasn't cleared yet.
-                                # Wait for the reload to happen.
-                                st.info("🔄 Finalizando login...")
-                                st.stop()
+                                # We already processed this code.
+                                # Case A: Success -> Just redirect
+                                if st.session_state.get('logged_in'):
+                                    st.query_params.clear()
+                                    st.rerun()
+                                
+                                # Case B: Stuck/Failed -> Clear flag and let it retry (or fail with invalid_grant and auto-heal)
+                                del st.session_state.last_auth_code
                                 
                             st.session_state.last_auth_code = auth_code
 
