@@ -1987,26 +1987,36 @@ with tab_mix:
         df_mix = df_mix.sort_values('MagicRank', ascending=True).head(10)
         
         if len(df_mix) > 0:
-            st.success(f"{len(df_mix)} ATIVOS ENCONTRADOS NA ELITE.")
             
-            # Distribute Investment Equally
+            # --- BASKET LOGIC (User Request) ---
+            # Buying "Bundles" of the entire list. 
+            # 1 Share of each asset = 1 Basket.
+            basket_price = df_mix['price'].sum()
+            shares_per_asset = 0
+            remaining_cash = 0
+            
+            if invest_mix > 0 and basket_price > 0:
+                shares_per_asset = int(invest_mix // basket_price)
+                cost_total = shares_per_asset * basket_price
+                remaining_cash = invest_mix - cost_total
+            
+            st.success(f"{len(df_mix)} ATIVOS NA ELITE. CUSTO DA CESTA (1 Cota de Cada): {format_brl(basket_price)}")
+            
             if invest_mix > 0:
-                val_per_asset = invest_mix / len(df_mix)
-            else:
-                val_per_asset = 0
+                 if shares_per_asset > 0:
+                     st.info(f"💰 COM {format_brl(invest_mix)}, VOCÊ COMPRA **{shares_per_asset} AÇÕES DE CADA** ATIVO ABAIXO (Total: {format_brl(cost_total)}). Sobra: {format_brl(remaining_cash)}.")
+                 else:
+                     st.warning(f"⚠️ APORTE INSUFICIENTE PARA 1 CESTA COMPLETA ({format_brl(basket_price)}).")
 
             c1, c2 = st.columns(2)
             for i, r in df_mix.reset_index().iterrows():
-                # SIMULATION LOGIC (Distributed)
+                # SIMULATION LOGIC (Uniform Quantity)
                 sim_html = ""
-                if val_per_asset > 0:
-                    qtd_sim = int(val_per_asset // r['price'])
-                    total_alloc = qtd_sim * r['price']
-                    # Show valid allocation only if at least 1 share can be bought
-                    if qtd_sim > 0:
-                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#5DD9C2'>💰 APORTE ({format_brl(val_per_asset)}): <b>{qtd_sim}</b> AÇÕES</div>"
+                if invest_mix > 0:
+                    if shares_per_asset > 0:
+                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#5DD9C2'>💰 APORTE: <b>{shares_per_asset}</b> AÇÕES</div>"
                     else:
-                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#AA4444'>💰 APORTE ({format_brl(val_per_asset)}): <b>INSUFICIENTE</b></div>"
+                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#AA4444'>💰 APORTE: <b>0</b></div>"
 
                 with (c1 if i%2==0 else c2):
                     # Card Personalizado da Elite
