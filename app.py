@@ -47,8 +47,14 @@ if "logged_in" not in st.session_state:
 
 # Try to recover session from cookie if not logged in
 if not st.session_state["logged_in"]:
-    # Check for token in cookies
+    # Check if we are in a "pending login" state (just came from Google)
+    if st.query_params.get("login_pending") == "true":
+        st.info("🔄 Sincronizando sessão segura...")
+        # Force a wait for the cookie to appear
+        time.sleep(1)
+        
     auth_token = cookie_manager.get("auth_token")
+    
     if auth_token:
         # Verify token in DB
         user = db.get_user_by_session(auth_token)
@@ -56,8 +62,15 @@ if not st.session_state["logged_in"]:
             st.session_state['logged_in'] = True
             st.session_state['user_id'] = user['id']
             st.session_state['username'] = user['username']
-            # Optional: Refresh cookie expiration
-            # cookie_manager.set("auth_token", auth_token, expires_at=datetime.now() + timedelta(days=30))
+            
+            # Clear the pending flag if it exists
+            if st.query_params.get("login_pending"):
+               st.query_params.clear()
+               st.rerun()
+    elif st.query_params.get("login_pending") == "true":
+        # Cookie not found YET, but we expect it. Rerun to try again.
+        time.sleep(1)
+        st.rerun()
 
 # ==============================================================================
 # 🧠 INTELIGÊNCIA ARTIFICIAL (MOTOR V7.1)
@@ -1134,7 +1147,15 @@ def login_page():
                                     st.success("Sessão salva! Redirecionando...")
                                     time.sleep(2) 
                                     
+                                    # Use a query param to flag that we are expecting a session on next load
+                                    # This survives the reload even if session_state is wiped
+                                    st.query_params["login_pending"] = "true"
+                                    # We can remove the 'code' now implicitly by overwritting or just setting this new one
+                                    # st.query_params.clear() -> this clears everything. 
+                                    # Let's set the param specifically, which updates the URL.
+                                    # But we want to remove 'code'.
                                     st.query_params.clear()
+                                    st.query_params["login_pending"] = "true"
                                     st.rerun()
                                 else:
                                     status_container.update(label="❌ Erro de Cadastro", state="error")
@@ -1144,8 +1165,7 @@ def login_page():
                             except Exception as e:
                                 err_msg = str(e)
                                 if "invalid_grant" in err_msg:
-                                    # Code is stale (race condition). Clear and retry/refresh.
-                                    # Usually means another thread succeeded or the user refreshed.
+                                    # Code is stale.
                                     st.warning("⚠️ Código expirado. Recarregando...")
                                     st.query_params.clear()
                                     st.rerun()
