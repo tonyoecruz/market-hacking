@@ -1499,7 +1499,7 @@ with tab_carteira:
                 
                 for _, row in df_pie.iterrows():
                     echarts_data.append({
-                        "value": row['total_val'],
+                        "value": round(row['total_val'], 2), # ROUNDED to 2 decimals
                         "name": row['Tipo'],
                         "itemStyle": {"color": colors_map.get(row['Tipo'], "#555")}
                     })
@@ -1507,28 +1507,25 @@ with tab_carteira:
                 # ECharts Options (Strict User Schema)
                 options = {
                     "tooltip": {"trigger": "item", "formatter": "{b}: R$ {c} ({d}%)"},
-                    "legend": {"top": "5%", "left": "center", "textStyle": {"color": "#fff"}},
+                    "legend": {"top": "0%", "left": "center", "textStyle": {"color": "#fff"}}, # Moved simple legend to top
                     "series": [
                         {
                             "name": "Alocação",
                             "type": "pie",
-                            "radius": ["40%", "70%"], # Donut to look modern
+                            "radius": ["40%", "70%"], 
                             "avoidLabelOverlap": False,
                             "itemStyle": {
                                 "borderRadius": 10,
-                                "borderColor": '#1a1a2e', # Match BG for "cut" effect
+                                "borderColor": '#1a1a2e',
                                 "borderWidth": 2
                             },
-                            "label": {
-                                "show": False,
-                                "position": "center"
-                            },
+                            "label": {"show": False, "position": "center"},
                             "emphasis": {
                                 "scale": True,   
-                                "scaleSize": 15, 
+                                "scaleSize": 10, 
                                 "label": {
                                     "show": True,
-                                    "fontSize": 20,
+                                    "fontSize": 16,
                                     "fontWeight": "bold",
                                     "color": "#fff"
                                 },
@@ -1542,8 +1539,7 @@ with tab_carteira:
                         }
                     ]
                 }
-                
-                st_echarts(options=options, height="300px")
+                st_echarts(options=options, height="280px")
                 
             with h2:
                 # Privacy Logic
@@ -1562,42 +1558,71 @@ with tab_carteira:
                 show = st.session_state['privacy_show']
                 val_display = format_brl(total_current) if show else "R$ ---"
                 
-                # CHART 2: PROFIT RING
+                # ---------------- ECHARTS PROFIT RING ----------------
                 profit_val = total_current - total_invested
                 is_profit = profit_val >= 0
                 
-                # Calc Rentability %
                 var_pct_val = (profit_val / total_invested) if total_invested > 0 else 0
                 pct_fmt = f"{'+' if is_profit else ''}{var_pct_val:.1%}" if show else "XX%"
                 money_diff = format_brl(profit_val) if show else "R$ ---"
-                
-                if is_profit:
-                    labels = ["APORTE", "LUCRO"]
-                    values = [total_invested, profit_val]
-                    colors = ["#121212", "#00ff41"] # Dark vs Green
-                else:
-                    labels = ["SALDO ATUAL", "PREJUÍZO"]
-                    values = [total_current, abs(profit_val)]
-                    colors = ["#121212", "#ff0055"] # Dark vs Red
-
-                if not show:
-                    values = [100]; labels = ["OCULTO"]; colors = ["#222"]
-                
-                fig_ring = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.75, 
-                                                marker=dict(colors=colors, line=dict(color='#000000', width=3)),
-                                                textinfo='none', 
-                                                hoverinfo='label+value+percent',
-                                                hovertemplate = "<b>%{label}</b><br>💰 R$ %{value:,.2f}<extra></extra>",
-                                                pull=[0]*len(labels)
-                                                )])
-
-                # Color for the central text
                 pct_color = "#00ff41" if is_profit else "#ff0055"
                 if not show: pct_color = "#AAA"
                 
-                fig_ring.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='white'),
+                if is_profit:
+                    p_data = [
+                        {"value": round(total_invested, 2), "name": "APORTE", "itemStyle": {"color": "#121212"}},
+                        {"value": round(profit_val, 2), "name": "LUCRO", "itemStyle": {"color": "#00ff41"}}
+                    ]
+                else:
+                    p_data = [
+                        {"value": round(total_current, 2), "name": "SALDO", "itemStyle": {"color": "#121212"}},
+                        {"value": round(abs(profit_val), 2), "name": "PREJUÍZO", "itemStyle": {"color": "#ff0055"}}
+                    ]
+                
+                if not show:
+                     p_data = [{"value": 100, "name": "OCULTO", "itemStyle": {"color": "#222"}}]
+
+                # ECharts Rich Text for Center Info
+                opt_ring = {
+                    "tooltip": {"trigger": "item", "formatter": "{b}: R$ {c} ({d}%)"},
+                    "title": {
+                        "text": '{label|SALDO BRUTO}\n{val|' + str(val_display) + '}\n{line|────────}\n{sublabel|RENTABILIDADE}\n{subval|' + str(pct_fmt) + ' (' + str(money_diff) + ')}',
+                        "left": "center",
+                        "top": "center",
+                        "textStyle": {
+                            "rich": {
+                                "label": {"fontSize": 10, "color": "#888", "padding": [0,0,5,0]},
+                                "val": {"fontSize": 18, "fontWeight": "800", "color": "#FFF", "padding": [0,0,5,0]},
+                                "line": {"fontSize": 10, "color": "#333", "padding": [0,0,5,0]},
+                                "sublabel": {"fontSize": 9, "color": "#888", "padding": [0,0,2,0]},
+                                "subval": {"fontSize": 13, "fontWeight": "bold", "color": pct_color}
+                            }
+                        }
+                    },
+                    "series": [
+                        {
+                            "name": "Patrimônio",
+                            "type": "pie",
+                            "radius": ["55%", "70%"], # Thinner ring
+                            "avoidLabelOverlap": False,
+                            "label": {"show": False, "position": "center"},
+                            "itemStyle": {
+                                "borderRadius": 5,
+                                "borderColor": '#1a1a2e',
+                                "borderWidth": 2
+                            },
+                             "emphasis": {
+                                "scale": True,   
+                                "scaleSize": 10, 
+                                "itemStyle": {
+                                    "shadowBlur": 10, "shadowOffsetX": 0, "shadowColor": "rgba(0, 0, 0, 0.5)"
+                                }
+                            },
+                            "data": p_data
+                        }
+                    ]
+                }
+                st_echarts(options=opt_ring, height="280px")
                     margin=dict(t=20, b=20, l=20, r=20),
                     showlegend=False,
                     height=280,
