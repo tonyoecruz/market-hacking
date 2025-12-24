@@ -1061,56 +1061,68 @@ def login_page():
                         auth_code = st.query_params.get("code")
                         
                         if auth_code:
-                            st.info("🔑 Credenciais Google detectadas.")
-                            st.caption(f"Código: {auth_code[:10]}...")
+                            # 1. Idempotency Check: Don't process the same code twice in a row
+                            if "last_auth_code" in st.session_state and st.session_state.last_auth_code == auth_code:
+                                # We already processed this code. The URL just hasn't cleared yet.
+                                # Wait for the reload to happen.
+                                st.info("🔄 Finalizando login...")
+                                st.stop()
+                                
+                            st.session_state.last_auth_code = auth_code
+
+                            # 2. Add visual feedback
+                            status_container = st.status("🔐 Realizando Login Automático...", expanded=True)
                             
-                            # MANUAL TRIGGER TO PREVENT RACE CONDITIONS
-                            # This button ensures fetch_token is ONLY called when you explicitly click, 
-                            # avoiding the "double run" bug that invalidates the code.
-                            if st.button("🔐 CLIQUE AQUI PARA ENTRAR", type="primary", use_container_width=True):
-                                try:
-                                    st.write("🔄 Trocando código por token...")
-                                    flow.fetch_token(code=auth_code)
-                                    credentials = flow.credentials
+                            try:
+                                status_container.write("🔄 Validando credenciais Google...")
+                                flow.fetch_token(code=auth_code)
+                                credentials = flow.credentials
+                                
+                                sess = requests.Session()
+                                sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
+                                user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
+                                
+                                status_container.write("👤 Verificando usuário no banco...")
+                                # DB Login
+                                user = db.login_google_user(user_info['email'], user_info['id'])
+                                
+                                if user:
+                                    status_container.write("🎫 Criando sessão segura...")
+                                    token, sess_err = db.create_session(user['id'])
                                     
-                                    sess = requests.Session()
-                                    sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
-                                    user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
+                                    if not token:
+                                            status_container.update(label="❌ Erro de Sessão", state="error")
+                                            st.error(f"Erro ao Criar Sessão no Banco: {sess_err}")
+                                            st.stop()
+                                            
+                                    # Success!
+                                    st.session_state['logged_in'] = True
+                                    st.session_state['user_id'] = user['id']
+                                    st.session_state['username'] = user['username'] 
                                     
-                                    # DB Login
-                                    user = db.login_google_user(user_info['email'], user_info['id'])
+                                    status_container.update(label=f"✅ Bem-vindo, {user['username']}!", state="complete", expanded=False)
+                                    time.sleep(0.5)
+                                    st.query_params.clear()
+                                    st.rerun()
+                                else:
+                                    status_container.update(label="❌ Erro de Cadastro", state="error")
+                                    st.error("Erro ao salvar usuário no banco.")
+                                    st.stop()
                                     
-                                    if user:
-                                        token, sess_err = db.create_session(user['id'])
-                                        
-                                        if not token:
-                                             st.error(f"Erro ao Criar Sessão no Banco: {sess_err}")
-                                             st.stop()
-                                             
-                                        # cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
-                                        
-                                        st.session_state['logged_in'] = True
-                                        st.session_state['user_id'] = user['id']
-                                        st.session_state['username'] = user['username'] 
-                                        
-                                        st.success(f"✅ BEM-VINDO, {user['username'].upper()}!")
-                                        time.sleep(1)
+                            except Exception as e:
+                                err_msg = str(e)
+                                if "invalid_grant" in err_msg:
+                                    # Code is stale (race condition). Clear and retry/refresh.
+                                    # Usually means another thread succeeded or the user refreshed.
+                                    st.warning("⚠️ Código expirado. Recarregando...")
+                                    st.query_params.clear()
+                                    st.rerun()
+                                else:
+                                    status_container.update(label="❌ Erro no Login", state="error")
+                                    st.error(f"Erro: {err_msg}")
+                                    if st.button("Tentar Novamente"):
                                         st.query_params.clear()
                                         st.rerun()
-                                    else:
-                                        st.error("Erro ao salvar usuário no banco.")
-                                        st.stop()
-                                        
-                                except Exception as e:
-                                    err_msg = str(e)
-                                    if "invalid_grant" in err_msg:
-                                        st.warning("⚠️ Sessão expirada clique em limpar URL.")
-                                    else:
-                                        st.error(f"Erro: {err_msg}")
-                                    
-                            if st.button("🗑️ Limpar URL (Cancelar)"):
-                                st.query_params.clear()
-                                st.rerun()
                         else:
                             # 3. Show Login Link
                             auth_url, _ = flow.authorization_url(prompt='consent')
