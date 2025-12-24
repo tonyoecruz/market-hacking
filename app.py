@@ -1059,74 +1059,51 @@ def login_page():
                         auth_code = st.query_params.get("code")
                         
                         if auth_code:
-                             # Prevent double-execution (Streamlit race condition)
-                            if "auth_processing" not in st.session_state:
-                                st.session_state.auth_processing = str(auth_code)
-                                
-                            # Only proceed if this specific code hasn't been handled yet
-                            if st.session_state.auth_processing == str(auth_code):
-                                # MANUAL DEBUG MODE - NO SPINNER, NO AUTO-RERUN
-                                st.info("🛑 MODO DEBUG ATIVADO: O sistema vai pausar em cada etapa.")
-                                
+                            st.info("🔑 Credenciais Google detectadas.")
+                            st.caption(f"Código: {auth_code[:10]}...")
+                            
+                            # MANUAL TRIGGER TO PREVENT RACE CONDITIONS
+                            # This button ensures fetch_token is ONLY called when you explicitly click, 
+                            # avoiding the "double run" bug that invalidates the code.
+                            if st.button("🔐 CLIQUE AQUI PARA ENTRAR", type="primary", use_container_width=True):
                                 try:
-                                    st.markdown("### 1️⃣ Trocando Código por Token...")
-                                    st.write(f"ℹ️ Redirect URI Configurada: `{flow.redirect_uri}`")
-                                    st.write(f"ℹ️ Código Recebido (Início): `{auth_code[:10]}...`")
-                                    
+                                    st.write("🔄 Trocando código por token...")
                                     flow.fetch_token(code=auth_code)
                                     credentials = flow.credentials
-                                    st.success("✅ Token Recebido!")
                                     
-                                    st.markdown("### 2️⃣ Pegando Dados do Google...")
                                     sess = requests.Session()
                                     sess.headers.update({'Authorization': f'Bearer {credentials.token}'})
                                     user_info = sess.get('https://www.googleapis.com/oauth2/v2/userinfo').json()
-                                    st.json(user_info) # Show exact JSON from Google
                                     
-                                    st.markdown("### 3️⃣ Conectando no Banco (Supabase)...")
+                                    # DB Login
                                     user = db.login_google_user(user_info['email'], user_info['id'])
                                     
                                     if user:
-                                        st.success(f"✅ Usuário Encontrado/Criado: {user}")
-                                        
-                                        st.markdown("### 4️⃣ Criando Sessão...")
                                         token = db.create_session(user['id'])
-                                        st.write(f"Token de Sessão: {token}")
+                                        # cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
                                         
                                         st.session_state['logged_in'] = True
                                         st.session_state['user_id'] = user['id']
                                         st.session_state['username'] = user['username'] 
                                         
-                                        del st.session_state.auth_processing
-                                        
-                                        st.warning("🏁 PROCESSO CONCLUÍDO. CLIQUE ABAIXO PARA ENTRAR.")
-                                        if st.button("🚀 ACESSAR AGORA (FINALMENTE)"):
-                                            st.query_params.clear()
-                                            st.rerun()
-                                        
-                                        st.stop() # STOP HERE TO PREVENT LOOP
+                                        st.success(f"✅ BEM-VINDO, {user['username'].upper()}!")
+                                        time.sleep(1)
+                                        st.query_params.clear()
+                                        st.rerun()
                                     else:
-                                        st.error("❌ ERRO CRÍTICO: db.login_google_user retornou Vazio!")
-                                        st.write("Isso significa que o INSERT no banco falhou e a função retornou None.")
+                                        st.error("Erro ao salvar usuário no banco.")
                                         st.stop()
-
+                                        
                                 except Exception as e:
                                     err_msg = str(e)
                                     if "invalid_grant" in err_msg:
-                                        st.warning("⚠️ ESTE CÓDIGO JÁ FOI USADO OU EXPIROU.")
-                                        st.info("Isso acontece se a página recarregou sozinha. O código antigo ainda está na URL.")
-                                        if st.button("🗑️ LIMPAR URL E TENTAR DE NOVO"):
-                                            st.query_params.clear()
-                                            st.session_state.auth_processing = None
-                                            st.rerun()
-                                        st.stop()
+                                        st.warning("⚠️ Sessão expirada clique em limpar URL.")
                                     else:
-                                        st.error(f"❌ ERRO EXCEÇÃO: {str(e)}")
-                                        st.write(f"Detalhes: {e}")
-                                        st.stop()
-                            else:
-                                # If code changed or already processing another
-                                st.stop()
+                                        st.error(f"Erro: {err_msg}")
+                                    
+                            if st.button("🗑️ Limpar URL (Cancelar)"):
+                                st.query_params.clear()
+                                st.rerun()
                         else:
                             # 3. Show Login Link
                             auth_url, _ = flow.authorization_url(prompt='consent')
