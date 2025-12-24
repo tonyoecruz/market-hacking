@@ -340,8 +340,9 @@ def generate_audio(text, key_suffix=""):
             return None
             
     except Exception as e:
-         print(f"TTS Gen Error: {e}")
-         return None # Signals failure, do not play
+         err_str = f"TTS Gen Error: {e}"
+         print(err_str)
+         return f"ERROR: {e}" # Return error string for debug
          
     return None
 @st.cache_data(ttl=3600)
@@ -874,10 +875,10 @@ def show_graham_details(ticker, row):
         # TTS
         if st.button("🔊 Ouvir", key=f"speak_graham_{ticker}"):
              audio_path = generate_audio(ai_text, f"graham_{ticker}")
-             if audio_path:
+             if audio_path and not audio_path.startswith("ERROR:"):
                 st.audio(audio_path, format="audio/mp3", autoplay=True)
              else:
-                st.warning("⚠️ Impossível gerar áudio no momento.")
+                st.warning(f"⚠️ Erro ao gerar áudio: {audio_path}")
             
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
     
@@ -904,10 +905,10 @@ def show_magic_details(ticker, row):
         # TTS
         if st.button("🔊 Ouvir", key=f"speak_magic_{ticker}"):
             audio_path = generate_audio(ai_text, f"magic_{ticker}")
-            if audio_path:
+            if audio_path and not audio_path.startswith("ERROR:"):
                 st.audio(audio_path, format="audio/mp3", autoplay=True)
             else:
-                st.warning("⚠️ Impossível gerar áudio no momento.")
+                st.warning(f"⚠️ Erro ao gerar áudio: {audio_path}")
 
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
@@ -928,10 +929,10 @@ def show_mix_details(ticker, row):
         # TTS
         if st.button("🔊 Ouvir", key=f"speak_mix_{ticker}"):
             audio_path = generate_audio(ai_text, f"mix_{ticker}")
-            if audio_path:
+            if audio_path and not audio_path.startswith("ERROR:"):
                 st.audio(audio_path, format="audio/mp3", autoplay=True)
             else:
-                st.warning("⚠️ Impossível gerar áudio no momento.")
+                st.warning(f"⚠️ Erro ao gerar áudio: {audio_path}")
 
         st.markdown(f"<div class='ai-box'><div class='ai-header'><span class='ai-title'>OPINIÃO DA IA</span></div>{ai_text}</div>", unsafe_allow_html=True)
 
@@ -2039,10 +2040,10 @@ with tab_arena:
                 # TTS
                 if st.button("🔊 Ouvir Veredito", key=f"speak_battle_{t1}_{t2}"):
                     audio_path = generate_audio(res, f"battle_{t1}_{t2}")
-                    if audio_path:
+                    if audio_path and not audio_path.startswith("ERROR:"):
                         st.audio(audio_path, format="audio/mp3", autoplay=True)
                     else:
-                        st.warning("⚠️ Impossível gerar áudio.")
+                         st.warning(f"⚠️ Erro ao gerar áudio: {audio_path}")
 
                 st.markdown(f"<div class='glass-card'><div class='ai-header'><span class='ai-title'>VEREDITO DO ÁRBITRO</span></div>{res}</div>", unsafe_allow_html=True)
             
