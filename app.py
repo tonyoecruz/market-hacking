@@ -1478,7 +1478,7 @@ with tab_carteira:
             # -----------------------------------
 
             with h1:
-                # CHART 1: ASSET ALLOCATION
+                # CHART 1: ASSET ALLOCATION (Full Exploded Pie)
                 st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>ALOCAÇÃO POR CLASSE</div>", unsafe_allow_html=True)
                 
                 # Group by Type
@@ -1493,12 +1493,15 @@ with tab_carteira:
                 }
                 pie_colors = [colors_map.get(t, "#555") for t in df_pie['Tipo']]
 
-                fig_alloc = go.Figure(data=[go.Pie(labels=df_pie['Tipo'], values=df_pie['total_val'], hole=0.70,
-                                                   marker=dict(colors=pie_colors, line=dict(color='#000000', width=3)),
-                                                   textinfo='percent',
-                                                   textposition='outside',
-                                                   # Pull 'slices' slightly to give separation/relief look constantly
-                                                   pull=[0.02]*len(df_pie),
+                # "Exploded" visual: Pull all slices slightly to give the "relief" / detached look requested
+                pull_values = [0.05] * len(df_pie)
+
+                fig_alloc = go.Figure(data=[go.Pie(labels=df_pie['Tipo'], values=df_pie['total_val'], 
+                                                   hole=0.0, # Full Pizza (No hole)
+                                                   marker=dict(colors=pie_colors, line=dict(color='#000000', width=2)),
+                                                   textinfo='percent+label',
+                                                   textposition='inside', # Cleaner inside the full pie
+                                                   pull=pull_values, # The "Relief" effect
                                                    hoverinfo='label+value+percent',
                                                    hovertemplate = "<b>%{label}</b><br>💰 R$ %{value:,.2f}<br>📊 %{percent}<extra></extra>"
                                                    )])
@@ -1507,10 +1510,8 @@ with tab_carteira:
                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
                     font=dict(color='white', family="Inter"),
                     margin=dict(t=20, b=20, l=20, r=20),
-                    legend=dict(font=dict(color="#ddd", size=10), orientation="h", y=-0.1, xanchor="center", x=0.5),
-                    showlegend=True,
-                    height=280,
-                    # annotations=[dict(text='ALOCAÇÃO', x=0.5, y=0.5, font_size=11, showarrow=False, font_color='#AAA')]
+                    showlegend=False, # Hide legend for Full Pie (labels inside)
+                    height=280
                 )
                 
                 st.plotly_chart(fig_alloc, width='stretch', config={'displayModeBar': False})
@@ -1572,16 +1573,16 @@ with tab_carteira:
                     showlegend=False,
                     height=280,
                     annotations=[
-                        # Main Value (Patrimonio)
-                        dict(text='<span style="font-size:10px; color:#888;">SALDO BRUTO</span>', x=0.5, y=0.65, showarrow=False),
-                        dict(text=f'<span style="font-size:18px; font-weight:800; color:#FFF;">{val_display}</span>', x=0.5, y=0.53, showarrow=False),
+                        # Main Value (Patrimonio) - COMPACT FONTS
+                        dict(text='<span style="font-size:10px; color:#888;">SALDO BRUTO</span>', x=0.5, y=0.62, showarrow=False),
+                        dict(text=f'<span style="font-size:16px; font-weight:800; color:#FFF;">{val_display}</span>', x=0.5, y=0.52, showarrow=False),
                         
-                        # Divider Line (visual only, hard in plotly annotations, using text to separate)
-                        dict(text='────────────────', x=0.5, y=0.42, showarrow=False, font=dict(color="#333", size=10)),
+                        # Divider Line
+                        dict(text='──────────', x=0.5, y=0.45, showarrow=False, font=dict(color="#333", size=8)),
 
                         # Rentability (Small)
-                        dict(text='<span style="font-size:10px; color:#888;">RENTABILIDADE</span>', x=0.5, y=0.32, showarrow=False),
-                        dict(text=f'<span style="font-size:14px; font-weight:bold; color:{pct_color};">{pct_fmt} ({money_diff})</span>', x=0.5, y=0.20, showarrow=False)
+                        dict(text='<span style="font-size:9px; color:#888;">RENTABILIDADE</span>', x=0.5, y=0.38, showarrow=False),
+                        dict(text=f'<span style="font-size:13px; font-weight:bold; color:{pct_color};">{pct_fmt}</span><br><span style="font-size:11px; color:#AAA;">{money_diff}</span>', x=0.5, y=0.22, showarrow=False)
                     ]
                 )
                 
