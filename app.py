@@ -18,6 +18,7 @@ import extra_streamlit_components as stx
 import edge_tts
 import asyncio
 import nest_asyncio
+from streamlit_echarts import st_echarts
 nest_asyncio.apply() # Fix for Streamlit's event loop
 import os
 import tempfile
@@ -1484,37 +1485,65 @@ with tab_carteira:
                 # Group by Type
                 df_pie = df_w.groupby('Tipo')['total_val'].sum().reset_index()
                 
-                # Vivid Colors Map
+                # NATIVE ECHARTS IMPLEMENTATION FOR DYNAMIC INTERACTIVITY
+                # User Requirement: Rigid "Scale/Pop" on Hover
+                
+                # Prepare Data for ECharts
+                echarts_data = []
                 colors_map = {
                     "AÇÕES": "#00f2ff", # Neon Cyan
                     "FIIs": "#b026ff",  # Neon Purple
                     "ETFs": "#ff007f",  # Neon Pink
                     "OUTROS": "#ffd700" # Gold
                 }
-                pie_colors = [colors_map.get(t, "#555") for t in df_pie['Tipo']]
-
-                # "Exploded" visual: Removed static pull so user can see native hover effect
-                # pull_values = [0.0] * len(df_pie) 
-
-                fig_alloc = go.Figure(data=[go.Pie(labels=df_pie['Tipo'], values=df_pie['total_val'], 
-                                                   hole=0.0, # Full Pizza (No hole)
-                                                   marker=dict(colors=pie_colors, line=dict(color='#000000', width=2)),
-                                                   textinfo='percent+label',
-                                                   textposition='inside', 
-                                                   # pull=pull_values, # REMOVED: User wants movement on hover, not static
-                                                   hoverinfo='label+value+percent',
-                                                   hovertemplate = "<b>%{label}</b><br>💰 R$ %{value:,.2f}<br>📊 %{percent}<extra></extra>"
-                                                   )])
                 
-                fig_alloc.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='white', family="Inter"),
-                    margin=dict(t=20, b=20, l=20, r=20),
-                    showlegend=False, # Hide legend for Full Pie (labels inside)
-                    height=280
-                )
+                for _, row in df_pie.iterrows():
+                    echarts_data.append({
+                        "value": row['total_val'],
+                        "name": row['Tipo'],
+                        "itemStyle": {"color": colors_map.get(row['Tipo'], "#555")}
+                    })
+
+                # ECharts Options (Strict User Schema)
+                options = {
+                    "tooltip": {"trigger": "item", "formatter": "{b}: R$ {c} ({d}%)"},
+                    "legend": {"top": "5%", "left": "center", "textStyle": {"color": "#fff"}},
+                    "series": [
+                        {
+                            "name": "Alocação",
+                            "type": "pie",
+                            "radius": ["40%", "70%"], # Donut to look modern
+                            "avoidLabelOverlap": False,
+                            "itemStyle": {
+                                "borderRadius": 10,
+                                "borderColor": '#1a1a2e', # Match BG for "cut" effect
+                                "borderWidth": 2
+                            },
+                            "label": {
+                                "show": False,
+                                "position": "center"
+                            },
+                            "emphasis": {
+                                "scale": True,   
+                                "scaleSize": 15, 
+                                "label": {
+                                    "show": True,
+                                    "fontSize": 20,
+                                    "fontWeight": "bold",
+                                    "color": "#fff"
+                                },
+                                "itemStyle": {
+                                    "shadowBlur": 10,
+                                    "shadowOffsetX": 0,
+                                    "shadowColor": "rgba(0, 0, 0, 0.5)"
+                                }
+                            },
+                            "data": echarts_data
+                        }
+                    ]
+                }
                 
-                st.plotly_chart(fig_alloc, width='stretch', config={'displayModeBar': False})
+                st_echarts(options=options, height="300px")
                 
             with h2:
                 # Privacy Logic
