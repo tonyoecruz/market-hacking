@@ -1966,19 +1966,21 @@ with tab_mix:
     
     if 'market_data' in st.session_state:
         df = st.session_state['market_data']
+        
+        # INPUTS
+        mc1, mc2 = st.columns(2)
+        with mc1: min_liq_mix = st.number_input("LIQUIDEZ MÍNIMA", value=200000, step=50000, key="min_liq_mix")
+        with mc2: invest_mix = st.number_input("SIMULAR APORTE", value=0.0, step=100.0, key="invest_mix")
+
          # Lógica do Filtro MIX
         # 1. Margem Graham Positiva (> 0)
         # 2. Magic Rank existente (ou seja, tem EV/EBIT e ROIC positivos)
-        # 3. Liquidez ok
-        # 4. Simulação de Aporte (Se houver)
-        sim_qty = 0
-        if 'invest_acoes' in st.session_state and st.session_state['invest_acoes'] > 0:
-            invest_val = st.session_state['invest_acoes']
-
+        # 3. Liquidez ok (User Filter)
+        
         df_mix = df[
             (df['Margem'] > 0) & 
             (df['MagicRank'].notnull()) & 
-            (df['liquidezmediadiaria'] > 200000)
+            (df['liquidezmediadiaria'] > min_liq_mix)
         ].copy()
         
         # Ordenação: Prioridade para o Magic Rank (Qualidade), mas garantindo que passou no Graham (Preço)
@@ -1988,6 +1990,13 @@ with tab_mix:
             st.success(f"{len(df_mix)} ATIVOS ENCONTRADOS NA ELITE.")
             c1, c2 = st.columns(2)
             for i, r in df_mix.reset_index().iterrows():
+                # SIMULATION LOGIC (How many shares with this money?)
+                sim_html = ""
+                if invest_mix > 0:
+                    qtd_sim = int(invest_mix // r['price'])
+                    if qtd_sim > 0:
+                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:12px; color:#5DD9C2'>💰 APORTE: <b>{qtd_sim}</b> AÇÕES</div>"
+
                 with (c1 if i%2==0 else c2):
                     # Card Personalizado da Elite
                     st.markdown(f"""
@@ -2006,6 +2015,7 @@ with tab_mix:
                                 <div style="font-size:15px; font-weight:600; color:#FFF;">#{int(r['MagicRank'])}</div>
                             </div>
                         </div>
+                        {sim_html}
                     </div>
                     """, unsafe_allow_html=True)
                     bc1, bc2 = st.columns([4, 1])
@@ -2013,9 +2023,10 @@ with tab_mix:
                          if st.button(f"🏆 DECODE ELITE #{i+1}", key=f"mix_{r['ticker']}"):
                             show_mix_details(r['ticker'], r)
                     with bc2:
-                        if st.button("⬆️", key=f"add_mix_{r['ticker']}_{i}"): add_wallet_dialog(r['ticker'], r['price'])
+                        with st.popover(f"⬆️", width='stretch'):  
+                             render_add_wallet_form(r['ticker'], r['price'], key_suffix=f"mix_{i}", show_title=True)
         else:
-            st.warning("Nenhum ativo passou nos dois filtros rigorosos simultaneamente hoje.")
+            st.warning("Nenhum ativo passou nos dois filtros rigorosos simultaneamente hoje (com esta liquidez).")
             
     else:
         st.warning("⚠️ Por favor, vá na aba AÇÕES e clique em 'INICIAR VARREDURA' primeiro para carregar os dados.")
