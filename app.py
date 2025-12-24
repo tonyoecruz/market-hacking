@@ -1988,14 +1988,25 @@ with tab_mix:
         
         if len(df_mix) > 0:
             st.success(f"{len(df_mix)} ATIVOS ENCONTRADOS NA ELITE.")
+            
+            # Distribute Investment Equally
+            if invest_mix > 0:
+                val_per_asset = invest_mix / len(df_mix)
+            else:
+                val_per_asset = 0
+
             c1, c2 = st.columns(2)
             for i, r in df_mix.reset_index().iterrows():
-                # SIMULATION LOGIC (How many shares with this money?)
+                # SIMULATION LOGIC (Distributed)
                 sim_html = ""
-                if invest_mix > 0:
-                    qtd_sim = int(invest_mix // r['price'])
+                if val_per_asset > 0:
+                    qtd_sim = int(val_per_asset // r['price'])
+                    total_alloc = qtd_sim * r['price']
+                    # Show valid allocation only if at least 1 share can be bought
                     if qtd_sim > 0:
-                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:12px; color:#5DD9C2'>💰 APORTE: <b>{qtd_sim}</b> AÇÕES</div>"
+                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#5DD9C2'>💰 APORTE ({format_brl(val_per_asset)}): <b>{qtd_sim}</b> AÇÕES</div>"
+                    else:
+                         sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:11px; color:#AA4444'>💰 APORTE ({format_brl(val_per_asset)}): <b>INSUFICIENTE</b></div>"
 
                 with (c1 if i%2==0 else c2):
                     # Card Personalizado da Elite
