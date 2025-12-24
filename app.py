@@ -1086,7 +1086,7 @@ def login_page():
                             st.link_button("🔵 ENTRAR COM GOOGLE", auth_url, use_container_width=True)
                             
                     except Exception as e:
-                        st.error("Erro no Login. Tente novamente.")
+                        st.error(f"Erro no Login: {str(e)}")
                         # Clear params if code was invalid to prevent loop
                         st.query_params.clear()
                         # Optional: Log internal error to console instead of UI if needed, but keeping simple for now
