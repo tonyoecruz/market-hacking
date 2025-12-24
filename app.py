@@ -1091,6 +1091,9 @@ def login_page():
                                             st.query_params.clear()
                                             time.sleep(1)
                                             st.rerun()
+                                        else:
+                                            st.error("Falha no Login: Usuário não pôde ser verificado ou criado.")
+                                            st.session_state.auth_processing = None # Allow retry
                                     except Exception as e:
                                         # Error handling inside the block
                                         err_msg = str(e)

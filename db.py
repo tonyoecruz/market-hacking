@@ -131,11 +131,16 @@ def login_google_user(email, google_id):
         """
         success, err = run_transaction(ins_sql, {"u": username, "e": email, "g": google_id})
         
+        success, err = run_transaction(ins_sql, {"u": username, "e": email, "g": google_id})
+        
         if success:
              # Fetch ID back
              df_new = run_query("SELECT id FROM users WHERE username = :u", {"u": username})
              if not df_new.empty:
                  return {"id": int(df_new.iloc[0]['id']), "username": username}
+        else:
+            st.error(f"Erro ao criar usuário no banco: {err}")
+            print(f"DB Error: {err}")
         
         return None
 
