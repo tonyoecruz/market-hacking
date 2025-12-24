@@ -1087,24 +1087,19 @@ def login_page():
                             
                     except Exception as e:
                         err_msg = str(e)
-                        st.query_params.clear() # Always clear to prevent loop
-                        
+                        # CRITICAL FIX: If code is invalid (expired/used), we MUST clear URL and rerun 
+                        # to give the user a clean state (Login Button) again.
                         if "invalid_grant" in err_msg:
-                            st.warning("⚠️ Sessão expirada ou já utilizada. Por favor, clique novamente em 'Entrar com Google'.")
+                            st.warning("♻️ Sessão expirada. Reiniciando para nova tentativa...")
+                            st.query_params.clear()
+                            time.sleep(1)
+                            st.rerun()
                         else:
                             st.error(f"Erro no Login: {err_msg}")
+                            # Clean Params for other errors too, but let user read message
+                            st.query_params.clear()
                         
-                        # Debug info for console only
                         print(f"Google Auth Error: {err_msg}")
-                        
-                        # PROVIDE RETRY BUTTON IMMEDIATELY
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        auth_url_retry, _ = flow.authorization_url(prompt='consent')
-                        st.link_button("🔄 TENTAR NOVAMENTE (CLIQUE AQUI)", auth_url_retry, use_container_width=True)
-                        
-                        # Fallback Rerun Option
-                        if st.button("Ou recarregar página"):
-                            st.rerun()
                 else:
                     st.caption("⚠️ Google Login indisponível (Sem config).")
                     
