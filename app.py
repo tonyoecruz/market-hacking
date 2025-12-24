@@ -1482,19 +1482,35 @@ with tab_carteira:
             # Group by Type
             df_pie = df_w.groupby('Tipo')['total_val'].sum().reset_index()
             
-            fig_alloc = px.pie(df_pie, values='total_val', names='Tipo', hole=0.6, 
-                             color_discrete_map={"AÇÕES": "#5DD9C2", "FIIs": "#8338ec", "ETFs": "#3a86ff", "OUTROS": "#999999"})
+            # Vivid Colors Map
+            colors_map = {
+                "AÇÕES": "#00f2ff", # Neon Cyan
+                "FIIs": "#b026ff",  # Neon Purple
+                "ETFs": "#ff007f",  # Neon Pink
+                "OUTROS": "#ffd700" # Gold
+            }
+            # Fallback color list if type not matches
+            pie_colors = [colors_map.get(t, "#555") for t in df_pie['Tipo']]
+
+            fig_alloc = go.Figure(data=[go.Pie(labels=df_pie['Tipo'], values=df_pie['total_val'], hole=0.65,
+                                               marker=dict(colors=pie_colors, line=dict(color='#000000', width=2)),
+                                               textinfo='percent',
+                                               textposition='outside',
+                                               pull=[0.02]*len(df_pie), # Slight explosion for "relief" feel
+                                               hovertemplate = "<b>%{label}</b><br>💰 R$ %{value:,.2f}<br>📊 %{percent}<extra></extra>"
+                                               )])
             
             fig_alloc.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white'),
-                margin=dict(t=30, b=20, l=20, r=20),
-                legend=dict(font=dict(color="white"), orientation="h", y=-0.1),
+                font=dict(color='white', family="Inter"),
+                margin=dict(t=40, b=20, l=40, r=40), # Balanced margins
+                legend=dict(font=dict(color="#ddd", size=10), orientation="h", y=-0.1, xanchor="center", x=0.5),
                 showlegend=True,
                 height=300,
-                annotations=[dict(text='ALOCAÇÃO', x=0.5, y=0.5, font_size=12, showarrow=False, font_color='white')]
+                annotations=[dict(text='ALOCAÇÃO', x=0.5, y=0.5, font_size=12, showarrow=False, font_color='#AAA', font_weight='bold')]
             )
-            st.markdown("<div style='text-align:center; font-weight:bold; color:#EEE; margin-bottom:-10px'>ALOCAÇÃO POR CLASSE</div>", unsafe_allow_html=True)
+            
+            st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#FFF; margin-bottom:0px; letter-spacing:1px;'>ALOCAÇÃO POR CLASSE</div>", unsafe_allow_html=True)
             st.plotly_chart(fig_alloc, width='stretch', config={'displayModeBar': False})
             
         with h2:
@@ -1521,37 +1537,39 @@ with tab_carteira:
             is_profit = profit_val >= 0
             
             if is_profit:
-                # GAIN SCENARIO
+                # GAIN SCENARIO (Vibrant Green)
                 labels = ["APORTE", "LUCRO"]
                 values = [total_invested, profit_val]
-                colors = ["#1f4e78", "#00ff41"] # Dark Blue, Green
+                colors = ["#1a1a2e", "#00ff41"] # Dark BG vs Neon Green
             else:
-                # LOSS SCENARIO
+                # LOSS SCENARIO (Neon Red)
                 labels = ["SALDO ATUAL", "PREJUÍZO"]
                 values = [total_current, abs(profit_val)]
-                colors = ["#1f4e78", "#ff4444"] # Dark Blue, Red
+                colors = ["#1a1a2e", "#ff0055"] # Dark BG vs Neon Red
 
             # If values need masking
             if not show:
                 # Mock chart for Privacy Mode
                 values = [100]
                 labels = ["OCULTO"]
-                colors = ["#333"]
+                colors = ["#222"]
             
-            fig_ring = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.7, 
-                                            marker=dict(colors=colors),
-                                            textinfo='none', # Hide labels on chart
-                                            hoverinfo='label+value+percent' if show else 'none')])
+            fig_ring = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.75, 
+                                            marker=dict(colors=colors, line=dict(color='#000000', width=2)),
+                                            textinfo='none', 
+                                            hoverinfo='label+value+percent',
+                                            pull=[0, 0.05] if is_profit else [0.05, 0] # Pull the interesting part slightly
+                                            )])
 
             fig_ring.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
                 font=dict(color='white'),
-                margin=dict(t=10, b=10, l=10, r=10),
+                margin=dict(t=0, b=0, l=10, r=10), # Tighter margins
                 showlegend=False,
                 height=260,
                 annotations=[
-                    dict(text='<span style="font-size:12px; color:#AAA">PATRIMÔNIO</span><br><span style="font-size:22px; font-weight:bold; color:#FFF">{}</span>'.format(val_display), 
-                         x=0.5, y=0.5, showarrow=False, font_size=14)
+                    dict(text='<span style="font-size:12px; color:#AAA; letter-spacing:1px">PATRIMÔNIO</span><br><span style="font-size:24px; font-weight:800; color:#FFF; text-shadow: 0 0 10px rgba(255,255,255,0.3)">{}</span>'.format(val_display), 
+                         x=0.5, y=0.5, showarrow=False)
                 ]
             )
             
