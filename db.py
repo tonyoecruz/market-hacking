@@ -147,8 +147,10 @@ def login_google_user(email, google_id):
 def create_session(user_id):
     token = str(uuid.uuid4())
     sql = "INSERT INTO sessions (token, user_id) VALUES (:t, :u)"
-    run_transaction(sql, {"t": token, "u": user_id})
-    return token
+    success, err = run_transaction(sql, {"t": token, "u": user_id})
+    if success:
+        return token, None
+    return None, err
 
 def get_user_by_session(token):
     sql = """

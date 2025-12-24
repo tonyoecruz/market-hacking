@@ -1009,14 +1009,16 @@ def login_page():
                 if st.button("🚀 ACESSAR SISTEMA", key="btn_login", use_container_width=True):
                     user = db.verify_user(u, p)
                     if user:
-                        token = db.create_session(user['id'])
-                        cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
-
-                        st.session_state['logged_in'] = True
-                        st.session_state['user_id'] = user['id']
-                        st.session_state['username'] = user['username']
-                        time.sleep(1)
-                        st.rerun()
+                        token, sess_err = db.create_session(user['id'])
+                        if not token:
+                            st.error(f"Erro de Sessão: {sess_err}")
+                        else:
+                            cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
+                            st.session_state['logged_in'] = True
+                            st.session_state['user_id'] = user['id']
+                            st.session_state['username'] = user['username']
+                            time.sleep(1)
+                            st.rerun()
                     else: st.error("ACESSO NEGADO")
                 
                 st.markdown("---")
@@ -1079,7 +1081,12 @@ def login_page():
                                     user = db.login_google_user(user_info['email'], user_info['id'])
                                     
                                     if user:
-                                        token = db.create_session(user['id'])
+                                        token, sess_err = db.create_session(user['id'])
+                                        
+                                        if not token:
+                                             st.error(f"Erro ao Criar Sessão no Banco: {sess_err}")
+                                             st.stop()
+                                             
                                         # cookie_manager.set("auth_token", token, expires_at=datetime.now() + timedelta(days=30))
                                         
                                         st.session_state['logged_in'] = True
