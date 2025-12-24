@@ -1493,15 +1493,15 @@ with tab_carteira:
                 }
                 pie_colors = [colors_map.get(t, "#555") for t in df_pie['Tipo']]
 
-                # "Exploded" visual: Pull all slices slightly to give the "relief" / detached look requested
-                pull_values = [0.05] * len(df_pie)
+                # "Exploded" visual: Removed static pull so user can see native hover effect
+                # pull_values = [0.0] * len(df_pie) 
 
                 fig_alloc = go.Figure(data=[go.Pie(labels=df_pie['Tipo'], values=df_pie['total_val'], 
                                                    hole=0.0, # Full Pizza (No hole)
                                                    marker=dict(colors=pie_colors, line=dict(color='#000000', width=2)),
                                                    textinfo='percent+label',
-                                                   textposition='inside', # Cleaner inside the full pie
-                                                   pull=pull_values, # The "Relief" effect
+                                                   textposition='inside', 
+                                                   # pull=pull_values, # REMOVED: User wants movement on hover, not static
                                                    hoverinfo='label+value+percent',
                                                    hovertemplate = "<b>%{label}</b><br>💰 R$ %{value:,.2f}<br>📊 %{percent}<extra></extra>"
                                                    )])
