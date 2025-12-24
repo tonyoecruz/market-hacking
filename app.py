@@ -313,7 +313,7 @@ def generate_audio(text, key_suffix=""):
     
     # 1. Select Voice
     if is_battle:
-        voice = "pt-BR-FabioNeural" # More energetic/younger male voice
+        voice = "pt-BR-DonatoNeural" # More energetic/younger male voice
     else:
         voice = "pt-BR-AntonioNeural" # Standard professional execution
 
