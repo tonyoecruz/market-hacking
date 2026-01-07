@@ -1747,19 +1747,19 @@ with tab_carteira:
             st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
             
             # Header Row - MERGED COLUMNS FOR ACTION CLUSTER
-            # 5 Columns: [Ticker] [Avg] [Price] [Rent] [ACTIONS (Rec+Add+Edit+Del)]
-            cols_spec = [1.8, 1.1, 1.1, 1.1, 3.2] 
-            h1, h2, h3, h4, h5 = st.columns(cols_spec)
+            # Header Row - MERGED COLUMNS FOR ACTION CLUSTER
+            # 5 Columns + 1 Spacer: [Ticker] [Avg] [Price] [Rent] [ACTIONS] [Spacer]
+            cols_spec = [1.8, 1.1, 1.1, 1.1, 2.2, 1.0] 
+            h1, h2, h3, h4, h5, h6 = st.columns(cols_spec)
             h1.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATIVO</span>", unsafe_allow_html=True)
             h2.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>MÉDIO</span>", unsafe_allow_html=True)
             h3.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATUAL</span>", unsafe_allow_html=True)
             h4.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>RENTABIL.</span>", unsafe_allow_html=True)
-            h5.markdown("") # Clear parent header
             
+            h5.markdown("") # Clear parent header
             # Nested Header to match Action Cluster
             h5_1, h5_2, h5_3, h5_4 = h5.columns([1.4, 0.4, 0.4, 0.4])
             h5_1.markdown("<div style='text-align:right; margin-right:5px; color:#AAA; font-weight:700; font-size:11px'>RECOMENDAÇÃO (IA)</div>", unsafe_allow_html=True)
-            # h5_4 can hold 'AÇÕES' or generic icon, leaving empty vs placing 'AÇÕES'
             h5_4.markdown("<div style='text-align:center; color:#AAA; font-weight:700; font-size:11px'>AÇÕES</div>", unsafe_allow_html=True) 
 
             st.divider()
@@ -1777,7 +1777,7 @@ with tab_carteira:
                         rec_qty = alloc.get('qty', 0)
                         rec_note = alloc.get('reason', '')
 
-                c1, c2, c3, c4, c5 = st.columns(cols_spec)
+                c1, c2, c3, c4, c5, c6 = st.columns(cols_spec)
                 with c1:
                     st.markdown(f"<span style='font-size:16px; font-weight:700; color:#FFF'>{row['ticker']}</span><br><span style='font-size:11px; color:#CCC'>{int(row['quantity'])} un.</span>", unsafe_allow_html=True)
                 with c2:
