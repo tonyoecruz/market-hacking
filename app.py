@@ -1686,15 +1686,21 @@ with tab_carteira:
             # UNIQUE KEYS FOR STATE
             section_key = title.replace(" ", "_").lower()
             
-            # --- SMART REBALANCING HEADER ---
-            c_title, c_input, c_btn = st.columns([2, 1.5, 1.5])
+            # --- SMART REBALANCING HEADER (UI FIXES) ---
+            # Adjusted ratio to make input/button tighter
+            c_title, c_spacer, c_input, c_btn = st.columns([2, 1, 0.8, 0.8])
+            
             with c_title:
                 st.markdown(f"### {title}")
+                
             with c_input:
-                aporte_val = st.number_input(f"APORTE ({title})", min_value=0.0, step=100.0, key=f"aporte_{section_key}", help=f"Valor para comprar mais {title}")
+                # Smaller Input, Added R$ to label
+                aporte_val = st.number_input(f"APORTE (R$) - {title}", min_value=0.0, step=100.0, format="%.2f", key=f"aporte_{section_key}")
+                
             with c_btn:
                 st.markdown("<br>", unsafe_allow_html=True) # Align with input
-                if st.button(f"🧠 SMART APORTE", key=f"btn_smart_{section_key}", use_container_width=True):
+                # Removed use_container_width=True to make button smaller (fit text)
+                if st.button(f"🧠 SMART APORTE", key=f"btn_smart_{section_key}"):
                     if aporte_val > 0:
                         with st.spinner(f"Analisando {title} com IA..."):
                             # Prepare Data
@@ -1722,7 +1728,6 @@ with tab_carteira:
                                 st.session_state[f'plan_{section_key}'] = plan
                             except Exception as e:
                                 st.error(f"Erro ao processar IA: {e}")
-                                # st.write(json_str) # Debug
                     else:
                         st.warning("Digite um valor de aporte.")
 
@@ -1735,7 +1740,7 @@ with tab_carteira:
             st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
             
             # Header Row - ADDED "QTD (IA)" COLUMN
-            cols_spec = [2, 1.2, 1.2, 1.2, 1.2, 1.2] # Adjusted for extra column
+            cols_spec = [2, 1.2, 1.2, 1.2, 1.2, 1.2] 
             h1, h2, h3, h4, h5, h6 = st.columns(cols_spec)
             h1.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATIVO</span>", unsafe_allow_html=True)
             h2.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>MÉDIO</span>", unsafe_allow_html=True)
@@ -1772,11 +1777,12 @@ with tab_carteira:
                     v_pct = f"{p_var:.1%}" if show else "XX%"
                     st.markdown(f"<span style='color:{color}; font-weight:bold'>{v_pct}</span>", unsafe_allow_html=True)
                 with c5:
-                    # IA RECOMMENDATION COLUMN
+                    # IA RECOMMENDATION COLUMN (UI FIX MATCHING REQUEST)
+                    # Bigger Fonts, Smaller Box
                     if rec_qty > 0:
-                         st.markdown(f"<div style='background:rgba(93, 217, 194, 0.1); border:1px solid #5DD9C2; border-radius:8px; padding:4px 8px; text-align:center'><span style='color:#5DD9C2; font-weight:800; font-size:14px'>+{rec_qty}</span><br><span style='font-size:9px; color:#AAA'>{rec_note[:15]}...</span></div>", unsafe_allow_html=True)
+                         st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:2px 4px; text-align:center'><span style='color:#5DD9C2; font-weight:800; font-size:18px'>+{rec_qty}</span><br><span style='font-size:11px; color:#DDD; font-weight:500'>{rec_note[:20]}...</span></div>", unsafe_allow_html=True)
                     elif ai_plan: # Plan exists but qty is 0
-                         st.markdown("<span style='color:#555; font-size:12px'>Manter</span>", unsafe_allow_html=True)
+                         st.markdown("<div style='padding-top:10px; text-align:center'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
                     else:
                          st.markdown("---")
 
