@@ -1754,7 +1754,14 @@ with tab_carteira:
             h2.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>MÉDIO</span>", unsafe_allow_html=True)
             h3.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATUAL</span>", unsafe_allow_html=True)
             h4.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>RENTABIL.</span>", unsafe_allow_html=True)
-            h5.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>AÇÕES & RECOMENDAÇÕES</span>", unsafe_allow_html=True)
+            h5.markdown("") # Clear parent header
+            
+            # Nested Header to match Action Cluster
+            h5_1, h5_2, h5_3, h5_4 = h5.columns([1.4, 0.4, 0.4, 0.4])
+            h5_1.markdown("<div style='text-align:right; margin-right:5px; color:#AAA; font-weight:700; font-size:11px'>RECOMENDAÇÃO (IA)</div>", unsafe_allow_html=True)
+            # h5_4 can hold 'AÇÕES' or generic icon, leaving empty vs placing 'AÇÕES'
+            h5_4.markdown("<div style='text-align:center; color:#AAA; font-weight:700; font-size:11px'>AÇÕES</div>", unsafe_allow_html=True) 
+
             st.divider()
 
             # Rows
@@ -1793,7 +1800,7 @@ with tab_carteira:
                         if rec_qty > 0:
                             st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:4px 8px; text-align:center; display:block; width:fit-content; margin-left: auto; margin-right: 5px;'><span style='color:#5DD9C2; font-weight:800; font-size:16px'>+{rec_qty}</span><br><span style='font-size:14px; color:#DDD; font-weight:700; line-height:1.0'>Fortalecer<br>Exposição...</span></div>", unsafe_allow_html=True)
                         elif ai_plan:
-                            st.markdown("<div style='padding-top:10px; text-align:center'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
+                            st.markdown("<div style='padding-top:10px; text-align:right; margin-right:15px;'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
                         else:
                             st.markdown("")
 
