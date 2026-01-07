@@ -304,6 +304,51 @@ def get_battle_analysis(t1, d1, t2, d2):
     """
     return get_ai_generic_analysis(prompt)
 
+def get_portfolio_rebalance_analysis(category, contribution, portfolio_data, market_context=""):
+    import json
+    # Format portfolio for prompt
+    portfolio_text = ""
+    for item in portfolio_data:
+        portfolio_text += f"- {item['ticker']}: Qtd {item['qty']} | Preço Médio R${item['price']:.2f} | Total Atual R${item['total']:.2f}\n"
+
+    prompt = f"""
+    Atue como um Gestor de Portfólio de Alta Performance (Wealth Management).
+    
+    OBJETIVO: Realizar um APORTE de R$ {contribution:.2f} na categoria {category}.
+    
+    CARTEIRA ATUAL:
+    {portfolio_text}
+    
+    CONTEXTO DE MERCADO/INDICADORES (Se disponível):
+    {market_context}
+    
+    MISSÃO:
+    Distribua o valor do aporte (R$ {contribution:.2f}) entre os ativos listados (e somente eles) para buscar o REBALANCEAMENTO INTELIGENTE.
+    Considere:
+    1. Ativos que já possuem grande exposição (Valor Total alto) devem receber menos ou nenhum aporte.
+    2. Ativos com menor exposição (ou melhores fundamentos, se informado) devem ser priorizados.
+    3. O objetivo é equilibrar a carteira e potencializar retornos futuros (comprar barato).
+    
+    SAÍDA OBRIGATÓRIA (JSON PURO):
+    Retorne APENAS um JSON válido no formato abaixo. NÃO adicione markdown (```json), NÃO adicione explicações antes ou depois. APENAS O JSON.
+    {{
+        "reasons": "Breve explicação da estratégia adotada (max 2 linhas).",
+        "allocations": {{
+            "TICKER": {{ "qty": INTEIRO_A_COMPRAR, "value": VALOR_APROXIMADO, "reason": "Motivo curto" }},
+            ...
+        }}
+    }}
+    
+    IMPORTANTE: 
+    - A soma dos valores ('value') deve ficar próxima de R$ {contribution:.2f}.
+    - Se algum ativo não deve ser comprado, coloque "qty": 0.
+    """
+    
+    # Force JSON instruction again in case generic analysis context overrides it
+    full_prompt = prompt + "\n\nResponda APENAS com o JSON."
+    
+    return get_ai_generic_analysis(full_prompt)
+
 def generate_audio(text, key_suffix=""):
     import hashlib
     import random
@@ -1638,24 +1683,82 @@ with tab_carteira:
         def render_wallet_section(title, df_segment):
             if df_segment.empty: return
             
-            # Section Title
-            st.markdown(f"### {title}")
+            # UNIQUE KEYS FOR STATE
+            section_key = title.replace(" ", "_").lower()
+            
+            # --- SMART REBALANCING HEADER ---
+            c_title, c_input, c_btn = st.columns([2, 1.5, 1.5])
+            with c_title:
+                st.markdown(f"### {title}")
+            with c_input:
+                aporte_val = st.number_input(f"APORTE ({title})", min_value=0.0, step=100.0, key=f"aporte_{section_key}", help=f"Valor para comprar mais {title}")
+            with c_btn:
+                st.markdown("<br>", unsafe_allow_html=True) # Align with input
+                if st.button(f"🧠 SMART APORTE", key=f"btn_smart_{section_key}", use_container_width=True):
+                    if aporte_val > 0:
+                        with st.spinner(f"Analisando {title} com IA..."):
+                            # Prepare Data
+                            p_data = []
+                            for _, r in df_segment.iterrows():
+                                p_data.append({
+                                    "ticker": r['ticker'],
+                                    "qty": int(r['quantity']),
+                                    "price": float(r['avg_price']),
+                                    "total": float(r['total_val'])
+                                })
+                            
+                            # Call AI
+                            json_str = get_portfolio_rebalance_analysis(title, aporte_val, p_data)
+                            
+                            try:
+                                # Clean JSON string (remove markdown if present)
+                                if "```json" in json_str:
+                                    json_str = json_str.split("```json")[1].split("```")[0]
+                                elif "```" in json_str:
+                                    json_str = json_str.split("```")[1].split("```")[0]
+                                
+                                import json
+                                plan = json.loads(json_str)
+                                st.session_state[f'plan_{section_key}'] = plan
+                            except Exception as e:
+                                st.error(f"Erro ao processar IA: {e}")
+                                # st.write(json_str) # Debug
+                    else:
+                        st.warning("Digite um valor de aporte.")
+
+            # SHOW PLAN IF AVAILABLE
+            ai_plan = st.session_state.get(f'plan_{section_key}')
+            if ai_plan:
+                with st.expander(f"📋 PLANO DE COMPRA: {title}", expanded=True):
+                    st.info(f"💡 ESTRATÉGIA: {ai_plan.get('reasons', 'Rebalanceamento automático.')}")
+            
             st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
             
-            # Header Row
-            h1, h2, h3, h4, h5 = st.columns([2, 1.5, 1.5, 1.5, 1.5])
+            # Header Row - ADDED "QTD (IA)" COLUMN
+            cols_spec = [2, 1.2, 1.2, 1.2, 1.2, 1.2] # Adjusted for extra column
+            h1, h2, h3, h4, h5, h6 = st.columns(cols_spec)
             h1.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATIVO</span>", unsafe_allow_html=True)
-            h2.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>PREÇO MÉDIO</span>", unsafe_allow_html=True)
-            h3.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>PREÇO ATUAL</span>", unsafe_allow_html=True)
-            h4.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>RENTABILIDADE</span>", unsafe_allow_html=True)
-            h5.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>AÇÕES</span>", unsafe_allow_html=True)
+            h2.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>MÉDIO</span>", unsafe_allow_html=True)
+            h3.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATUAL</span>", unsafe_allow_html=True)
+            h4.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>RENTABIL.</span>", unsafe_allow_html=True)
+            h5.markdown("<span style='color:#5DD9C2; font-weight:800; font-size:11px'>RECOMEND. (IA)</span>", unsafe_allow_html=True)
+            h6.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>AÇÕES</span>", unsafe_allow_html=True)
             st.divider()
 
             # Rows
             for idx, row in df_segment.iterrows():
                 p_var = (row['curr_price'] - row['avg_price']) / row['avg_price'] if row['avg_price'] > 0 else 0
                 
-                c1, c2, c3, c4, c5 = st.columns([2, 1.5, 1.5, 1.5, 1.5])
+                # Get Recommendation if exists
+                rec_qty = 0
+                rec_note = ""
+                if ai_plan and 'allocations' in ai_plan:
+                    alloc = ai_plan['allocations'].get(row['ticker'])
+                    if alloc:
+                        rec_qty = alloc.get('qty', 0)
+                        rec_note = alloc.get('reason', '')
+
+                c1, c2, c3, c4, c5, c6 = st.columns(cols_spec)
                 with c1:
                     st.markdown(f"<span style='font-size:16px; font-weight:700; color:#FFF'>{row['ticker']}</span><br><span style='font-size:11px; color:#CCC'>{int(row['quantity'])} un.</span>", unsafe_allow_html=True)
                 with c2:
@@ -1669,12 +1772,20 @@ with tab_carteira:
                     v_pct = f"{p_var:.1%}" if show else "XX%"
                     st.markdown(f"<span style='color:{color}; font-weight:bold'>{v_pct}</span>", unsafe_allow_html=True)
                 with c5:
+                    # IA RECOMMENDATION COLUMN
+                    if rec_qty > 0:
+                         st.markdown(f"<div style='background:rgba(93, 217, 194, 0.1); border:1px solid #5DD9C2; border-radius:8px; padding:4px 8px; text-align:center'><span style='color:#5DD9C2; font-weight:800; font-size:14px'>+{rec_qty}</span><br><span style='font-size:9px; color:#AAA'>{rec_note[:15]}...</span></div>", unsafe_allow_html=True)
+                    elif ai_plan: # Plan exists but qty is 0
+                         st.markdown("<span style='color:#555; font-size:12px'>Manter</span>", unsafe_allow_html=True)
+                    else:
+                         st.markdown("---")
+
+                with c6:
                     b1, b2 = st.columns(2)
                     with b1:
                         if st.button("✏️", key=f"edit_{row['ticker']}"):
                             edit_position_dialog(row['ticker'], int(row['quantity']), float(row['avg_price']))
                     with b2:
-                        # Use a unique key for popover or button to avoid conflicts if needed, but simple button is fine here
                         if st.button("❌", key=f"del_{row['ticker']}"):
                             ok, msg = db.remove_from_wallet(st.session_state['user_id'], row['ticker'])
                             st.rerun()
