@@ -1309,12 +1309,12 @@ if not st.session_state['logged_in']:
 
 
 # REFACTORED WALLET FUNCTION
-def render_add_wallet_form(ticker, current_price, key_suffix="", show_title=False):
+def render_add_wallet_form(ticker, current_price, key_suffix="", show_title=False, default_qty=100, section_key_to_clear=None):
     # Using st.form to prevent popover closing/rerun issues during input
     with st.form(key=f"form_add_{ticker}_{key_suffix}"):
         if show_title: st.markdown("##### 💰 ADICIONAR À CARTEIRA")
         st.markdown(f"**{ticker}**")
-        qty = st.number_input("QUANTIDADE", min_value=1, step=1, value=100)
+        qty = st.number_input("QUANTIDADE", min_value=1, step=1, value=int(default_qty))
         price = st.number_input("PREÇO DE COMPRA", min_value=0.01, step=0.1, value=float(current_price))
         
         # Submit Button
@@ -1323,6 +1323,11 @@ def render_add_wallet_form(ticker, current_price, key_suffix="", show_title=Fals
             if ok: 
                 # Success message INSIDE the form/container, below the button
                 st.success(f"✅ {msg}")
+                
+                # CLEAR PLAN IF REQUESTED (To remove 'Fortalecer Exposição' box)
+                if section_key_to_clear and f'plan_{section_key_to_clear}' in st.session_state:
+                    del st.session_state[f'plan_{section_key_to_clear}']
+                    
                 time.sleep(1.5) # Give detailed time to read
                 st.rerun()
             else: 
@@ -1778,9 +1783,25 @@ with tab_carteira:
                     st.markdown(f"<span style='color:{color}; font-weight:bold'>{v_pct}</span>", unsafe_allow_html=True)
                 with c5:
                     # IA RECOMMENDATION COLUMN (UI FIX MATCHING REQUEST)
-                    # Bigger Fonts, Smaller Box
+                    # Bigger Fonts, Smaller Box, Break Lines
                     if rec_qty > 0:
-                         st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:2px 4px; text-align:center'><span style='color:#5DD9C2; font-weight:800; font-size:18px'>+{rec_qty}</span><br><span style='font-size:11px; color:#DDD; font-weight:500'>{rec_note[:20]}...</span></div>", unsafe_allow_html=True)
+                         # Using <br> to break lines as requested
+                         st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:2px 4px; text-align:center; min-width: 80px;'><span style='color:#5DD9C2; font-weight:800; font-size:18px'>+{rec_qty}</span><br><span style='font-size:10px; color:#DDD; font-weight:500; line-height:1.1'>Fortalecer<br>Exposição...</span></div>", unsafe_allow_html=True)
+                         
+                         # ACTION BUTTON (Quick Add) - ALIGNED NEXT TO BOX OR BELOW?
+                         # User asked: "ao lado... deve haver um botão... dai ao clicar aparece o campo"
+                         # Since we are inside a column, we can put it right below or try side-by-side with columns if space permits.
+                         # Given column width is 1.2, it might be tight. But let's try a popover button.
+                         with st.popover("➕", use_container_width=True):
+                             render_add_wallet_form(
+                                 row['ticker'], 
+                                 row['curr_price'], 
+                                 key_suffix=f"smart_{idx}", 
+                                 show_title=True, 
+                                 default_qty=rec_qty,
+                                 section_key_to_clear=section_key
+                             )
+
                     elif ai_plan: # Plan exists but qty is 0
                          st.markdown("<div style='padding-top:10px; text-align:center'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
                     else:
