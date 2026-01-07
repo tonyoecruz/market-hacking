@@ -1747,9 +1747,9 @@ with tab_carteira:
             st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
             
             # Header Row - MERGED COLUMNS FOR ACTION CLUSTER
-            # Header Row - MERGED COLUMNS FOR ACTION CLUSTER
+            # Header Row - COMPACT COLUMNS
             # 5 Columns + 1 Spacer: [Ticker] [Avg] [Price] [Rent] [ACTIONS] [Spacer]
-            cols_spec = [1.8, 1.1, 1.1, 1.1, 2.2, 1.0] 
+            cols_spec = [1.5, 0.95, 0.95, 0.95, 2.7, 1.5] 
             h1, h2, h3, h4, h5, h6 = st.columns(cols_spec)
             h1.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATIVO</span>", unsafe_allow_html=True)
             h2.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>MÉDIO</span>", unsafe_allow_html=True)
@@ -1758,7 +1758,7 @@ with tab_carteira:
             
             h5.markdown("") # Clear parent header
             # Nested Header to match Action Cluster
-            h5_1, h5_2, h5_3, h5_4 = h5.columns([1.4, 0.4, 0.4, 0.4])
+            h5_1, h5_2, h5_gap, h5_3, h5_4 = h5.columns([1.1, 0.45, 0.1, 0.45, 0.45])
             h5_1.markdown("<div style='text-align:right; margin-right:5px; color:#AAA; font-weight:700; font-size:11px'>RECOMENDAÇÃO (IA)</div>", unsafe_allow_html=True)
             h5_4.markdown("<div style='text-align:center; color:#AAA; font-weight:700; font-size:11px'>AÇÕES</div>", unsafe_allow_html=True) 
 
@@ -1791,9 +1791,8 @@ with tab_carteira:
                     v_pct = f"{p_var:.1%}" if show else "XX%"
                     st.markdown(f"<span style='color:{color}; font-weight:bold'>{v_pct}</span>", unsafe_allow_html=True)
                 with c5:
-                    # ACTION CLUSTER: [Rec Box] [QuickAdd] [Edit] [Del]
-                    # Nested columns for perfect alignment
-                    ac1, ac2, ac3, ac4 = st.columns([1.4, 0.4, 0.4, 0.4])
+                    # ACTION CLUSTER: [Rec Box] [QuickAdd] [Gap] [Edit] [Del]
+                    ac1, ac2, ac_gap, ac3, ac4 = st.columns([1.1, 0.45, 0.1, 0.45, 0.45])
                     
                     # 1. Recommendation Box
                     with ac1:
