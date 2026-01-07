@@ -1744,15 +1744,17 @@ with tab_carteira:
             
             st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
             
-            # Header Row - ADDED "QTD (IA)" COLUMN
-            cols_spec = [2, 1.2, 1.2, 1.2, 1.2, 1.2] 
-            h1, h2, h3, h4, h5, h6 = st.columns(cols_spec)
+            st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
+            
+            # Header Row - MERGED COLUMNS FOR ACTION CLUSTER
+            # 5 Columns: [Ticker] [Avg] [Price] [Rent] [ACTIONS (Rec+Add+Edit+Del)]
+            cols_spec = [1.8, 1.1, 1.1, 1.1, 3.2] 
+            h1, h2, h3, h4, h5 = st.columns(cols_spec)
             h1.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATIVO</span>", unsafe_allow_html=True)
             h2.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>MÉDIO</span>", unsafe_allow_html=True)
             h3.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>ATUAL</span>", unsafe_allow_html=True)
             h4.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>RENTABIL.</span>", unsafe_allow_html=True)
-            h5.markdown("<span style='color:#5DD9C2; font-weight:800; font-size:11px'>RECOMEND. (IA)</span>", unsafe_allow_html=True)
-            h6.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>AÇÕES</span>", unsafe_allow_html=True)
+            h5.markdown("<span style='color:#AAA; font-weight:700; font-size:11px'>AÇÕES & RECOMENDAÇÕES</span>", unsafe_allow_html=True)
             st.divider()
 
             # Rows
@@ -1768,7 +1770,7 @@ with tab_carteira:
                         rec_qty = alloc.get('qty', 0)
                         rec_note = alloc.get('reason', '')
 
-                c1, c2, c3, c4, c5, c6 = st.columns(cols_spec)
+                c1, c2, c3, c4, c5 = st.columns(cols_spec)
                 with c1:
                     st.markdown(f"<span style='font-size:16px; font-weight:700; color:#FFF'>{row['ticker']}</span><br><span style='font-size:11px; color:#CCC'>{int(row['quantity'])} un.</span>", unsafe_allow_html=True)
                 with c2:
@@ -1782,38 +1784,44 @@ with tab_carteira:
                     v_pct = f"{p_var:.1%}" if show else "XX%"
                     st.markdown(f"<span style='color:{color}; font-weight:bold'>{v_pct}</span>", unsafe_allow_html=True)
                 with c5:
-                    # IA RECOMMENDATION COLUMN (UI FIX MATCHING REQUEST)
-                    # Bigger Fonts, Smaller Box, Break Lines
-                    if rec_qty > 0:
-                         # Using <br> to break lines as requested
-                         st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:2px 4px; text-align:center; min-width: 80px;'><span style='color:#5DD9C2; font-weight:800; font-size:18px'>+{rec_qty}</span><br><span style='font-size:10px; color:#DDD; font-weight:500; line-height:1.1'>Fortalecer<br>Exposição...</span></div>", unsafe_allow_html=True)
-                         
-                         # ACTION BUTTON (Quick Add) - ALIGNED NEXT TO BOX OR BELOW?
-                         # User asked: "ao lado... deve haver um botão... dai ao clicar aparece o campo"
-                         # Since we are inside a column, we can put it right below or try side-by-side with columns if space permits.
-                         # Given column width is 1.2, it might be tight. But let's try a popover button.
-                         with st.popover("➕", use_container_width=True):
-                             render_add_wallet_form(
-                                 row['ticker'], 
-                                 row['curr_price'], 
-                                 key_suffix=f"smart_{idx}", 
-                                 show_title=True, 
-                                 default_qty=rec_qty,
-                                 section_key_to_clear=section_key
-                             )
+                    # ACTION CLUSTER: [Rec Box] [QuickAdd] [Edit] [Del]
+                    # Nested columns for perfect alignment
+                    ac1, ac2, ac3, ac4 = st.columns([1.4, 0.4, 0.4, 0.4])
+                    
+                    # 1. Recommendation Box
+                    with ac1:
+                        if rec_qty > 0:
+                            st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:2px 4px; text-align:center; min-width: 80px;'><span style='color:#5DD9C2; font-weight:800; font-size:18px'>+{rec_qty}</span><br><span style='font-size:10px; color:#DDD; font-weight:500; line-height:1.1'>Fortalecer<br>Exposição...</span></div>", unsafe_allow_html=True)
+                        elif ai_plan:
+                            st.markdown("<div style='padding-top:10px; text-align:center'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("")
 
-                    elif ai_plan: # Plan exists but qty is 0
-                         st.markdown("<div style='padding-top:10px; text-align:center'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
-                    else:
-                         st.markdown("---")
+                    # 2. Quick Add Button (Only if Rec > 0)
+                    with ac2:
+                        if rec_qty > 0:
+                            # Align button vertically with the box center
+                            st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
+                            with st.popover("➕", use_container_width=True):
+                                render_add_wallet_form(
+                                     row['ticker'], 
+                                     row['curr_price'], 
+                                     key_suffix=f"smart_{idx}", 
+                                     show_title=True, 
+                                     default_qty=rec_qty,
+                                     section_key_to_clear=section_key
+                                 )
 
-                with c6:
-                    b1, b2 = st.columns(2)
-                    with b1:
-                        if st.button("✏️", key=f"edit_{row['ticker']}"):
+                    # 3. Edit Button
+                    with ac3:
+                        st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
+                        if st.button("✏️", key=f"edit_{row['ticker']}", use_container_width=True):
                             edit_position_dialog(row['ticker'], int(row['quantity']), float(row['avg_price']))
-                    with b2:
-                        if st.button("❌", key=f"del_{row['ticker']}"):
+
+                    # 4. Delete Button
+                    with ac4:
+                         st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
+                         if st.button("❌", key=f"del_{row['ticker']}", use_container_width=True):
                             ok, msg = db.remove_from_wallet(st.session_state['user_id'], row['ticker'])
                             st.rerun()
                 
