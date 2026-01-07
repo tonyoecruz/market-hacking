@@ -1791,7 +1791,7 @@ with tab_carteira:
                     # 1. Recommendation Box
                     with ac1:
                         if rec_qty > 0:
-                            st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:0px 2px; text-align:center; display:inline-block; width:100%'><span style='color:#5DD9C2; font-weight:800; font-size:18px'>+{rec_qty}</span><br><span style='font-size:9px; color:#DDD; font-weight:500; line-height:1.0'>Fortalecer<br>Exposição...</span></div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:4px 8px; text-align:center; display:inline-block; width:fit-content; margin:0 auto;'><span style='color:#5DD9C2; font-weight:800; font-size:16px'>+{rec_qty}</span><br><span style='font-size:14px; color:#DDD; font-weight:700; line-height:1.0'>Fortalecer<br>Exposição...</span></div>", unsafe_allow_html=True)
                         elif ai_plan:
                             st.markdown("<div style='padding-top:10px; text-align:center'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
                         else:
