@@ -1735,60 +1735,76 @@ with tab_carteira:
         # ------------------------------------------------------------------------------
         def get_smart_aporte_analysis_v2(title, amount, p_data, category_df=None):
             """
-            Uses the same AI model as Decode/Battle to analyze the entire portfolio batch.
-            Enriches data with fundamentals if category_df is provided.
+            Uses the POWERFUL GEMINI 1.5 PRO model for deep portfolio analysis.
             """
             # 1. Enrich Data
             enriched_text = ""
+            stats_enriched = 0
+            
+            # Pre-process category_df for faster/safer lookup
+            cat_df_lookup = None
+            if category_df is not None and not category_df.empty:
+                # Create a lookup dict for O(1) access
+                cat_df_lookup = category_df.set_index('ticker').to_dict('index')
+
             for item in p_data:
-                t = item['ticker']
+                t = item['ticker'].strip().upper()
                 
                 # Basic Info
                 info_str = f"- {t}: Qtd={item['qty']}, AvgPrice=R${item['price']:.2f}"
                 
                 # Add Fundamentals if available
-                if category_df is not None and not category_df.empty:
-                    row = category_df[category_df['ticker'] == t]
-                    if not row.empty:
-                        r = row.iloc[0]
-                        if "AÇÕES" in title.upper():
-                            info_str += f""" | Price=R${r.get('price',0):.2f} | PL={r.get('pl',0):.1f} | PVP={r.get('pvp',0):.1f} | EV/EBIT={r.get('ev_ebit',0):.1f} | ROIC={r.get('roic',0):.1%} | DivYield={r.get('dy',0):.1%} | Margem={r.get('Margem',0):.1%}"""
-                        elif "FIIS" in title.upper():
-                            info_str += f""" | Price=R${r.get('price',0):.2f} | DY={r.get('dy',0):.1%} | PVP={r.get('pvp',0):.2f} | Liq={r.get('liquidezmediadiaria',0):.0f} | Segmento={r.get('segmento','N/A')}"""
+                if cat_df_lookup and t in cat_df_lookup:
+                    r = cat_df_lookup[t]
+                    stats_enriched += 1
+                    if "AÇÕES" in title.upper():
+                        info_str += f""" | Price=R${r.get('price',0):.2f} | PL={r.get('pl',0):.1f} | PVP={r.get('pvp',0):.1f} | EV/EBIT={r.get('ev_ebit',0):.1f} | ROIC={r.get('roic',0):.1%} | DivYield={r.get('dy',0):.1%} | Margem={r.get('Margem',0):.1%}"""
+                    elif "FIIS" in title.upper():
+                        info_str += f""" | Price=R${r.get('price',0):.2f} | DY={r.get('dy',0):.1%} | PVP={r.get('pvp',0):.2f} | Liq={r.get('liquidezmediadiaria',0):.0f} | Segmento={r.get('segmento','N/A')}"""
                         
                 enriched_text += info_str + "\n"
 
-            # 2. Build Prompt
+            # 2. Build Prompt (Chain-of-Thought Style)
             prompt = f"""
-            ATUE COMO UM CONSULTOR DE INVESTIMENTOS SÊNIOR (WARREN BUFFETT / PETER LYNCH STYLE).
+            ATUE COMO UM INVESTIDOR BILIONÁRIO E ANALISTA QUANTITATIVO DE ELITE (WARREN BUFFETT + JIM SIMONS).
             
-            O usuário deseja aportar R$ {amount:.2f} nesta carteira de {title}.
+            O usuário vai aportar R$ {amount:.2f} nesta carteira de {title}.
             
-            ATIVOS E DADOS FUNDAMENTAIS:
+            DADOS DE MERCADO E FUNDAMENTOS (BASE REAL):
             {enriched_text}
             
-            TAREFA:
-            1. Analise a qualidade real de cada ativo com base nos dados fornecidos (Valuation, Eficiência, Dividendos).
-            2. Distribua o valor do aporte (R$ {amount:.2f}) de forma INTELIGENTE, priorizando os melhores ativos (mais descontados/melhores fundamentos).
-            3. Se um ativo for ruim, aloque 0.
-            4. Retorne APENAS um JSON estrito no formato abaixo, sem markdown.
-
-            FORMATO DO JSON:
+            MISSÃO CRÍTICA:
+            1. Analise profundamente cada ativo. Ignore ruídos. Foque em VALOR INTRÍNSECO e QUALIDADE (ROIC, Margem, PVP, DY, Liquidez).
+            2. Identifique OPORTUNIDADES ÓBVIAS (ativos descontados mas bons) vs ARMADILHAS (ativos caros ou ruins).
+            3. Aloque o capital (R$ {amount:.2f}) APENAS nos melhores ativos do momento.
+            4. Se um ativo já tem muito peso mas está caro, NÃO aloque mais. Se está barato, aloque mais.
+            
+            Retorne APENAS o JSON final (sem explicações antes/depois).
+            
+            JSON FORMAT:
             {{
                 "allocations": {{
-                    "TICKER": {{ "qty": (int), "reason": "Explicação curta e direta (max 15 words). Ex: 'Descontada e alto ROIC'." }},
+                    "TICKER": {{ "qty": (int), "reason": "Análise técnica/fundam. curta. Ex: 'P/VP 0.8 e Yield 12% - Desconto óbvio'." }},
                     ...
                 }},
-                "reasons": "Resumo geral da estratégia adotada (max 1 sentence)."
+                "reasons": "Resumo da tese de investimento para este aporte (max 20 palavras)."
             }}
             """
             
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(temperature=0.2))
-                return response.text
+                # UPGRADE: Using PRO model for higher intelligence (slower but smarter)
+                # Note: 'gemini-1.5-pro' is significantly stronger than flash.
+                model = genai.GenerativeModel('gemini-1.5-pro-latest') 
+                response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(temperature=0.3))
+                return response.text, stats_enriched
             except Exception as e:
-                return str(e)
+                # Fallback to flash if pro fails/timeouts
+                try: 
+                     model = genai.GenerativeModel('gemini-1.5-flash')
+                     response = model.generate_content(prompt)
+                     return response.text, stats_enriched
+                except:
+                     return str(e), 0
 
         # Helper to render a section
         def render_wallet_section(title, df_segment):
@@ -1834,10 +1850,15 @@ with tab_carteira:
                             elif "FIIS" in title.upper() and 'fiis_data' in st.session_state:
                                 enrich_df = st.session_state['fiis_data']
 
-                            status.write("🤖 Consultando Consultor Sênior (Gemini)...")
-                            # Call AI (V2)
-                            json_str = get_smart_aporte_analysis_v2(title, aporte_val, p_data, enrich_df)
+                            status.write("🤖 Consultando Consultor Sênior (Gemini 1.5 PRO)...")
+                            # Call AI (V2) - Tuple Unpacking
+                            json_str, enriched_count = get_smart_aporte_analysis_v2(title, aporte_val, p_data, enrich_df)
                             
+                            if enriched_count > 0:
+                                status.write(f"✅ Inteligência Ativada: {enriched_count} ativos analisados com dados fundamentais.")
+                            else:
+                                status.write("⚠️ Aviso: Análise baseada apenas em preço (Dados fundamentais não encontrados). Faça uma varredura antes.")
+
                             status.write("📝 Interpretando estratégia...")
                             try:
                                 # ROBUST JSON CLEANING (Regex)
