@@ -2461,36 +2461,17 @@ with tab_fiis:
             fmt_pvp = f"{row['pvp']:.2f}"
             fmt_seg = str(row['segmento'])[:15]
             
-            # Safe String Construction (Using .format to avoid f-string parser bugs)
-            card_html_template = """
-            <div class="glass-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="font-size:20px; font-weight:700;">{tick}</div>
-                    <div style="font-size:18px; font-weight:600; color:#5DD9C2;">{price}</div>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <div>
-                        <span style="font-size:11px; color:#CCC;">DY (12M)</span><br>
-                        <strong style="color:#FFF;">{dy}</strong>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#CCC;">P/VP</span><br>
-                        <strong style="color:#FFF;">{pvp}</strong>
-                    </div>
-                    <div style="text-align:right;">
-                        <span style="font-size:11px; color:#CCC;">SETOR</span><br>
-                        <span style="color:#FFF;">{seg}</span>
-                    </div>
-                </div>
-            </div>
-            """
-            st.markdown(card_html_template.format(
-                tick=row['ticker'],
-                price=format_brl(row['price']),
-                dy=fmt_dy,
-                pvp=fmt_pvp,
-                seg=fmt_seg
-            ), unsafe_allow_html=True)
+            # Ultra-Safe Concatenation Mode
+            div_start = '<div class="glass-card">'
+            row1 = f'<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="font-size:20px; font-weight:700;">{row["ticker"]}</span><span style="font-size:18px; font-weight:600; color:#5DD9C2;">{format_brl(row["price"])}</span></div>'
+            row2 = '<div style="display:flex; justify-content:space-between;">'
+            col1 = f'<div><span style="font-size:11px; color:#CCC;">DY (12M)</span><br><strong style="color:#FFF;">{fmt_dy}</strong></div>'
+            col2 = f'<div><span style="font-size:11px; color:#CCC;">P/VP</span><br><strong style="color:#FFF;">{fmt_pvp}</strong></div>'
+            col3 = f'<div style="text-align:right;"><span style="font-size:11px; color:#CCC;">SETOR</span><br><span style="color:#FFF;">{fmt_seg}</span></div>'
+            row2_end = '</div></div>'
+            
+            final_html = div_start + row1 + row2 + col1 + col2 + col3 + row2_end
+            st.markdown(final_html, unsafe_allow_html=True)
             bc1, bc2 = st.columns([4, 1])
             with bc1:
                 if st.button(f"🏢 ANALISAR {row['ticker']}", key=f"fii_list_{row['ticker']}"):
