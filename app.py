@@ -2461,30 +2461,36 @@ with tab_fiis:
             fmt_pvp = f"{row['pvp']:.2f}"
             fmt_seg = str(row['segmento'])[:15]
             
-            # Safe String Construction
-            card_html = f"""
+            # Safe String Construction (Using .format to avoid f-string parser bugs)
+            card_html_template = """
             <div class="glass-card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="font-size:20px; font-weight:700;">{row['ticker']}</div>
-                    <div style="font-size:18px; font-weight:600; color:#5DD9C2;">{format_brl(row['price'])}</div>
+                    <div style="font-size:20px; font-weight:700;">{tick}</div>
+                    <div style="font-size:18px; font-weight:600; color:#5DD9C2;">{price}</div>
                 </div>
                 <div style="display:flex; justify-content:space-between;">
                     <div>
                         <span style="font-size:11px; color:#CCC;">DY (12M)</span><br>
-                        <strong style="color:#FFF;">{fmt_dy}</strong>
+                        <strong style="color:#FFF;">{dy}</strong>
                     </div>
                     <div>
                         <span style="font-size:11px; color:#CCC;">P/VP</span><br>
-                        <strong style="color:#FFF;">{fmt_pvp}</strong>
+                        <strong style="color:#FFF;">{pvp}</strong>
                     </div>
                     <div style="text-align:right;">
                         <span style="font-size:11px; color:#CCC;">SETOR</span><br>
-                        <span style="color:#FFF;">{fmt_seg}</span>
+                        <span style="color:#FFF;">{seg}</span>
                     </div>
                 </div>
             </div>
             """
-            st.markdown(card_html, unsafe_allow_html=True)
+            st.markdown(card_html_template.format(
+                tick=row['ticker'],
+                price=format_brl(row['price']),
+                dy=fmt_dy,
+                pvp=fmt_pvp,
+                seg=fmt_seg
+            ), unsafe_allow_html=True)
             bc1, bc2 = st.columns([4, 1])
             with bc1:
                 if st.button(f"🏢 ANALISAR {row['ticker']}", key=f"fii_list_{row['ticker']}"):
