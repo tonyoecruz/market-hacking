@@ -1813,7 +1813,9 @@ with tab_carteira:
                 # Removed use_container_width=True to make button smaller (fit text)
                 if st.button(f"🧠 SMART APORTE", key=f"btn_smart_{section_key}"):
                     if aporte_val > 0:
-                        with st.spinner(f"Analisando {title} com IA..."):
+                        # New visual feedback with Status Container
+                        with st.status("🧠 IA em ação...", expanded=True) as status:
+                            status.write("🔍 Coletando dados da carteira...")
                             # Prepare Data
                             p_data = []
                             for _, r in df_segment.iterrows():
@@ -1824,6 +1826,7 @@ with tab_carteira:
                                     "total": float(r['total_val'])
                                 })
                             
+                            status.write("📊 Enriquecendo com indicadores fundamentalistas...")
                             # Determine correct Data Source for enrichment
                             enrich_df = None
                             if "AÇÕES" in title.upper() and 'market_data' in st.session_state:
@@ -1831,18 +1834,19 @@ with tab_carteira:
                             elif "FIIS" in title.upper() and 'fiis_data' in st.session_state:
                                 enrich_df = st.session_state['fiis_data']
 
+                            status.write("🤖 Consultando Consultor Sênior (Gemini)...")
                             # Call AI (V2)
                             json_str = get_smart_aporte_analysis_v2(title, aporte_val, p_data, enrich_df)
                             
+                            status.write("📝 Interpretando estratégia...")
                             try:
                                 # ROBUST JSON CLEANING (Regex)
                                 import re
-                                # Find everything between the first { and the last }
                                 match = re.search(r"\{.*\}", json_str, re.DOTALL)
                                 if match:
                                     json_str = match.group(0)
                                 else:
-                                    # Fallback for simple cleaning if regex fails
+                                    # Fallback
                                     if "```json" in json_str:
                                         json_str = json_str.split("```json")[1].split("```")[0]
                                     elif "```" in json_str:
@@ -1852,18 +1856,19 @@ with tab_carteira:
                                 try:
                                     plan = json.loads(json_str)
                                 except json.JSONDecodeError as e:
-                                    # Handle "Extra data" (e.g. valid JSON followed by noise)
                                     if "Extra data" in str(e):
-                                        # Try to preserve just the valid part
                                         try:
                                             plan = json.loads(json_str[:e.pos])
-                                        except:
-                                            raise e
-                                    else:
-                                        raise e
+                                        except: raise e
+                                    else: raise e
                                 
                                 st.session_state[f'plan_{section_key}'] = plan
+                                status.update(label="✅ Análise Concluída!", state="complete", expanded=False)
+                                time.sleep(1)
+                                st.rerun()
+                                
                             except Exception as e:
+                                status.update(label="❌ Erro na Análise", state="error", expanded=True)
                                 st.error(f"Erro ao processar IA: {e}")
                                 with st.expander("🕵️ DEBUG (Conteúdo da IA)", expanded=False):
                                     st.code(json_str)
