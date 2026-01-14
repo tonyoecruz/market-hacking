@@ -2461,18 +2461,30 @@ with tab_fiis:
             fmt_pvp = f"{row['pvp']:.2f}"
             fmt_seg = str(row['segmento'])[:15]
             
-            st.markdown(f"""
+            # Safe String Construction
+            card_html = f"""
             <div class="glass-card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div style="font-size:20px; font-weight:700;">{row['ticker']}</div>
                     <div style="font-size:18px; font-weight:600; color:#5DD9C2;">{format_brl(row['price'])}</div>
                 </div>
                 <div style="display:flex; justify-content:space-between;">
-                    <div><span style="font-size:11px; color:#CCC;">DY (12M)</span><br><strong style="color:#FFF;">{fmt_dy}</strong></div>
-                    <div><span style="font-size:11px; color:#CCC;">P/VP</span><br><strong style="color:#FFF;">{fmt_pvp}</strong></div>
-                    <div style="text-align:right;"><span style="font-size:11px; color:#CCC;">SETOR</span><br><span style="color:#FFF;">{fmt_seg}</span></div>
+                    <div>
+                        <span style="font-size:11px; color:#CCC;">DY (12M)</span><br>
+                        <strong style="color:#FFF;">{fmt_dy}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size:11px; color:#CCC;">P/VP</span><br>
+                        <strong style="color:#FFF;">{fmt_pvp}</strong>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-size:11px; color:#CCC;">SETOR</span><br>
+                        <span style="color:#FFF;">{fmt_seg}</span>
+                    </div>
                 </div>
-            </div>""", unsafe_allow_html=True)
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
             bc1, bc2 = st.columns([4, 1])
             with bc1:
                 if st.button(f"🏢 ANALISAR {row['ticker']}", key=f"fii_list_{row['ticker']}"):
