@@ -1336,6 +1336,23 @@ def render_add_wallet_form(ticker, current_price, key_suffix="", show_title=Fals
 @st.dialog("💰 ADICIONAR À CARTEIRA")
 def add_wallet_dialog(ticker, current_price):
     render_add_wallet_form(ticker, current_price, key_suffix="dialog", show_title=False)
+
+@st.dialog("✏️ EDITAR POSIÇÃO")
+def edit_position_dialog(ticker, current_qty, current_avg):
+    st.markdown(f"**{ticker}**")
+    
+    with st.form(key=f"edit_form_{ticker}"):
+        new_qty = st.number_input("QUANTIDADE", min_value=1, step=1, value=int(current_qty))
+        new_price = st.number_input("PREÇO MÉDIO", min_value=0.01, step=0.1, value=float(current_avg), format="%.2f")
+        
+        if st.form_submit_button("SALVAR ALTERAÇÕES"):
+            ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, new_qty, new_price)
+            if ok:
+                st.success(f"✅ {msg}")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error(msg)
         
 # ------------------------------------------------------------------------------
 # LAYOUT & NAVIGATION (TOP NAVBAR)
