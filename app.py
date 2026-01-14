@@ -606,11 +606,14 @@ st.markdown(f"""
         color: #333333 !important; /* Dark Text for Tooltips */
         font-weight: 600 !important;
     }}
-    button[data-testid="stBaseButton-secondary"] svg {{
-        fill: #AAAAAA !important; /* Make icons visible grey */
+    
+    /* TARGET SPECIFICALLY THE DATAFRAME TOOLBAR ICONS */
+    [data-testid="stElementToolbar"] button svg {{
+        fill: #000000 !important; /* FORCE BLACK ICONS */
+        color: #000000 !important;
     }}
-    button[data-testid="stBaseButton-secondary"]:hover svg {{
-        fill: #FFFFFF !important; /* White on hover */
+    [data-testid="stElementToolbar"] button:hover svg {{
+        fill: #333333 !important; /* Dark Grey on Hover */
     }}
     /* Dropdown Options - ULTIMATE FIX FOR VISIBILITY */
     /* Container Background */
