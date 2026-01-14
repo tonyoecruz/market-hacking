@@ -1835,11 +1835,18 @@ with tab_carteira:
                             json_str = get_smart_aporte_analysis_v2(title, aporte_val, p_data, enrich_df)
                             
                             try:
-                                # Clean JSON string (remove markdown if present)
-                                if "```json" in json_str:
-                                    json_str = json_str.split("```json")[1].split("```")[0]
-                                elif "```" in json_str:
-                                    json_str = json_str.split("```")[1].split("```")[0]
+                                # ROBUST JSON CLEANING (Regex)
+                                import re
+                                # Find everything between the first { and the last }
+                                match = re.search(r"\{.*\}", json_str, re.DOTALL)
+                                if match:
+                                    json_str = match.group(0)
+                                else:
+                                    # Fallback for simple cleaning if regex fails
+                                    if "```json" in json_str:
+                                        json_str = json_str.split("```json")[1].split("```")[0]
+                                    elif "```" in json_str:
+                                        json_str = json_str.split("```")[1].split("```")[0]
                                 
                                 import json
                                 plan = json.loads(json_str)
