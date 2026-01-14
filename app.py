@@ -1872,8 +1872,33 @@ with tab_carteira:
 
             # SHOW PLAN IF AVAILABLE
             ai_plan = st.session_state.get(f'plan_{section_key}')
+            
+            # --- ROBUST TYPING NORMALIZATION ---
+            if ai_plan:
+                # Case 1: List (Wrap it)
+                if isinstance(ai_plan, list):
+                    # Try to map if items are dicts with 'ticker'
+                    new_allocs = {}
+                    for item in ai_plan:
+                        if isinstance(item, dict) and 'ticker' in item:
+                             new_allocs[item['ticker']] = item
+                    ai_plan = {"allocations": new_allocs, "reasons": "Estratégia Simplificada (Lista detectada)"}
+                
+                # Case 2: Dict but missing 'allocations' (Direct Dict)
+                elif isinstance(ai_plan, dict) and 'allocations' not in ai_plan:
+                    # Check if keys look like tickers (uppercase, len < 7)
+                    if any(k.isupper() and len(k) < 7 for k in ai_plan.keys()):
+                         ai_plan = {"allocations": ai_plan, "reasons": "Estratégia Direta"}
+                
+                # Ensure structure
+                if not isinstance(ai_plan, dict): ai_plan = {}
+                
+                # Update State with normalized version to prevent downstream errors
+                st.session_state[f'plan_{section_key}'] = ai_plan
+
             if ai_plan:
                 with st.expander(f"📋 PLANO DE COMPRA: {title}", expanded=True):
+                    # Safe get
                     st.info(f"💡 ESTRATÉGIA: {ai_plan.get('reasons', 'Rebalanceamento automático.')}")
             
             st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
