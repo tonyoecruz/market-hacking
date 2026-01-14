@@ -2164,28 +2164,26 @@ with tab_acoes:
             if 'invest_acoes' in st.session_state and st.session_state['invest_acoes'] > 0:
                  qtd_sim = int(st.session_state['invest_acoes'] // p)
                  if qtd_sim > 0:
-                     sim_html = f"<div style='margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:12px; color:#5DD9C2'>💰 APORTE: <b>{qtd_sim}</b> AÇÕES</div>"
+                     # Safe concatenation
+                     sim_html = '<div style="margin-top:5px; padding-top:5px; border-top:1px solid #333; font-size:12px; color:#5DD9C2">💰 APORTE: <b>' + str(qtd_sim) + '</b> AÇÕES</div>'
 
-            return f"""
-            <div class="glass-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <div style="font-size:20px; font-weight:700;">{t}</div>
-                    <div style="font-size:18px; color:#5DD9C2; font-weight:600;">{format_brl(p)}</div>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <div>
-                        <div style="font-size:11px; color:#CCC; text-transform:uppercase;">{l1}</div>
-                        <div style="font-size:15px; font-weight:600; color:#FFF;">{v1}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:11px; color:#CCC; text-transform:uppercase;">{l2}</div>
-                        <div style="font-size:15px; font-weight:600; color:#FFF;">{v2}</div>
-                    </div>
-                </div>
-                {sim_html}
-            </div>
-            """
-        
+            # Ultra-Safe Concatenation Mode
+            div_start = '<div class="glass-card">'
+            row1 = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">'
+            row1 += '<div style="font-size:20px; font-weight:700;">' + str(t) + '</div>'
+            row1 += '<div style="font-size:18px; color:#5DD9C2; font-weight:600;">' + format_brl(p) + '</div></div>'
+            
+            row2 = '<div style="display:flex; justify-content:space-between;">'
+            col1 = '<div><div style="font-size:11px; color:#CCC; text-transform:uppercase;">' + str(l1) + '</div>'
+            col1 += '<div style="font-size:15px; font-weight:600; color:#FFF;">' + str(v1) + '</div></div>'
+            
+            col2 = '<div style="text-align:right;"><div style="font-size:11px; color:#CCC; text-transform:uppercase;">' + str(l2) + '</div>'
+            col2 += '<div style="font-size:15px; font-weight:600; color:#FFF;">' + str(v2) + '</div></div>'
+            
+            row2_end = '</div>' + sim_html + '</div>'
+            
+            return div_start + row1 + row2 + col1 + col2 + row2_end
+            
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("#### 💎 SELEÇÃO GRAHAM")
