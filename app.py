@@ -2457,6 +2457,10 @@ with tab_fiis:
         if tipo != "TODOS": df_f = df_f[df_f['segmento'] == tipo]
         st.markdown("---")
         for i, row in df_f.sort_values('dy', ascending=False).head(10).reset_index().iterrows():
+            fmt_dy = f"{row['dy']:.1%}"
+            fmt_pvp = f"{row['pvp']:.2f}"
+            fmt_seg = str(row['segmento'])[:15]
+            
             st.markdown(f"""
             <div class="glass-card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -2464,9 +2468,9 @@ with tab_fiis:
                     <div style="font-size:18px; font-weight:600; color:#5DD9C2;">{format_brl(row['price'])}</div>
                 </div>
                 <div style="display:flex; justify-content:space-between;">
-                    <div><span style="font-size:11px; color:#CCC;">DY (12M)</span><br><strong style="color:#FFF;">{row['dy']:.1%}</strong></div>
-                    <div><span style="font-size:11px; color:#CCC;">P/VP</span><br><strong style="color:#FFF;">{row['pvp']:.2f}</strong></div>
-                    <div style="text-align:right;"><span style="font-size:11px; color:#CCC;">SETOR</span><br><span style="color:#FFF;">{row['segmento'][:15]}</span></div>
+                    <div><span style="font-size:11px; color:#CCC;">DY (12M)</span><br><strong style="color:#FFF;">{fmt_dy}</strong></div>
+                    <div><span style="font-size:11px; color:#CCC;">P/VP</span><br><strong style="color:#FFF;">{fmt_pvp}</strong></div>
+                    <div style="text-align:right;"><span style="font-size:11px; color:#CCC;">SETOR</span><br><span style="color:#FFF;">{fmt_seg}</span></div>
                 </div>
             </div>""", unsafe_allow_html=True)
             bc1, bc2 = st.columns([4, 1])
