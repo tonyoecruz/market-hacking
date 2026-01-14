@@ -2306,18 +2306,49 @@ with tab_arena:
 
     st.divider()
     st.markdown("### ⚔️ ARENA DE BATALHA: COMPARADOR")
-    if 'market_data' in st.session_state:
-        df = st.session_state['market_data']
+    
+    # 1. Mode Selection
+    arena_mode = st.radio("CATEGORIA", ["AÇÕES", "FIIs"], horizontal=True, key="arena_mode_sel")
+    st.markdown("<div style='margin-bottom:15px'></div>", unsafe_allow_html=True)
+    
+    df_arena = None
+    
+    # 2. Data Loading based on Mode
+    if arena_mode == "AÇÕES":
+        if 'market_data' in st.session_state:
+            df_arena = st.session_state['market_data']
+        else:
+             st.warning("⚠️ Dados de AÇÕES não carregados. Vá na aba 'AÇÕES' e inicie a varredura.")
+    else: # FIIs
+        if 'fiis_data' in st.session_state:
+             df_arena = st.session_state['fiis_data']
+        else:
+             st.warning("⚠️ Dados de FIIs não carregados. Vá na aba 'FIIs' e inicie a varredura.")
+
+    # 3. Battle Logic
+    if df_arena is not None and not df_arena.empty:
         c1, c2 = st.columns(2)
-        with c1: t1 = st.selectbox("LUTADOR 1", options=sorted(df['ticker'].unique()), key="t1")
-        with c2: t2 = st.selectbox("LUTADOR 2", options=sorted(df['ticker'].unique()), key="t2")
+        with c1: t1 = st.selectbox("LUTADOR 1", options=sorted(df_arena['ticker'].unique()), key="t1")
+        with c2: t2 = st.selectbox("LUTADOR 2", options=sorted(df_arena['ticker'].unique()), key="t2")
+        
         if t1 and t2 and t1 != t2:
-            d1 = df[df['ticker']==t1].iloc[0]; d2 = df[df['ticker']==t2].iloc[0]
-            comp_data = {
-                "INDICADOR": ["PREÇO", "P/L", "P/VP", "EV/EBIT", "ROIC", "MARGEM GRAHAM"],
-                f"{t1}": [format_brl(d1['price']), f"{d1['pl']:.1f}", f"{d1['pvp']:.1f}", f"{d1['ev_ebit']:.1f}", f"{d1['roic']:.1%}", f"{d1['Margem']:.1%}"],
-                f"{t2}": [format_brl(d2['price']), f"{d2['pl']:.1f}", f"{d2['pvp']:.1f}", f"{d2['ev_ebit']:.1f}", f"{d2['roic']:.1%}", f"{d2['Margem']:.1%}"]
-            }
+            d1 = df_arena[df_arena['ticker']==t1].iloc[0]
+            d2 = df_arena[df_arena['ticker']==t2].iloc[0]
+            
+            # 4. Comparison Table (Branch Logic)
+            if arena_mode == "AÇÕES":
+                comp_data = {
+                    "INDICADOR": ["PREÇO", "P/L", "P/VP", "EV/EBIT", "ROIC", "MARGEM GRAHAM"],
+                    f"{t1}": [format_brl(d1['price']), f"{d1['pl']:.1f}", f"{d1['pvp']:.1f}", f"{d1['ev_ebit']:.1f}", f"{d1['roic']:.1%}", f"{d1['Margem']:.1%}"],
+                    f"{t2}": [format_brl(d2['price']), f"{d2['pl']:.1f}", f"{d2['pvp']:.1f}", f"{d2['ev_ebit']:.1f}", f"{d2['roic']:.1%}", f"{d2['Margem']:.1%}"]
+                }
+            else: # FIIs
+                comp_data = {
+                    "INDICADOR": ["PREÇO", "DY (12M)", "P/VP", "LIQUIDEZ", "SEGMENTO"],
+                    f"{t1}": [format_brl(d1['price']), f"{d1['dy']:.1%}", f"{d1['pvp']:.2f}", format_brl(d1['liquidezmediadiaria']), d1['segmento']],
+                    f"{t2}": [format_brl(d2['price']), f"{d2['dy']:.1%}", f"{d2['pvp']:.2f}", format_brl(d2['liquidezmediadiaria']), d2['segmento']]
+                }
+                
             st.dataframe(pd.DataFrame(comp_data).set_index("INDICADOR"), width='stretch')
             # SESSION STATE MANAGEMENT FOR BATTLE
             if 'battle_res' not in st.session_state: st.session_state['battle_res'] = None
