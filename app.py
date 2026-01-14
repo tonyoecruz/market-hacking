@@ -2275,26 +2275,24 @@ with tab_etfs:
         cols = st.columns(2)
         for i, row in df_etf.sort_values('liquidezmediadiaria', ascending=False).reset_index().iterrows():
             with cols[i % 2]:
-                st.markdown(f"""
-                <div class="glass-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <div style="font-size:20px; font-weight:700;">{row['ticker']}</div>
-                        <div style="font-size:18px; color:#5DD9C2; font-weight:600;">{format_brl(row['price'])}</div>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:15px">
-                        <div>
-                            <div style="font-size:11px; color:#CCC; text-transform:uppercase;">LIQUIDEZ</div>
-                            <div style="font-size:15px; font-weight:600; color:#FFF;">{format_brl(row['liquidezmediadiaria'])}</div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                # Ultra-Safe Concatenation Mode for ETFs
+                etf_div = '<div class="glass-card">'
+                etf_row1 = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">'
+                etf_row1 += '<div style="font-size:20px; font-weight:700;">' + str(row['ticker']) + '</div>'
+                etf_row1 += '<div style="font-size:18px; color:#5DD9C2; font-weight:600;">' + format_brl(row['price']) + '</div></div>'
+                
+                etf_row2 = '<div style="display:flex; justify-content:space-between; margin-bottom:15px">'
+                etf_row2 += '<div><div style="font-size:11px; color:#CCC; text-transform:uppercase;">LIQUIDEZ</div>'
+                etf_row2 += '<div style="font-size:15px; font-weight:600; color:#FFF;">' + format_brl(row['liquidezmediadiaria']) + '</div></div></div>'
+                
+                etf_html = etf_div + etf_row1 + etf_row2 + '</div>'
+                st.markdown(etf_html, unsafe_allow_html=True)
                 
                 # Action Buttons
                 b1, b2 = st.columns([1, 1])
                 with b1:
-                    if st.button("🧠 DECODE", key=f"btn_dec_etf_{row['ticker']}"):
-                        show_etf_decode(row['ticker'], row)
+                    if st.button(f"🔍 ANALISAR {row['ticker']}", key=f"etf_list_{row['ticker']}"):
+                         show_ai_decode(row['ticker'], row, {'Tipo': 'ETF'})
                 with b2:
                     with st.popover(f"⬆️ ADICIONAR", width='stretch'): 
                          render_add_wallet_form(row['ticker'], row['price'], key_suffix=f"etf_{i}", show_title=True)
