@@ -1779,11 +1779,13 @@ with tab_carteira:
             FORMATO DO JSON:
             {{
                 "allocations": {{
-                    "TICKER": {{ "qty": (int), "reason": "Explicação curta e direta (max 15 words). Ex: 'Descontada e alto ROIC'." }},
+                    "TICKER": {{ "qty": (int), "reason": "Explicação curta (max 15 words)." }},
                     ...
                 }},
-                "reasons": "Resumo geral da estratégia adotada (max 1 sentence)."
+                "reasons": "Resumo curto (1 frase).",
+                "detailed_report": "Texto explicativo detalhado (Pode usar <b> para destaque). Explique: 1) Por que escolheu os Top Picks? 2) Por que evitou os outros? 3) Racional da distribuição de quantidade. SEJA DIDÁTICO E CONVINCENTE."
             }}
+            """
             """
             
             try:
@@ -1916,9 +1918,26 @@ with tab_carteira:
                 st.session_state[f'plan_{section_key}'] = ai_plan
 
             if ai_plan:
-                with st.expander(f"📋 PLANO DE COMPRA: {title}", expanded=True):
-                    # Safe get
-                    st.info(f"💡 ESTRATÉGIA: {ai_plan.get('reasons', 'Rebalanceamento automático.')}")
+                with st.expander(f"📋 RELATÓRIO DE ESTRATÉGIA: {title}", expanded=True):
+                    detailed_report = ai_plan.get('detailed_report')
+                    short_reason = ai_plan.get('reasons', 'Estratégia calculada com sucesso.')
+                    
+                    if detailed_report:
+                        st.markdown(f'<div style="font-size:14px; line-height:1.6; color:#EEE;">{detailed_report}</div>', unsafe_allow_html=True)
+                        st.markdown("---")
+                        
+                        # TTS AUDIO for Report
+                        if st.button("🔊 OUVIR EXPLICAÇÃO DA IA", key=f"tts_report_{section_key}"):
+                            # Use plain text for audio (remove simple HTML tags if needed, though simple ones usually skipped by TTS engine or read)
+                            # Simple regex to strip tags for cleaner audio
+                            clean_text = re.sub('<[^<]+?>', '', detailed_report) 
+                            audio_path = generate_audio(clean_text, f"report_{section_key}")
+                            if audio_path and not audio_path.startswith("ERROR"):
+                                st.audio(audio_path, format="audio/mp3", autoplay=True)
+                            else:
+                                st.warning("Erro ao gerar áudio.")
+                    else:
+                        st.info(f"💡 ESTRATÉGIA: {short_reason}")
             
             st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
             
