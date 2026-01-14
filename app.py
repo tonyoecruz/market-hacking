@@ -1735,7 +1735,7 @@ with tab_carteira:
         # ------------------------------------------------------------------------------
         def get_smart_aporte_analysis_v2(title, amount, p_data, category_df=None):
             """
-            Uses the POWERFUL GEMINI 1.5 PRO model for deep portfolio analysis.
+            Uses the GLOBALLY CONFIGURED MODEL suitable for the account tier.
             """
             # 1. Enrich Data
             enriched_text = ""
@@ -1744,13 +1744,10 @@ with tab_carteira:
             # Pre-process category_df for faster/safer lookup
             cat_df_lookup = None
             if category_df is not None and not category_df.empty:
-                # Create a lookup dict for O(1) access
                 cat_df_lookup = category_df.set_index('ticker').to_dict('index')
 
             for item in p_data:
                 t = item['ticker'].strip().upper()
-                
-                # Basic Info
                 info_str = f"- {t}: Qtd={item['qty']}, AvgPrice=R${item['price']:.2f}"
                 
                 # Add Fundamentals if available
@@ -1764,47 +1761,37 @@ with tab_carteira:
                         
                 enriched_text += info_str + "\n"
 
-            # 2. Build Prompt (Chain-of-Thought Style)
+            # 2. Build Prompt
             prompt = f"""
-            ATUE COMO UM INVESTIDOR BILIONÁRIO E ANALISTA QUANTITATIVO DE ELITE (WARREN BUFFETT + JIM SIMONS).
+            ATUE COMO UM CONSULTOR DE INVESTIMENTOS SÊNIOR (WARREN BUFFETT / PETER LYNCH STYLE).
             
-            O usuário vai aportar R$ {amount:.2f} nesta carteira de {title}.
+            O usuário deseja aportar R$ {amount:.2f} nesta carteira de {title}.
             
-            DADOS DE MERCADO E FUNDAMENTOS (BASE REAL):
+            ATIVOS E DADOS FUNDAMENTAIS:
             {enriched_text}
             
-            MISSÃO CRÍTICA:
-            1. Analise profundamente cada ativo. Ignore ruídos. Foque em VALOR INTRÍNSECO e QUALIDADE (ROIC, Margem, PVP, DY, Liquidez).
-            2. Identifique OPORTUNIDADES ÓBVIAS (ativos descontados mas bons) vs ARMADILHAS (ativos caros ou ruins).
-            3. Aloque o capital (R$ {amount:.2f}) APENAS nos melhores ativos do momento.
-            4. Se um ativo já tem muito peso mas está caro, NÃO aloque mais. Se está barato, aloque mais.
-            
-            Retorne APENAS o JSON final (sem explicações antes/depois).
-            
-            JSON FORMAT:
+            TAREFA:
+            1. Analise a qualidade real de cada ativo com base nos dados fornecidos (Valuation, Eficiência, Dividendos).
+            2. Distribua o valor do aporte (R$ {amount:.2f}) de forma INTELIGENTE, priorizando os melhores ativos (mais descontados/melhores fundamentos).
+            3. Se um ativo for ruim, aloque 0.
+            4. Retorne APENAS um JSON estrito no formato abaixo, sem markdown.
+
+            FORMATO DO JSON:
             {{
                 "allocations": {{
-                    "TICKER": {{ "qty": (int), "reason": "Análise técnica/fundam. curta. Ex: 'P/VP 0.8 e Yield 12% - Desconto óbvio'." }},
+                    "TICKER": {{ "qty": (int), "reason": "Explicação curta e direta (max 15 words). Ex: 'Descontada e alto ROIC'." }},
                     ...
                 }},
-                "reasons": "Resumo da tese de investimento para este aporte (max 20 palavras)."
+                "reasons": "Resumo geral da estratégia adotada (max 1 sentence)."
             }}
             """
             
             try:
-                # UPGRADE: Using PRO model for higher intelligence (slower but smarter)
-                # Note: 'gemini-1.5-pro' is significantly stronger than flash.
-                model = genai.GenerativeModel('gemini-1.5-pro-latest') 
-                response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(temperature=0.3))
-                return response.text, stats_enriched
+                # USE GLOBAL MODEL (SAFE)
+                response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
+                return response.text, stats_enriched, prompt
             except Exception as e:
-                # Fallback to flash if pro fails/timeouts
-                try: 
-                     model = genai.GenerativeModel('gemini-1.5-flash')
-                     response = model.generate_content(prompt)
-                     return response.text, stats_enriched
-                except:
-                     return str(e), 0
+                return str(e), 0, prompt
 
         # Helper to render a section
         def render_wallet_section(title, df_segment):
@@ -1850,14 +1837,20 @@ with tab_carteira:
                             elif "FIIS" in title.upper() and 'fiis_data' in st.session_state:
                                 enrich_df = st.session_state['fiis_data']
 
-                            status.write("🤖 Consultando Consultor Sênior (Gemini 1.5 PRO)...")
-                            # Call AI (V2) - Tuple Unpacking
-                            json_str, enriched_count = get_smart_aporte_analysis_v2(title, aporte_val, p_data, enrich_df)
                             
+                            status.write(f"🤖 Consultando IA (Modelo Ativo: {ACTIVE_MODEL_NAME})...")
+                            
+                            # Call AI (V2) - Tuple Unpacking (Response, Count, Prompt)
+                            json_str, enriched_count, debug_prompt = get_smart_aporte_analysis_v2(title, aporte_val, p_data, enrich_df)
+                            
+                            # DEBUG: Show Prompt to User (Transparency)
+                            with st.expander("🛠️ DEBUG TÉCNICO: Prompt enviado à IA", expanded=False):
+                                st.code(debug_prompt)
+
                             if enriched_count > 0:
                                 status.write(f"✅ Inteligência Ativada: {enriched_count} ativos analisados com dados fundamentais.")
                             else:
-                                status.write("⚠️ Aviso: Análise baseada apenas em preço (Dados fundamentais não encontrados). Faça uma varredura antes.")
+                                status.write("⚠️ Aviso: Dados fundamentais não encontrados. A análise será apenas matemática.")
 
                             status.write("📝 Interpretando estratégia...")
                             try:
