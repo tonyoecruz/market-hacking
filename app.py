@@ -1849,10 +1849,24 @@ with tab_carteira:
                                         json_str = json_str.split("```")[1].split("```")[0]
                                 
                                 import json
-                                plan = json.loads(json_str)
+                                try:
+                                    plan = json.loads(json_str)
+                                except json.JSONDecodeError as e:
+                                    # Handle "Extra data" (e.g. valid JSON followed by noise)
+                                    if "Extra data" in str(e):
+                                        # Try to preserve just the valid part
+                                        try:
+                                            plan = json.loads(json_str[:e.pos])
+                                        except:
+                                            raise e
+                                    else:
+                                        raise e
+                                
                                 st.session_state[f'plan_{section_key}'] = plan
                             except Exception as e:
                                 st.error(f"Erro ao processar IA: {e}")
+                                with st.expander("🕵️ DEBUG (Conteúdo da IA)", expanded=False):
+                                    st.code(json_str)
                     else:
                         st.warning("Digite um valor de aporte.")
 
