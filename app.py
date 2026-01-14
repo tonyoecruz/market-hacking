@@ -600,6 +600,18 @@ st.markdown(f"""
         border-radius: 12px !important;
         font-weight: 500 !important;
     }}
+    
+    /* FIX: DATAFRAME TOOLBAR & TOOLTIPS VISIBILITY */
+    div[data-testid="stTooltipContent"] > div {{
+        color: #333333 !important; /* Dark Text for Tooltips */
+        font-weight: 600 !important;
+    }}
+    button[data-testid="stBaseButton-secondary"] svg {{
+        fill: #AAAAAA !important; /* Make icons visible grey */
+    }}
+    button[data-testid="stBaseButton-secondary"]:hover svg {{
+        fill: #FFFFFF !important; /* White on hover */
+    }}
     /* Dropdown Options - ULTIMATE FIX FOR VISIBILITY */
     /* Container Background */
     div[data-baseweb="popover"], div[data-baseweb="menu"], ul[data-baseweb="menu"], div[role="listbox"] {{
