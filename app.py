@@ -593,12 +593,26 @@ st.markdown(f"""
     }}
     
     /* INPUTS & BUTTONS */
-    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div {{
+    .stTextInput input, .stNumberInput input {{
         background: rgba(0, 0, 0, 0.3) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         color: white !important;
         border-radius: 12px !important;
         font-weight: 500 !important;
+    }}
+    
+    /* DROPDOWN (Selectbox) - WHITE BACKGROUND REQUESTED */
+    .stSelectbox div[data-baseweb="select"] > div {{
+        background: #FFFFFF !important;
+        border: 1px solid #DDDDDD !important;
+        color: #000000 !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+    }}
+    /* Dropdown Arrow Icon - Dark */
+    .stSelectbox div[data-baseweb="select"] svg {{
+        fill: #000000 !important; 
+        color: #000000 !important;
     }}
     
     /* FIX: DATAFRAME TOOLBAR & TOOLTIPS VISIBILITY */
