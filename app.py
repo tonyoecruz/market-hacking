@@ -1795,6 +1795,13 @@ with tab_carteira:
             except Exception as e:
                 return str(e), 0, prompt
 
+        @st.dialog("📋 ESTRATÉGIA IA")
+        def show_ai_report_dialog(report_text):
+            st.markdown(f'<div style="font-size:14px; line-height:1.6; color:#EEE;">{report_text}</div>', unsafe_allow_html=True)
+            st.markdown("---")
+            if st.button("ENTENDIDO / APLICAR", key="btn_apply_strategy"):
+                st.rerun()
+
         # Helper to render a section
         def render_wallet_section(title, df_segment):
             if df_segment.empty: return
@@ -1881,7 +1888,7 @@ with tab_carteira:
                                 st.session_state[f'plan_{section_key}'] = plan
                                 status.update(label="✅ Análise Concluída!", state="complete", expanded=False)
                                 time.sleep(1)
-                                st.rerun()
+                                show_ai_report_dialog(plan.get('detailed_report', 'Relatório indisponível.'))
                                 
                             except Exception as e:
                                 status.update(label="❌ Erro na Análise", state="error", expanded=True)
