@@ -23,6 +23,7 @@ nest_asyncio.apply() # Fix for Streamlit's event loop
 import os
 import tempfile
 import glob
+import re
 
 # --- CORREÇÃO PARA O GOOGLE LOGIN NA NUVEM ---
 if not os.path.exists("client_secret.json"):
