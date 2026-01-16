@@ -399,12 +399,27 @@ def generate_audio(text, key_suffix=""):
         return fname
         
     try:
-        # Patch is already applied globally
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.run_until_complete(_gen())
-        else:
-             loop.run_until_complete(_gen())
+        # ROBUST ASYNC EXECUTION (Thread-Isolated)
+        # Avoids "Event loop is closed" or "Already running" issues in Streamlit
+        import threading
+        
+        result_container = {"error": None}
+
+        def runner():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(_gen())
+                loop.close()
+            except Exception as e:
+                result_container["error"] = str(e)
+
+        t = threading.Thread(target=runner)
+        t.start()
+        t.join() # Wait for completion
+
+        if result_container["error"]:
+             raise Exception(result_container["error"])
              
         # Verify if file was actually created
         if os.path.exists(fname) and os.path.getsize(fname) > 0:
