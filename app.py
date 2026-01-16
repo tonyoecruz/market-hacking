@@ -1793,12 +1793,7 @@ with tab_carteira:
 
             FORMATO DO JSON:
             {{
-                "allocations": {{
-                    "TICKER": {{ "qty": (int), "reason": "Explicação curta (max 15 words)." }},
-                    ...
-                }},
-                "reasons": "Resumo curto (1 frase).",
-                "detailed_report": "Texto explicativo detalhado (Pode usar <b> para destaque). Explique: 1) Por que escolheu os Top Picks? 2) Por que evitou os outros? 3) Racional da distribuição de quantidade. SEJA DIDÁTICO E CONVINCENTE."
+                    "detailed_report": "Texto explicativo detalhado (Pode usar <b> para destaque). Explique: 1) Por que escolheu os Top Picks? 2) Por que evitou os outros? 3) Racional da distribuição de quantidade. SEJA DIDÁTICO E CONVINCENTE."
             }}
             """
 
@@ -1810,12 +1805,14 @@ with tab_carteira:
             except Exception as e:
                 return str(e), 0, prompt
 
-        @st.dialog("📋 ESTRATÉGIA IA")
-        def show_ai_report_dialog(report_text):
-            st.markdown(f'<div style="font-size:14px; line-height:1.6; color:#EEE;">{report_text}</div>', unsafe_allow_html=True)
-            st.markdown("---")
-            if st.button("ENTENDIDO / APLICAR", key="btn_apply_strategy"):
-                st.rerun()
+@st.dialog("📋 ESTRATÉGIA IA")
+def show_ai_report_dialog(report_text):
+    st.markdown(f'<div style="font-size:14px; line-height:1.6; color:#EEE;">{report_text}</div>', unsafe_allow_html=True)
+    st.markdown("---")
+    if st.button("ENTENDIDO / APLICAR", key="btn_apply_strategy"):
+        st.rerun()
+
+
 
         # Helper to render a section
         def render_wallet_section(title, df_segment):
