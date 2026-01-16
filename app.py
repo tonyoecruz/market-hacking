@@ -1879,7 +1879,7 @@ with tab_carteira:
                             status.write("📝 Interpretando estratégia...")
                             try:
                                 # ROBUST JSON CLEANING (Regex)
-                                import re
+
                                 match = re.search(r"\{.*\}", json_str, re.DOTALL)
                                 if match:
                                     json_str = match.group(0)
@@ -1890,7 +1890,7 @@ with tab_carteira:
                                     elif "```" in json_str:
                                         json_str = json_str.split("```")[1].split("```")[0]
                                 
-                                import json
+
                                 try:
                                     plan = json.loads(json_str, strict=False)
                                 except json.JSONDecodeError as e:
