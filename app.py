@@ -1892,11 +1892,19 @@ with tab_carteira:
                                 
                                 import json
                                 try:
-                                    plan = json.loads(json_str)
+                                    plan = json.loads(json_str, strict=False)
                                 except json.JSONDecodeError as e:
+                                    # Fallback 1: Extra Data (Truncate)
                                     if "Extra data" in str(e):
                                         try:
-                                            plan = json.loads(json_str[:e.pos])
+                                            plan = json.loads(json_str[:e.pos], strict=False)
+                                        except: raise e
+                                    # Fallback 2: Control Characters (Sanitize)
+                                    elif "Invalid control character" in str(e):
+                                        try:
+                                            # Replace literal newlines/tabs with escaped versions
+                                            sanitized = json_str.replace('\n', '\\n').replace('\r', '').replace('\t', '\\t')
+                                            plan = json.loads(sanitized, strict=False)
                                         except: raise e
                                     else: raise e
                                 
