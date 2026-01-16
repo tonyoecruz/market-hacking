@@ -154,6 +154,13 @@ def get_ai_generic_analysis(prompt):
         return response.text
     except Exception as e: return f"⚠️ ERRO DE GERAÇÃO: {str(e)}"
 
+@st.dialog("📋 ESTRATÉGIA IA")
+def show_ai_report_dialog(report_text):
+    st.markdown(f'<div style="font-size:14px; line-height:1.6; color:#EEE;">{report_text}</div>', unsafe_allow_html=True)
+    st.markdown("---")
+    if st.button("ENTENDIDO / APLICAR", key="btn_apply_strategy"):
+        st.rerun()
+
 def get_graham_analysis(ticker, price, fair_value, lpa, vpa):
     margin = (fair_value/price) - 1 if price > 0 else 0
     safe_margin = margin > 0.5
@@ -1805,12 +1812,7 @@ with tab_carteira:
             except Exception as e:
                 return str(e), 0, prompt
 
-@st.dialog("📋 ESTRATÉGIA IA")
-def show_ai_report_dialog(report_text):
-    st.markdown(f'<div style="font-size:14px; line-height:1.6; color:#EEE;">{report_text}</div>', unsafe_allow_html=True)
-    st.markdown("---")
-    if st.button("ENTENDIDO / APLICAR", key="btn_apply_strategy"):
-        st.rerun()
+
 
 
 
