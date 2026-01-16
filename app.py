@@ -24,6 +24,7 @@ import os
 import tempfile
 import glob
 import re
+import json
 
 # --- CORREÇÃO PARA O GOOGLE LOGIN NA NUVEM ---
 if not os.path.exists("client_secret.json"):
