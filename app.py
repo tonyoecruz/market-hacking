@@ -1786,7 +1786,7 @@ with tab_carteira:
                 "detailed_report": "Texto explicativo detalhado (Pode usar <b> para destaque). Explique: 1) Por que escolheu os Top Picks? 2) Por que evitou os outros? 3) Racional da distribuição de quantidade. SEJA DIDÁTICO E CONVINCENTE."
             }}
             """
-            """
+
             
             try:
                 # USE GLOBAL MODEL (SAFE)
@@ -2380,25 +2380,32 @@ with tab_mix:
 
                 with (c1 if i%2==0 else c2):
                     # Card Personalizado da Elite
-                    st.markdown(f"""
-                    <div class="glass-card" style="border: 1px solid #FFD700; background: rgba(255, 215, 0, 0.05);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                            <div style="font-size:20px; font-weight:700; color:#FFD700;">{r['ticker']}</div>
-                            <div style="font-size:18px; color:#FFD700; font-weight:600;">{format_brl(r['price'])}</div>
-                        </div>
-                        <div style="display:flex; justify-content:space-between;">
-                            <div>
-                                <div style="font-size:11px; color:#CCC; text-transform:uppercase;">MARGEM GRAHAM</div>
-                                <div style="font-size:15px; font-weight:600; color:#5DD9C2;">{r['Margem']:.1%}</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:11px; color:#CCC; text-transform:uppercase;">RANK MAGIC</div>
-                                <div style="font-size:15px; font-weight:600; color:#FFF;">#{int(r['MagicRank'])}</div>
-                            </div>
-                        </div>
-                        {sim_html}
-                    </div>
-                    """, unsafe_allow_html=True)
+                    card_html = (
+                        '<div class="glass-card" style="border: 1px solid #FFD700; background: rgba(255, 215, 0, 0.05);">'
+                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">'
+                        '<div style="font-size:20px; font-weight:700; color:#FFD700;">{ticker}</div>'
+                        '<div style="font-size:18px; color:#FFD700; font-weight:600;">{price}</div>'
+                        '</div>'
+                        '<div style="display:flex; justify-content:space-between;">'
+                        '<div>'
+                        '<div style="font-size:11px; color:#CCC; text-transform:uppercase;">MARGEM GRAHAM</div>'
+                        '<div style="font-size:15px; font-weight:600; color:#5DD9C2;">{margem:.1%}</div>'
+                        '</div>'
+                        '<div style="text-align:right;">'
+                        '<div style="font-size:11px; color:#CCC; text-transform:uppercase;">RANK MAGIC</div>'
+                        '<div style="font-size:15px; font-weight:600; color:#FFF;">#{rank}</div>'
+                        '</div>'
+                        '</div>'
+                        '{sim_html}'
+                        '</div>'
+                    ).format(
+                        ticker=r['ticker'],
+                        price=format_brl(r['price']),
+                        margem=r['Margem'],
+                        rank=int(r['MagicRank']),
+                        sim_html=sim_html
+                    )
+                    st.markdown(card_html, unsafe_allow_html=True)
                     bc1, bc2 = st.columns([4, 1])
                     with bc1:
                          if st.button(f"🏆 DECODE ELITE #{i+1}", key=f"mix_{r['ticker']}"):
@@ -2569,5 +2576,5 @@ with tab_arena:
     else:
         st.warning("⚠️ Carregue a base de AÇÕES primeiro na aba principal.")
 
-st.markdown("""<div class="disclaimer">&#9888; AVISO LEGAL: ESTA FERRAMENTA É APENAS PARA FINS EDUCACIONAIS E DE CÁLCULO AUTOMATIZADO. OS DADOS SÃO OBTIDOS DE FONTES PÚBLICAS E PODEM CONTER ATRASOS. ISTO NÃO É UMA RECOMENDAÇÃO DE COMPRA OU VENDA DE ATIVOS. O INVESTIDOR É RESPONSÁVEL POR SUAS PRÓPRIAS DECISÕES.</div>""", unsafe_allow_html=True)
+st.markdown('<div class="disclaimer">&#9888; AVISO LEGAL: ESTA FERRAMENTA &Eacute; APENAS PARA FINS EDUCACIONAIS E DE C&Aacute;LCULO AUTOMATIZADO. OS DADOS S&Atilde;O OBTIDOS DE FONTES P&Uacute;BLICAS E PODEM CONTER ATRASOS. ISTO N&Atilde;O &Eacute; UMA RECOMENDA&Ccedil;&Atilde;O DE COMPRA OU VENDA DE ATIVOS. O INVESTIDOR &Eacute; RESPONS&Aacute;VEL POR SUAS PR&Oacute;PRIAS DECIS&Otilde;ES.</div>', unsafe_allow_html=True)
 
