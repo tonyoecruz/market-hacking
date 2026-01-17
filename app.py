@@ -1807,7 +1807,7 @@ with tab_carteira:
                     "TICKER": {{ "qty": INTEGER (quantidade a comprar), "reason": "Motivo curto" }},
                     "OUTRO_TICKER": {{ "qty": 0, "reason": "Motivo de evitar" }}
                 }},
-                "detailed_report": "Texto explicativo detalhado (Pode usar <b> para destaque). Explique: 1) Por que escolheu os Top Picks? 2) Por que evitou os outros? 3) Racional da distribuição de quantidade. SEJA DIDÁTICO E CONVINCENTE.",
+                "detailed_report": "Texto explicativo detalhado. ATENÇÃO: NÃO use aspas duplas (\") dentro deste texto para não quebrar o JSON. Use apenas aspas simples ('). Explique: 1) Top Picks 2) Evitados 3) Racional.",
                 "reasons": "Resumo em 1 frase."
             }}
             """
