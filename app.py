@@ -1800,9 +1800,14 @@ with tab_carteira:
             3. Se um ativo for ruim, aloque 0.
             4. Retorne APENAS um JSON estrito no formato abaixo, sem markdown.
 
-            FORMATO DO JSON:
+            FORMATO DO JSON (OBRIGATÓRIO):
             {{
-                    "detailed_report": "Texto explicativo detalhado (Pode usar <b> para destaque). Explique: 1) Por que escolheu os Top Picks? 2) Por que evitou os outros? 3) Racional da distribuição de quantidade. SEJA DIDÁTICO E CONVINCENTE."
+                "allocations": {{
+                    "TICKER": {{ "qty": INTEGER (quantidade a comprar), "reason": "Motivo curto" }},
+                    "OUTRO_TICKER": {{ "qty": 0, "reason": "Motivo de evitar" }}
+                }},
+                "detailed_report": "Texto explicativo detalhado (Pode usar <b> para destaque). Explique: 1) Por que escolheu os Top Picks? 2) Por que evitou os outros? 3) Racional da distribuição de quantidade. SEJA DIDÁTICO E CONVINCENTE.",
+                "reasons": "Resumo em 1 frase."
             }}
             """
 
@@ -2052,11 +2057,7 @@ with tab_carteira:
                         if rec_qty > 0:
                             st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:4px 8px; text-align:center; display:block; width:fit-content; margin-left: auto; margin-right: 5px;'><span style='color:#5DD9C2; font-weight:800; font-size:16px'>+{rec_qty}</span><br><span style='font-size:14px; color:#DDD; font-weight:700; line-height:1.0'>Fortalecer<br>Exposição...</span></div>", unsafe_allow_html=True)
                         elif ai_plan:
-                            debug_keys = list(ai_plan.keys()) # Show ROOT keys to see if 'allocations' exists
-                            # LIMIT DEBUG to first 3 keys to avoid UI explosion, or just show count
-                            debug_str = str(debug_keys)[:50] + "..."
-                            
-                            st.markdown(f"<div style='padding-top:10px; text-align:right; margin-right:15px;'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span><br><span style='font-size:8px; color:#444'>RootKeys: {debug_str}</span></div>", unsafe_allow_html=True)
+                            st.markdown("<div style='padding-top:10px; text-align:right; margin-right:15px;'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
                         else:
                             st.markdown("")
 
