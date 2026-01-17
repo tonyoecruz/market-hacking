@@ -122,14 +122,19 @@ if API_KEY:
             STARTUP_MSG = f"Erro lista: {str(e)}"
 
         if available_models:
+            # Save for Debugging
+            st.session_state['detected_models'] = available_models
+            
             # PRIORIDADE: GEMINI 1.5 PRO (Mais Inteligente/Sênior)
             if 'models/gemini-1.5-pro' in available_models: ACTIVE_MODEL_NAME = 'gemini-1.5-pro'
             elif 'models/gemini-1.5-flash' in available_models: ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
             elif 'models/gemini-pro' in available_models: ACTIVE_MODEL_NAME = 'gemini-pro'
             else: ACTIVE_MODEL_NAME = available_models[0].replace('models/', '')
+            
             model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
             IA_AVAILABLE = True
         else:
+            st.session_state['detected_models'] = []
             ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
             model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
             IA_AVAILABLE = True
@@ -1788,20 +1793,40 @@ with tab_carteira:
 
             # 2. Build Prompt
             prompt = f"""
-            ATUE COMO UM CONSULTOR DE INVESTIMENTOS SÊNIOR (WARREN BUFFETT / PETER LYNCH STYLE).
-            
-            O usuário deseja aportar R$ {amount:.2f} nesta carteira de {title}.
-            
-            ATIVOS E DADOS FUNDAMENTAIS:
-            {enriched_text}
-            
-            TAREFA:
-            1. Analise a qualidade real de cada ativo com base nos dados fornecidos (Valuation, Eficiência, Dividendos).
-            2. Distribua o valor do aporte (R$ {amount:.2f}) de forma INTELIGENTE, priorizando os melhores ativos (mais descontados/melhores fundamentos).
-            3. Se um ativo for ruim, aloque 0.
-            4. Retorne APENAS um JSON estrito no formato abaixo, sem markdown.
+            ATUE COMO UM MOTOR DE ALOCAÇÃO QUANTITATIVA DE CAPITAL (QUANT HEDGE FUND ALGORITHM).
+            MODELO MENTAL: Você não é um consultor humano. Você é um algoritmo de otimização de portfólio baseado em Lógica Fuzzy e Teoria Moderna do Portfólio (Markowitz), focado em retorno ajustado ao risco.
 
-            FORMATO DO JSON (OBRIGATÓRIO):
+            OBJETIVO DO USUÁRIO:
+            Realizar um aporte de R$ {amount:.2f} nesta carteira de {title} buscando:
+            1. Rebalanceamento (diminuir assimetrias de risco).
+            2. Value Investing (comprar o que está barato e é bom).
+            3. Defesa (não comprar ativos onde a exposição financeira já é perigosamente alta).
+
+            DADOS DE ENTRADA (CARTEIRA ATUAL PROCESSADA):
+            {enriched_text}
+            *(Nota de sistema: A lista acima contém o Ticker, Quantidade, Preço Atual e, crucialmente, o 'Share of Wallet' atual %)*
+
+            ---
+
+            ### PROTOCOLO DE DECISÃO (EXECUÇÃO OBRIGATÓRIA):
+
+            FASE 1: SANITIZAÇÃO (Hard Filters)
+            Analise os fundamentos de cada ativo listado.
+            - Critério de Exclusão: Se P/VP > 1.20 (FIIs Tijolo) ou Vacância > 15%, ou Valuation esticado (Ações), marque como "UNINVESTABLE". Alocação = 0.
+
+            FASE 2: MATRIZ DE SATURAÇÃO (Risk Assessment)
+            Analise o campo 'Peso na Carteira (%)' ou calcule o valor financeiro total investido em cada ativo.
+            - REGRA DE OURO (Antigravity Lock): Se um ativo individual já representa >15% do valor total da carteira (ou for o maior da carteira disparado), a compra é PROIBIDA (Qty = 0), a menos que seja uma oportunidade geracional de preço. O risco de ruína supera o benefício do retorno.
+
+            FASE 3: ALOCAÇÃO DE FLUXO (Water-filling Algorithm)
+            Distribua os R$ {amount:.2f} apenas nos ativos aprovados na FASE 1 e não bloqueados na FASE 2.
+            - Prioridade 1: Ativos "Top Tier" (fundamentos excelentes) que estão SUB-ALOCADOS (possuem pouco dinheiro investido comparado aos demais).
+            - Prioridade 2: Ativos descontados (P/VP ou P/L baixo).
+            - Tática: Encha os "baldes vazios" de qualidade. Tente equalizar a exposição financeira dos ativos bons.
+
+            ---
+
+             FORMATO DO JSON (OBRIGATÓRIO):
             {{
                 "allocations": {{
                     "TICKER": {{ "qty": INTEGER (quantidade a comprar), "reason": "Motivo curto" }},
@@ -1941,7 +1966,10 @@ with tab_carteira:
                             # AI Connection Steps (User Request)
                             status.write("⚡ Conectando IA...")
                             time.sleep(0.5)
-                            status.write(f"✅ IA Conectada. Modelo: {ACTIVE_MODEL_NAME} (Versão Sênior)")
+                            
+                            # Dynamic Label
+                            model_label = " (Versão Sênior)" if "1.5-pro" in ACTIVE_MODEL_NAME else " (Automático)"
+                            status.write(f"✅ IA Conectada. Modelo: {ACTIVE_MODEL_NAME}{model_label}")
 
                             status.write(f"🤖 Consultando IA (Modelo Ativo: {ACTIVE_MODEL_NAME})...")
                             
@@ -1950,6 +1978,10 @@ with tab_carteira:
                             
                             # DEBUG: Show Prompt to User (Transparency)
                             with st.expander("🛠️ DEBUG TÉCNICO: Prompt enviado à IA", expanded=False):
+                                st.write("---")
+                                st.caption(f"🤖 Modelos Disponíveis: {st.session_state.get('detected_models', 'N/A')}")
+                                st.caption(f"🎯 Modelo Selecionado: {ACTIVE_MODEL_NAME}")
+                                st.write("---")
                                 st.code(debug_prompt)
 
                             if enriched_count > 0:
