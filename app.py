@@ -2204,7 +2204,7 @@ with tab_carteira:
                     with ac3:
                         st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
                         if st.button("✏️", key=f"edit_{row['ticker']}", use_container_width=True):
-                            edit_position_dialog(row['ticker'], int(row['quantity']), float(row['avg_price']))
+                            edit_wallet_item_v2(row['ticker'], int(row['quantity']), float(row['avg_price']))
 
                     # 4. Delete Button
                     with ac4:
@@ -2225,13 +2225,13 @@ with tab_carteira:
             
     # DIALOG FOR EDITING (Moved here)
     @st.dialog("✏️ EDITAR POSIÇÃO")
-    def edit_position_dialog(ticker, old_qty, old_avg):
+    def edit_wallet_item_v2(ticker, old_qty, old_avg):
         st.markdown(f"### EDITANDO: {ticker}")
-        nq = st.number_input("NOVA QUANTIDADE", value=int(old_qty), step=1, key=f"edit_qty_{ticker}_v2", help="Permite 0 para zerar")
-        np = st.number_input("NOVO PREÇO MÉDIO", value=float(old_avg), min_value=0.0, step=0.01, key=f"edit_price_{ticker}_v2")
-        if st.button("SALVAR ALTERAÇÕES"):
-            nq = max(0, int(nq)) # Force non-negative
-            ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, nq, np)
+        # Explicit min_value=0 is CRITICAL here to prevent browser ">=1" default
+        nq = st.number_input("NOVA QUANTIDADE", value=int(old_qty), min_value=0, step=1, key=f"qty_v3_{ticker}")
+        np = st.number_input("NOVO PREÇO MÉDIO", value=float(old_avg), min_value=0.0, step=0.01, key=f"price_v3_{ticker}")
+        if st.button("SALVAR ALTERAÇÕES", key=f"save_v3_{ticker}"):
+            ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, int(nq), np)
             if ok: st.rerun()
             else: st.error(msg)
 
