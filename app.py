@@ -1760,17 +1760,17 @@ with tab_carteira:
         st.markdown("<h5 style='color: white; font-weight: 700;'>🧾 SEUS ATIVOS (POR CATEGORIA)</h5>", unsafe_allow_html=True)
         st.markdown("<div style='margin-bottom:20px'></div>", unsafe_allow_html=True)
 
-# --- GLOBAL DIALOGS ---
-@st.dialog("✏️ EDITAR POSIÇÃO")
-def edit_wallet_item_v2(ticker, old_qty, old_avg):
-    st.markdown(f"### EDITANDO: {ticker}")
-    # Explicit min_value=0 is CRITICAL here to prevent browser ">=1" default
-    nq = st.number_input("NOVA QUANTIDADE", value=int(old_qty), min_value=0, step=1, key=f"qty_v3_{ticker}")
-    np = st.number_input("NOVO PREÇO MÉDIO", value=float(old_avg), min_value=0.0, step=0.01, key=f"price_v3_{ticker}")
-    if st.button("SALVAR ALTERAÇÕES", key=f"save_v3_{ticker}"):
-        ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, int(nq), np)
-        if ok: st.rerun()
-        else: st.error(msg)
+        # --- GLOBAL DIALOGS (Scoped to Wallet View) ---
+        @st.dialog("✏️ EDITAR POSIÇÃO")
+        def edit_wallet_item_v2(ticker, old_qty, old_avg):
+            st.markdown(f"### EDITANDO: {ticker}")
+            # Explicit min_value=0 is CRITICAL here to prevent browser ">=1" default
+            nq = st.number_input("NOVA QUANTIDADE", value=int(old_qty), min_value=0, step=1, key=f"qty_v3_{ticker}")
+            np = st.number_input("NOVO PREÇO MÉDIO", value=float(old_avg), min_value=0.0, step=0.01, key=f"price_v3_{ticker}")
+            if st.button("SALVAR ALTERAÇÕES", key=f"save_v3_{ticker}"):
+                ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, int(nq), np)
+                if ok: st.rerun()
+                else: st.error(msg)
 
         # ------------------------------------------------------------------------------
         # NEW AI SMART APORTE ENGINE (V2)
