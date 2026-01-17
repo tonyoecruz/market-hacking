@@ -1828,6 +1828,34 @@ with tab_carteira:
         def render_wallet_section(title, df_segment):
             if df_segment.empty: return
             
+            # CSS Hack for Dark Expander & Readable Code
+            st.markdown("""
+            <style>
+            div[data-testid="stExpander"] details {
+                background-color: rgba(255, 255, 255, 0.05) !important;
+                color: white !important;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            div[data-testid="stExpander"] details summary {
+                color: white !important;
+            }
+            div[data-testid="stExpander"] details summary svg {
+                fill: white !important;
+            }
+            div[data-testid="stExpander"] div[role="button"] p {
+                color: white !important;
+            }
+            /* Code Block Styling Fix inside Expander */
+            div[data-testid="stExpander"] code {
+                color: #e0e0e0 !important;
+            }
+            div[data-testid="stExpander"] pre {
+                background-color: #1a1a1a !important;
+                border: 1px solid #333 !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
             # UNIQUE KEYS FOR STATE
             section_key = title.replace(" ", "_").lower()
             
@@ -1960,6 +1988,26 @@ with tab_carteira:
                 st.session_state[f'plan_{section_key}'] = ai_plan
 
             if ai_plan:
+                # CSS Hack for Dark Expander
+                st.markdown("""
+                <style>
+                div[data-testid="stExpander"] details {
+                    background-color: rgba(255, 255, 255, 0.05) !important;
+                    color: white !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                div[data-testid="stExpander"] details summary {
+                    color: white !important;
+                }
+                div[data-testid="stExpander"] details summary svg {
+                    fill: white !important;
+                }
+                div[data-testid="stExpander"] div[role="button"] p {
+                    color: white !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
                 with st.expander(f"📋 RELATÓRIO DE ESTRATÉGIA: {title}", expanded=True):
                     detailed_report = ai_plan.get('detailed_report')
                     short_reason = ai_plan.get('reasons', 'Estratégia calculada com sucesso.')
