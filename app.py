@@ -1999,16 +1999,7 @@ with tab_carteira:
                 rec_qty = 0
                 rec_note = ""
                 if ai_plan and 'allocations' in ai_plan:
-                    t_key = row['ticker'].strip().upper()
-                    # Try direct lookup first
-                    alloc = ai_plan['allocations'].get(t_key)
-                    
-                    # Fallback loops if direct key fails (robustness)
-                    if not alloc:
-                         for k, v in ai_plan['allocations'].items():
-                             if k.strip().upper() == t_key:
-                                 alloc = v
-                                 break
+                    alloc = ai_plan['allocations'].get(row['ticker'])
                     if alloc:
                         rec_qty = alloc.get('qty', 0)
                         rec_note = alloc.get('reason', '')
