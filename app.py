@@ -122,8 +122,9 @@ if API_KEY:
             STARTUP_MSG = f"Erro lista: {str(e)}"
 
         if available_models:
-            if 'models/gemini-1.5-flash' in available_models: ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
-            elif 'models/gemini-1.5-pro' in available_models: ACTIVE_MODEL_NAME = 'gemini-1.5-pro'
+            # PRIORIDADE: GEMINI 1.5 PRO (Mais Inteligente/Sênior)
+            if 'models/gemini-1.5-pro' in available_models: ACTIVE_MODEL_NAME = 'gemini-1.5-pro'
+            elif 'models/gemini-1.5-flash' in available_models: ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
             elif 'models/gemini-pro' in available_models: ACTIVE_MODEL_NAME = 'gemini-pro'
             else: ACTIVE_MODEL_NAME = available_models[0].replace('models/', '')
             model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
