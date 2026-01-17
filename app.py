@@ -1828,28 +1828,58 @@ with tab_carteira:
         def render_wallet_section(title, df_segment):
             if df_segment.empty: return
             
-            # CSS Hack for Dark Expander & Readable Code
+            # CSS Hack for Dark Expander & Status Widget
             st.markdown("""
             <style>
+            /* 1. STATUS WIDGET CONTAINER (The "Processando/Concluído" box) */
+            div[data-testid="stStatusWidget"] {
+                background-color: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                color: white !important;
+            }
+            /* Inner content of status widget */
+            div[data-testid="stStatusWidget"] > div {
+                background-color: transparent !important;
+                color: white !important;
+            }
+            div[data-testid="stStatusWidget"] p, 
+            div[data-testid="stStatusWidget"] span, 
+            div[data-testid="stStatusWidget"] div {
+                color: white !important;
+            }
+            div[data-testid="stStatusWidget"] svg {
+                fill: white !important;
+                color: white !important;
+            }
+
+            /* 2. EXPANDER (The "Relatório" and "Debug" boxes) */
             div[data-testid="stExpander"] details {
                 background-color: rgba(255, 255, 255, 0.05) !important;
-                color: white !important;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-            div[data-testid="stExpander"] details summary {
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 color: white !important;
             }
-            div[data-testid="stExpander"] details summary svg {
+            div[data-testid="stExpander"] details[open] {
+                background-color: rgba(255, 255, 255, 0.05) !important;
+            }
+            div[data-testid="stExpander"] details:hover {
+                background-color: rgba(255, 255, 255, 0.08) !important;
+            }
+            div[data-testid="stExpander"] summary {
+                color: white !important;
+            }
+            div[data-testid="stExpander"] summary svg {
                 fill: white !important;
+                color: white !important;
             }
             div[data-testid="stExpander"] div[role="button"] p {
                 color: white !important;
             }
-            /* Code Block Styling Fix inside Expander */
-            div[data-testid="stExpander"] code {
+
+            /* 3. CODE BLOCKS (Inside any container) */
+            code {
                 color: #e0e0e0 !important;
             }
-            div[data-testid="stExpander"] pre {
+            pre {
                 background-color: #1a1a1a !important;
                 border: 1px solid #333 !important;
             }
