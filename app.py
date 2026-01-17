@@ -2002,17 +2002,27 @@ with tab_carteira:
                     # 1. Try exact match
                     alloc = ai_plan['allocations'].get(row['ticker'])
                     
-                    # 2. Try robust match (ignore spaces/case)
+                    # 2. Try robust match (ignore spaces, case, substring)
                     if not alloc:
                         t_clean = row['ticker'].strip().upper()
                         for k, v in ai_plan['allocations'].items():
-                            if k.strip().upper() == t_clean:
+                            k_clean = k.strip().upper()
+                            # Match if EXACT or if one is contained in the other (e.g. "HGLG11 " or "HGLG11 (Log)")
+                            if k_clean == t_clean or t_clean in k_clean or k_clean in t_clean:
                                 alloc = v
                                 break
 
                     if alloc:
-                        rec_qty = alloc.get('qty', 0)
-                        rec_note = alloc.get('reason', '')
+                        # SUPER ROBUST QUANTITY EXTRACTION
+                        # AI might use 'qty', 'quantity', 'amount', 'cotas', etc.
+                        for q_key in ['qty', 'quantity', 'amount', 'q', 'cotas', 'unidades']:
+                            if q_key in alloc:
+                                try:
+                                    rec_qty = int(alloc[q_key])
+                                    break
+                                except: pass
+                        
+                        rec_note = alloc.get('reason', alloc.get('motivo', ''))
 
                 c1, c2, c3, c4, c5, c6 = st.columns(cols_spec)
                 with c1:
