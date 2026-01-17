@@ -1917,9 +1917,7 @@ with tab_carteira:
                                 st.session_state[f'plan_{section_key}'] = plan
                                 status.update(label="✅ Análise Concluída!", state="complete", expanded=False)
                                 
-                                # SUCCESS DEBUG
-                                with st.expander("🕵️ DEBUG SUCESSO (Ver JSON)", expanded=False):
-                                    st.json(plan)
+
 
                                 time.sleep(1)
                                 show_ai_report_dialog(plan.get('detailed_report', 'Relatório indisponível.'))
