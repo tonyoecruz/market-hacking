@@ -1938,7 +1938,11 @@ with tab_carteira:
                             elif "FIIS" in title.upper() and 'fiis_data' in st.session_state:
                                 enrich_df = st.session_state['fiis_data']
 
-                            
+                            # AI Connection Steps (User Request)
+                            status.write("⚡ Conectando IA...")
+                            time.sleep(0.5)
+                            status.write(f"✅ IA Conectada. Modelo: {ACTIVE_MODEL_NAME} (Versão Sênior)")
+
                             status.write(f"🤖 Consultando IA (Modelo Ativo: {ACTIVE_MODEL_NAME})...")
                             
                             # Call AI (V2) - Tuple Unpacking (Response, Count, Prompt)
