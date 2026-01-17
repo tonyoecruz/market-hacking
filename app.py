@@ -1831,20 +1831,22 @@ with tab_carteira:
             # CSS Hack for Dark Expander & Status Widget
             st.markdown("""
             <style>
-            /* 1. STATUS WIDGET CONTAINER (The "Processando/Concluído" box) */
+            /* 1. STATUS WIDGET CONTAINER */
             div[data-testid="stStatusWidget"] {
                 background-color: rgba(255, 255, 255, 0.05) !important;
                 border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            }
+            /* Inner Content */
+            div[data-testid="stStatusWidget"] > div {
                 color: white !important;
             }
-            /* Inner content of status widget */
-            div[data-testid="stStatusWidget"] > div {
+            /* Header (Summary) Fix - This is what was white */
+            div[data-testid="stStatusWidget"] summary {
                 background-color: transparent !important;
                 color: white !important;
             }
-            div[data-testid="stStatusWidget"] p, 
-            div[data-testid="stStatusWidget"] span, 
-            div[data-testid="stStatusWidget"] div {
+            div[data-testid="stStatusWidget"] summary:hover {
+                background-color: rgba(255, 255, 255, 0.05) !important;
                 color: white !important;
             }
             div[data-testid="stStatusWidget"] svg {
@@ -1852,30 +1854,37 @@ with tab_carteira:
                 color: white !important;
             }
 
-            /* 2. EXPANDER (The "Relatório" and "Debug" boxes) */
+            /* 2. EXPANDER (Report/Debug) */
+            /* Container */
             div[data-testid="stExpander"] details {
                 background-color: rgba(255, 255, 255, 0.05) !important;
                 border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 color: white !important;
             }
+            /* Open State Container */
             div[data-testid="stExpander"] details[open] {
                 background-color: rgba(255, 255, 255, 0.05) !important;
             }
-            div[data-testid="stExpander"] details:hover {
-                background-color: rgba(255, 255, 255, 0.08) !important;
-            }
+            /* Header (Summary) Fix - Ensure header doesn't turn white */
             div[data-testid="stExpander"] summary {
+                background-color: transparent !important;
+                color: white !important;
+            }
+            div[data-testid="stExpander"] summary:hover {
+                background-color: rgba(255, 255, 255, 0.05) !important; /* Subtle hover effect */
                 color: white !important;
             }
             div[data-testid="stExpander"] summary svg {
                 fill: white !important;
                 color: white !important;
             }
-            div[data-testid="stExpander"] div[role="button"] p {
+            /* Content Text */
+            div[data-testid="stExpander"] div[role="button"] p,
+            div[data-testid="stExpander"] p {
                 color: white !important;
             }
 
-            /* 3. CODE BLOCKS (Inside any container) */
+            /* 3. CODE BLOCKS */
             code {
                 color: #e0e0e0 !important;
             }
@@ -2127,9 +2136,9 @@ with tab_carteira:
                     v_pct = f"{p_var:.1%}" if show else "XX%"
                     st.markdown(f"<span style='color:{color}; font-weight:bold'>{v_pct}</span>", unsafe_allow_html=True)
                 with c5:
-                    # ACTION CLUSTER: [Rec Box] [QuickAdd] [Edit] [Del]
-                    # Nested columns for perfect alignment
-                    ac1, ac2, ac3, ac4 = st.columns([1.4, 0.4, 0.4, 0.4])
+                    # ACTION CLUSTER: [Rec Box] [QuickAdd] [SPACE] [Edit] [Del]
+                    # Nested columns for perfect alignment with Spacer
+                    ac1, ac2, ac_s, ac3, ac4 = st.columns([1.4, 0.4, 0.15, 0.4, 0.4])
                     
                     # 1. Recommendation Box
                     with ac1:
