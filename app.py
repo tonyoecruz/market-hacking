@@ -2227,8 +2227,8 @@ with tab_carteira:
     @st.dialog("✏️ EDITAR POSIÇÃO")
     def edit_position_dialog(ticker, old_qty, old_avg):
         st.markdown(f"### EDITANDO: {ticker}")
-        nq = st.number_input("NOVA QUANTIDADE", value=old_qty, min_value=0, step=1)
-        np = st.number_input("NOVO PREÇO MÉDIO", value=float(old_avg), step=0.01)
+        nq = st.number_input("NOVA QUANTIDADE", value=int(old_qty), min_value=0, step=1, key=f"edit_qty_{ticker}")
+        np = st.number_input("NOVO PREÇO MÉDIO", value=float(old_avg), min_value=0.0, step=0.01, key=f"edit_price_{ticker}")
         if st.button("SALVAR ALTERAÇÕES"):
             ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, nq, np)
             if ok: st.rerun()
