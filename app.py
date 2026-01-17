@@ -1999,7 +1999,17 @@ with tab_carteira:
                 rec_qty = 0
                 rec_note = ""
                 if ai_plan and 'allocations' in ai_plan:
+                    # 1. Try exact match
                     alloc = ai_plan['allocations'].get(row['ticker'])
+                    
+                    # 2. Try robust match (ignore spaces/case)
+                    if not alloc:
+                        t_clean = row['ticker'].strip().upper()
+                        for k, v in ai_plan['allocations'].items():
+                            if k.strip().upper() == t_clean:
+                                alloc = v
+                                break
+
                     if alloc:
                         rec_qty = alloc.get('qty', 0)
                         rec_note = alloc.get('reason', '')
