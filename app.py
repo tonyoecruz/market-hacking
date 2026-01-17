@@ -1842,13 +1842,16 @@ with tab_carteira:
                 # Smaller Input, Added R$ to label
                 aporte_val = st.number_input(f"APORTE (R$) - {title}", min_value=0.0, step=100.0, format="%.2f", key=f"aporte_{section_key}")
                 
+            clicked_smart = False
             with c_btn:
                 st.markdown("<br>", unsafe_allow_html=True) # Align with input
                 # Removed use_container_width=True to make button smaller (fit text)
-                if st.button(f"🧠 SMART APORTE", key=f"btn_smart_{section_key}"):
-                    if aporte_val > 0:
-                        # New visual feedback with Status Container
-                        with st.status("🧠 IA em ação...", expanded=True) as status:
+                clicked_smart = st.button(f"🧠 SMART APORTE", key=f"btn_smart_{section_key}")
+            
+            if clicked_smart:
+                 if aporte_val > 0:
+                     # New visual feedback with Status Container (NOW FULL WIDTH)
+                     with st.status("🧠 IA em ação...", expanded=True) as status:
                             status.write("🔍 Coletando dados da carteira...")
                             # Prepare Data
                             p_data = []
@@ -1897,7 +1900,6 @@ with tab_carteira:
                                     elif "```" in json_str:
                                         json_str = json_str.split("```")[1].split("```")[0]
                                 
-
                                 try:
                                     plan = json.loads(json_str, strict=False)
                                 except json.JSONDecodeError as e:
@@ -1919,17 +1921,17 @@ with tab_carteira:
                                 status.update(label="✅ Análise Concluída!", state="complete", expanded=False)
                                 
 
-
-                                time.sleep(1)
-                                show_ai_report_dialog(plan.get('detailed_report', 'Relatório indisponível.'))
+                                # time.sleep(1)
+                                # show_ai_report_dialog(plan.get('detailed_report', 'Relatório indisponível.'))
                                 
                             except Exception as e:
                                 status.update(label="❌ Erro na Análise", state="error", expanded=True)
                                 st.error(f"Erro ao processar IA: {e}")
                                 with st.expander("🕵️ DEBUG (Conteúdo da IA)", expanded=False):
                                     st.code(json_str)
-                    else:
-                        st.warning("Digite um valor de aporte.")
+                 else:
+                     st.warning("Digite um valor de aporte.")
+
 
             # SHOW PLAN IF AVAILABLE
             ai_plan = st.session_state.get(f'plan_{section_key}')
