@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #00f3ff;
+  --color-secondary: #bc13fe;
+  --color-success: #00ff41;
+  --color-danger: #ff0055;
+  --color-background: #050510;
+
+  --animate-spin-slow: spin 3s linear infinite;
+}
+
+:root {
+  --foreground: #ededed;
+  --primary-glow: rgba(0, 243, 255, 0.4);
+  --secondary-glow: rgba(188, 19, 254, 0.4);
+  --glass-surface: rgba(20, 20, 30, 0.65);
+}
+
+body {
+  color: var(--foreground);
+  background: var(--color-background);
+  background-image:
+    radial-gradient(circle at 50% 0%, #1a1a2e 0%, var(--color-background) 80%),
+    repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 243, 255, 0.03) 1px, rgba(0, 243, 255, 0.03) 2px);
+  background-attachment: fixed;
+  font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
+}
+
+@utility glass-card {
+  background-color: rgba(20, 20, 30, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    border-color: rgba(0, 243, 255, 0.3);
+    box-shadow: 0 0 30px rgba(0, 243, 255, 0.1);
+  }
+}
+
+@utility neon-text {
+  text-shadow: 0 0 10px var(--primary-glow);
+}
+
+@utility neon-border {
+  box-shadow: 0 0 15px var(--primary-glow), inset 0 0 10px var(--primary-glow);
+}

@@ -1,0 +1,220 @@
+/* 
+   -------------------------------------------------------------------------
+   THEME: CYBERPUNK CLEAN / HIGH-END FINTECH
+   ------------------------------------------------------------------------- 
+*/
+
+:root {
+    --bg-dark: #050509;
+    --bg-panel: #0a0a12;
+    --neon-cyan: #00f3ff;
+    --neon-purple: #bc13fe;
+    --neon-green: #00ff41;
+    --text-main: #e0e0e0;
+    --text-muted: #94969f;
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-surface: rgba(20, 20, 25, 0.6);
+}
+
+/* GLOBAL RESET & TYPOGRAPHY */
+html, body, [class*="css"] {
+    font-family: 'Inter', 'Roboto', sans-serif;
+    color: var(--text-main);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.5px;
+}
+
+p, div, span, label, li {
+    color: var(--text-main);
+}
+
+/* APP BACKGROUND */
+.stApp {
+    background-color: var(--bg-dark) !important;
+    background-image: 
+        radial-gradient(circle at 50% 0%, #1a1a2e 0%, var(--bg-dark) 60%),
+        repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 243, 255, 0.03) 1px, rgba(0, 243, 255, 0.03) 2px);
+    background-attachment: fixed;
+}
+
+/* -------------------------------------------------------------------------
+   GLASSMORPHISM COMPONENTS
+   ------------------------------------------------------------------------- */
+
+/* GENERIC GLASS CARD */
+.glass-card {
+    background: var(--glass-surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    border-color: rgba(0, 243, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+/* STREAMLIT CONTAINERS (Replacements for st.container(border=True)) */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color: rgba(15, 15, 20, 0.4) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------
+   INTERACTIVE ELEMENTS
+   ------------------------------------------------------------------------- */
+
+/* BUTTONS: FUTURISTIC OUTLINE STYLE */
+.stButton > button {
+    background: transparent !important;
+    color: var(--neon-cyan) !important;
+    border: 1px solid var(--neon-cyan) !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.1);
+}
+
+.stButton > button:hover {
+    background: rgba(0, 243, 255, 0.1) !important;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.4), inset 0 0 10px rgba(0, 243, 255, 0.2) !important;
+    color: #fff !important;
+    border-color: #fff !important;
+    transform: scale(1.02);
+}
+
+.stButton > button:active {
+    transform: scale(0.98);
+}
+
+/* INPUT FIELDS */
+.stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border-radius: 8px !important;
+}
+
+.stTextInput input:focus, .stNumberInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {
+    border-color: var(--neon-cyan) !important;
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.2) !important;
+}
+
+/* TABS: NEON UNDERLINE */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    padding-bottom: 10px !important;
+}
+
+.stTabs [aria-selected="true"] {
+    color: var(--neon-cyan) !important;
+    border-bottom: 2px solid var(--neon-cyan) !important;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+/* -------------------------------------------------------------------------
+   CUSTOM VISUALIZATION COMPONENTS
+   ------------------------------------------------------------------------- */
+
+/* HERO SCORE */
+.score-circle {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 243, 255, 0.05) 0%, transparent 70%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 30px rgba(0, 243, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    position: relative;
+}
+
+.score-circle::before {
+    content: '';
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: var(--neon-cyan);
+    border-right-color: var(--neon-purple); /* Gradient effect via separation */
+    animation: spin 3s linear infinite;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.score-val { font-size: 32px; font-weight: 800; color: #fff; text-shadow: 0 0 10px var(--neon-cyan); }
+.score-label { font-size: 11px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; margin-top: 5px; }
+
+/* MODALS */
+div[data-testid="stDialog"] div[role="dialog"] {
+    background-color: #0e1117 !important;
+    border: 1px solid var(--neon-cyan);
+    box-shadow: 0 0 40px rgba(0, 243, 255, 0.15);
+}
+
+/* AI BOX */
+.ai-box {
+    margin-top: 20px;
+    background: linear-gradient(90deg, rgba(0,243,255,0.05) 0%, rgba(0,0,0,0) 100%);
+    border-left: 3px solid var(--neon-cyan);
+    border-radius: 4px;
+    padding: 20px;
+}
+
+.ai-title {
+    color: var(--neon-cyan);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ai-title::before {
+    content: '⦿';
+    font-size: 10px;
+    animation: blink 2s infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* TAGS */
+.info-tag {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* DATAFRAME ADJUSTMENTS */
+div[data-testid="stDataFrame"] {
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}

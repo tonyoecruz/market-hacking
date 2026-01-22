@@ -7,7 +7,7 @@ lxml
 html5lib
 beautifulsoup4
 google-generativeai==0.7.2
-yfinance
+yfinance<1.0.0
 plotly
 bcrypt
 google-auth-oauthlib

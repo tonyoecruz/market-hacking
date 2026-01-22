@@ -1,140 +1,138 @@
-import streamlit as st
+import os
+import sqlite3
+import pandas as pd
 import bcrypt
 import datetime
-import pandas as pd
 import uuid
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, scoped_session
+from dotenv import load_dotenv
 
-# --- DATABASE CONNECTION (Native Streamlit/Supabase) ---
-
-# --- DATABASE CONNECTION (Native Streamlit/Supabase + SQLite Fallback) ---
-
-import sqlite3
-import os
+load_dotenv()
 
 DB_FILE = "market_hacking.db"
 
+# --- DATABASE ENGINE SETUP ---
+# Detects if using Postgres (Supabase) or fallback SQLite
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if DATABASE_URL:
+    # Postgres
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+    SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+    print("🔌 Conectado ao PostgreSQL (Supabase)")
+else:
+    # SQLite
+    print("⚠️ DATABASE_URL não encontrada. Usando SQLite local.")
+    engine = None
+    SessionLocal = None
+
 def get_db_connection():
-    """Conecta ao Supabase OU SQLite dependendo da config"""
-    # 1. Tenta Supabase se configurado
-    if "connections" in st.secrets and "postgresql" in st.secrets["connections"]:
-        try:
-            return st.connection("postgresql", type="sql")
-        except Exception:
-            pass
-            
-    # 2. Fallback SQLite
-    return "sqlite"
+    """Retorna uma conexão ativa (SQLAlchemy Session ou SQLite Connection)"""
+    if engine:
+        return SessionLocal()
+    else:
+        # SQLite Connection
+        conn = sqlite3.connect(DB_FILE)
+        return conn
 
 def init_db():
-    conn = get_db_connection()
-    if conn == "sqlite":
-        # Create Tables if not exist
-        try:
-            c = sqlite3.connect(DB_FILE)
-            cur = c.cursor()
-            
-            # Users
-            cur.execute('''CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                email TEXT UNIQUE,
-                password_hash TEXT NOT NULL,
-                google_id TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )''')
-            
-            # Sessions
-            cur.execute('''CREATE TABLE IF NOT EXISTS sessions (
-                token TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )''')
-            
-            # Portfolio
-            cur.execute('''CREATE TABLE IF NOT EXISTS portfolio (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                ticker TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                avg_price REAL NOT NULL,
-                last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(user_id, ticker)
-            )''')
-            
-            # Transactions
-            cur.execute('''CREATE TABLE IF NOT EXISTS transactions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                ticker TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                price REAL NOT NULL,
-                type TEXT NOT NULL,
-                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )''')
-            
-            c.commit()
-            c.close()
-        except Exception as e:
-            st.error(f"Erro init SQLite: {e}")
-            
+    """Inicializa tabelas se nao existirem"""
+    if not engine: # SQLite Init
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.cursor()
+        
+        # Copied Schema from original
+        cur.execute('''CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE,
+            password_hash TEXT NOT NULL,
+            google_id TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS sessions (
+            token TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS portfolio (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            ticker TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            avg_price REAL NOT NULL,
+            last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, ticker)
+        )''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            ticker TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            price REAL NOT NULL,
+            type TEXT NOT NULL,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        conn.commit()
+        conn.close()
     else:
-        # Supabase check
-        try:
-            with conn.session as session:
-                session.execute(text("SELECT 1"))
-                session.commit()
-        except: pass
-
-from sqlalchemy.exc import OperationalError
+        # We assume tables exist in cloud for now, or use migration tool like Alembic later
+        pass
 
 def run_query(query, params=None):
-    """Função genérica (Supabase ou SQLite)"""
-    conn = get_db_connection()
-    
-    if conn == "sqlite":
-        try:
-            # Adapt SQL (Postgres vs SQLite syntax differences if any)
-            # Replace :param with ? or named style depending on driver. 
-            # SQLite3 supports :name style.
-            
-            c = sqlite3.connect(DB_FILE)
-            return pd.read_sql_query(query, c, params=params)
-        except Exception as e:
-            st.error(f"Erro SQLite Query: {e}")
-            return pd.DataFrame()
-            
-    # Postgres
+    """Executa SELECT e retorna DataFrame"""
     try:
-        if params:
-            return conn.query(query, params=params, ttl=0)
-        return conn.query(query, ttl=0)
-    except OperationalError as e:
-        # Fallback friendly message
-        st.error("Erro Conexão DB Cloud.")
-        raise e
+        conn = get_db_connection()
+        
+        if engine: # SQLAlchemy
+            try:
+                result = conn.execute(text(query), params if params else {})
+                df = pd.DataFrame(result.fetchall(), columns=result.keys())
+                conn.close()
+                return df
+            except Exception as e:
+                conn.close()
+                print(f"SQL Error: {e}")
+                return pd.DataFrame()
+        else: # SQLite
+            try:
+                df = pd.read_sql_query(query, conn, params=params)
+                conn.close()
+                return df
+            except Exception as e:
+                conn.close()
+                print(f"SQLite Error: {e}")
+                return pd.DataFrame()
+    except Exception as e:
+        print(f"DB Conn Error: {e}")
+        return pd.DataFrame()
 
 def run_transaction(query, params=None):
-    """Função auxiliar para ESCRITA"""
-    conn = get_db_connection()
-    
-    if conn == "sqlite":
-        try:
-            c = sqlite3.connect(DB_FILE)
-            cur = c.cursor()
-            cur.execute(query, params if params else {})
-            c.commit()
-            c.close()
-            return True, None
-        except Exception as e:
-            return False, str(e)
-
-    # Postgres
+    """Executa INSERT/UPDATE/DELETE"""
     try:
-        with conn.session as session:
-            session.execute(text(query), params if params else {})
-            session.commit()
-        return True, None
+        conn = get_db_connection()
+        
+        if engine: # SQLAlchemy
+            try:
+                conn.execute(text(query), params if params else {})
+                conn.commit()
+                conn.close()
+                return True, None
+            except Exception as e:
+                conn.rollback()
+                conn.close()
+                return False, str(e)
+        else: # SQLite
+            try:
+                cur = conn.cursor()
+                cur.execute(query, params if params else {})
+                conn.commit()
+                conn.close()
+                return True, None
+            except Exception as e:
+                conn.close()
+                return False, str(e)
     except Exception as e:
         return False, str(e)
 
@@ -214,8 +212,7 @@ def login_google_user(email, google_id):
              if not df_new.empty:
                  return {"id": int(df_new.iloc[0]['id']), "username": username}
         else:
-            st.error(f"Erro ao criar usuário no banco: {err}")
-            print(f"DB Error: {err}")
+            print(f"Erro ao criar usuário no banco: {err}")
         
         return None
 
