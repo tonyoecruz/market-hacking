@@ -1837,13 +1837,41 @@ with tab_carteira:
         @st.dialog("✏️ EDITAR POSIÇÃO")
         def edit_wallet_item_v2(ticker, old_qty, old_avg, wallet_id):
             st.markdown(f"### EDITANDO: {ticker}")
+            
+            # 1. Fetch Wallets for Dropdown
+            wallets_df = db.get_wallets(st.session_state['user_id'])
+            if wallets_df.empty:
+                w_options = ["Carteira Principal"] # Fallback
+                w_ids = { "Carteira Principal": wallet_id } 
+            else:
+                w_options = wallets_df['name'].tolist()
+                w_ids = {row['name']: row['id'] for _, row in wallets_df.iterrows()}
+            
+            # Find current wallet name
+            current_w_name = None
+            for name, wid in w_ids.items():
+                if int(wid) == int(wallet_id):
+                    current_w_name = name
+                    break
+            
+            if not current_w_name and w_options: current_w_name = w_options[0]
+            
+            # 2. Wallet Selector
+            sel_wallet_name = st.selectbox("CARTEIRA (Mover/Alterar)", options=w_options, index=w_options.index(current_w_name) if current_w_name in w_options else 0, key=f"w_sel_edit_{ticker}")
+            sel_wallet_id = w_ids.get(sel_wallet_name)
+
             # Explicit min_value=0 is CRITICAL here to prevent browser ">=1" default
             nq = st.number_input("NOVA QUANTIDADE", value=int(old_qty), min_value=0, step=1, key=f"qty_v3_{ticker}")
             np = st.number_input("NOVO PREÇO MÉDIO", value=float(old_avg), min_value=0.0, step=0.01, key=f"price_v3_{ticker}")
+            
             if st.button("SALVAR ALTERAÇÕES", key=f"save_v3_{ticker}"):
-                ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, int(nq), np, wallet_id=wallet_id)
-                if ok: st.rerun()
-                else: st.error(msg)
+                ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, int(nq), np, wallet_id=wallet_id, new_wallet_id=sel_wallet_id)
+                if ok: 
+                    st.success(f"✅ {msg}")
+                    time.sleep(1)
+                    st.rerun()
+                else: 
+                    st.error(msg)
 
         # ------------------------------------------------------------------------------
         # NEW AI SMART APORTE ENGINE (V2)
