@@ -1593,18 +1593,39 @@ with tab_carteira:
     # Filter Options
     filter_options = ["TODAS"] + w_names + ["➕ Nova Carteira"]
     
-    # Selection
-    sel_filter = st.selectbox("VISUALIZAR CARTEIRA", options=filter_options, index=0)
+    # Selection (Reduced Width & Styled)
+    # CSS to force black text on Selectbox for visibility
+    st.markdown("""
+    <style>
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        color: black !important;
+        background-color: white !important;
+    }
+    div[data-testid="stSelectbox"] p {
+        color: #eee !important; /* Label Color */
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    col_sel, col_rest = st.columns([1, 3]) # 1/4 Width
+    
+    with col_sel:
+        sel_filter = st.selectbox("VISUALIZAR CARTEIRA", options=filter_options, index=0)
     
     target_wallet_id = None
     
     if sel_filter == "➕ Nova Carteira":
-         new_w = st.text_input("NOME DA NOVA CARTEIRA", placeholder="Pressione Enter para salvar")
+         with col_rest:
+             st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True) # Align with selectbox
+             new_w = st.text_input("NOME DA NOVA CARTEIRA", placeholder="Digite e pressione Enter", label_visibility="collapsed")
+         
          if new_w:
              ok, msg = db.create_wallet(st.session_state['user_id'], new_w)
              if ok: st.success(msg); time.sleep(1); st.rerun()
              else: st.error(msg)
-         st.stop() # Wait for input
+         if not new_w: st.stop() # Wait for input
+         
     elif sel_filter != "TODAS":
          target_wallet_id = w_map.get(sel_filter)
 
