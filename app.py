@@ -994,28 +994,77 @@ if not st.session_state['logged_in']:
 
 # REFACTORED WALLET FUNCTION
 def render_add_wallet_form(ticker, current_price, key_suffix="", show_title=False, default_qty=100, section_key_to_clear=None):
+    # Fetch Wallets
+    wallets_df = db.get_wallets(st.session_state['user_id'])
+    wallet_options = wallets_df['name'].tolist() if not wallets_df.empty else []
+    wallet_map = {row['name']: row['id'] for _, row in wallets_df.iterrows()}
+    
     # Using st.form to prevent popover closing/rerun issues during input
     with st.form(key=f"form_add_{ticker}_{key_suffix}"):
         if show_title: st.markdown("##### 💰 ADICIONAR À CARTEIRA")
         st.markdown(f"**{ticker}**")
+        
+        # WALLET SELECTION
+        # Default to "Carteira Principal" if exists, or first one
+        def_idx = 0
+        if "Carteira Principal" in wallet_options:
+            def_idx = wallet_options.index("Carteira Principal")
+            
+        # Try to infer current dashboard selection if possible, but safe default is fine
+        sel_wallet_name = st.selectbox("CARTEIRA DESTINO", options=wallet_options, index=def_idx)
+        
+        # Option to create new
+        new_wallet_name = st.text_input("OU CRIE UMA NOVA (Digite o nome)", placeholder="Ex: Aposentadoria")
+        
         qty = st.number_input("QUANTIDADE", min_value=1, step=1, value=int(default_qty))
         price = st.number_input("PREÇO DE COMPRA", min_value=0.01, step=0.1, value=float(current_price))
         
         # Submit Button
         if st.form_submit_button("CONFIRMAR APORTE"):
-            ok, msg = db.add_to_wallet(st.session_state['user_id'], ticker, qty, price)
-            if ok: 
-                # Success message INSIDE the form/container, below the button
-                st.success(f"✅ {msg}")
-                
-                # CLEAR PLAN IF REQUESTED (To remove 'Fortalecer Exposição' box)
-                if section_key_to_clear and f'plan_{section_key_to_clear}' in st.session_state:
-                    del st.session_state[f'plan_{section_key_to_clear}']
+            # Determine Wallet ID
+            target_wallet_id = None
+            
+            if new_wallet_name.strip():
+                # Create New Wallet
+                start_creation = True
+                # Check duplicate name locally to save DB call/error
+                if new_wallet_name.strip() in wallet_options:
+                     target_wallet_id = wallet_map[new_wallet_name.strip()]
+                else:
+                     cre_ok, cre_msg = db.create_wallet(st.session_state['user_id'], new_wallet_name.strip())
+                     if cre_ok:
+                         # Get ID - simplified by re-fetching or we need db.create_wallet to return ID.
+                         # db.create_wallet returns bool, msg.
+                         # Let's fetch it.
+                         w_refresh = db.get_wallets(st.session_state['user_id'])
+                         target_row = w_refresh[w_refresh['name'] == new_wallet_name.strip()]
+                         if not target_row.empty:
+                             target_wallet_id = int(target_row.iloc[0]['id'])
+                         else:
+                             st.error("Erro ao recuperar ID da nova carteira.")
+                             st.stop()
+                     else:
+                         st.error(cre_msg)
+                         st.stop()
+            else:
+                target_wallet_id = wallet_map.get(sel_wallet_name)
+            
+            if target_wallet_id:
+                ok, msg = db.add_to_wallet(st.session_state['user_id'], ticker, qty, price, wallet_id=target_wallet_id)
+                if ok: 
+                    # Success message INSIDE the form/container, below the button
+                    st.success(f"✅ {msg}")
                     
-                time.sleep(1.5) # Give detailed time to read
-                st.rerun()
-            else: 
-                st.error(msg)
+                    # CLEAR PLAN IF REQUESTED (To remove 'Fortalecer Exposição' box)
+                    if section_key_to_clear and f'plan_{section_key_to_clear}' in st.session_state:
+                        del st.session_state[f'plan_{section_key_to_clear}']
+                        
+                    time.sleep(1.5) # Give detailed time to read
+                    st.rerun()
+                else: 
+                    st.error(msg)
+            else:
+                st.error("Carteira inválida.")
 
 @st.dialog("💰 ADICIONAR À CARTEIRA")
 def add_wallet_dialog(ticker, current_price):
@@ -1160,8 +1209,53 @@ tab_carteira, tab_acoes, tab_etfs, tab_mix, tab_fiis, tab_arena = st.tabs(["CART
 # PÁGINA 0: CARTEIRA PESSOAL (HERO DASHBOARD)
 # ------------------------------------------------------------------------------
 with tab_carteira:
-    # 1. Fetch Data
-    df_w = db.get_portfolio(st.session_state['user_id'])
+    # --- DASHBOARD HEADER & FILTER ---
+    # Fetch Wallets
+    w_df = db.get_wallets(st.session_state['user_id'])
+    w_names = w_df['name'].tolist()
+    w_map = {row['name']: row['id'] for _, row in w_df.iterrows()}
+    
+    # Filter Options
+    filter_options = ["TODAS"] + w_names + ["➕ Nova Carteira"]
+    
+    # Selection (Reduced Width & Styled)
+    # CSS to force black text on Selectbox for visibility
+    st.markdown("""
+    <style>
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        color: black !important;
+        background-color: white !important;
+    }
+    div[data-testid="stSelectbox"] p {
+        color: #eee !important; /* Label Color */
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    col_sel, col_rest = st.columns([1, 3]) # 1/4 Width
+    
+    with col_sel:
+        sel_filter = st.selectbox("VISUALIZAR CARTEIRA", options=filter_options, index=0)
+    
+    target_wallet_id = None
+    
+    if sel_filter == "➕ Nova Carteira":
+         with col_rest:
+             st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True) # Align with selectbox
+             new_w = st.text_input("NOME DA NOVA CARTEIRA", placeholder="Digite e pressione Enter", label_visibility="collapsed")
+         
+         if new_w:
+             ok, msg = db.create_wallet(st.session_state['user_id'], new_w)
+             if ok: st.success(msg); time.sleep(1); st.rerun()
+             else: st.error(msg)
+         if not new_w: st.stop() # Wait for input
+         
+    elif sel_filter != "TODAS":
+         target_wallet_id = w_map.get(sel_filter)
+
+    # 1. Fetch Data (Filtered)
+    df_w = db.get_portfolio(st.session_state['user_id'], wallet_id=target_wallet_id)
     
     if df_w.empty:
         st.info("Sua carteira está vazia. Comece adicionando ativos nas abas 'AÇÕES' ou 'FIIs'.")
@@ -1387,15 +1481,43 @@ with tab_carteira:
 
         # --- GLOBAL DIALOGS (Scoped to Wallet View) ---
         @st.dialog("✏️ EDITAR POSIÇÃO")
-        def edit_wallet_item_v2(ticker, old_qty, old_avg):
+        def edit_wallet_item_v2(ticker, old_qty, old_avg, wallet_id):
             st.markdown(f"### EDITANDO: {ticker}")
+            
+            # 1. Fetch Wallets for Dropdown
+            wallets_df = db.get_wallets(st.session_state['user_id'])
+            if wallets_df.empty:
+                w_options = ["Carteira Principal"] # Fallback
+                w_ids = { "Carteira Principal": wallet_id } 
+            else:
+                w_options = wallets_df['name'].tolist()
+                w_ids = {row['name']: row['id'] for _, row in wallets_df.iterrows()}
+            
+            # Find current wallet name
+            current_w_name = None
+            for name, wid in w_ids.items():
+                if int(wid) == int(wallet_id):
+                    current_w_name = name
+                    break
+            
+            if not current_w_name and w_options: current_w_name = w_options[0]
+            
+            # 2. Wallet Selector
+            sel_wallet_name = st.selectbox("CARTEIRA (Mover/Alterar)", options=w_options, index=w_options.index(current_w_name) if current_w_name in w_options else 0, key=f"w_sel_edit_{ticker}")
+            sel_wallet_id = w_ids.get(sel_wallet_name)
+
             # Explicit min_value=0 is CRITICAL here to prevent browser ">=1" default
             nq = st.number_input("NOVA QUANTIDADE", value=int(old_qty), min_value=0, step=1, key=f"qty_v3_{ticker}")
             np = st.number_input("NOVO PREÇO MÉDIO", value=float(old_avg), min_value=0.0, step=0.01, key=f"price_v3_{ticker}")
+            
             if st.button("SALVAR ALTERAÇÕES", key=f"save_v3_{ticker}"):
-                ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, int(nq), np)
-                if ok: st.rerun()
-                else: st.error(msg)
+                ok, msg = db.update_wallet_item(st.session_state['user_id'], ticker, int(nq), np, wallet_id=wallet_id, new_wallet_id=sel_wallet_id)
+                if ok: 
+                    st.success(f"✅ {msg}")
+                    time.sleep(1)
+                    st.rerun()
+                else: 
+                    st.error(msg)
 
         # ------------------------------------------------------------------------------
         # NEW AI SMART APORTE ENGINE (V2)
@@ -1841,13 +1963,13 @@ with tab_carteira:
                     with ac3:
                         st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
                         if st.button("✏️", key=f"edit_{row['ticker']}", use_container_width=True):
-                            edit_wallet_item_v2(row['ticker'], int(row['quantity']), float(row['avg_price']))
+                            edit_wallet_item_v2(row['ticker'], int(row['quantity']), float(row['avg_price']), row['wallet_id'])
 
                     # 4. Delete Button
                     with ac4:
                          st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
                          if st.button("❌", key=f"del_{row['ticker']}", use_container_width=True):
-                            ok, msg = db.remove_from_wallet(st.session_state['user_id'], row['ticker'])
+                            ok, msg = db.remove_from_wallet(st.session_state['user_id'], row['ticker'], wallet_id=row['wallet_id'])
                             st.rerun()
                 
                 st.markdown("<div style='border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom:10px; margin-top:10px;'></div>", unsafe_allow_html=True)
