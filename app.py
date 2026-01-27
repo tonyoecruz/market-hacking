@@ -2053,20 +2053,6 @@ with tab_carteira:
                 st_echarts(options=options, height="280px")
 
             with h2:
-                # CHART 2: PROFITABILITY HISTORY (Line Chart - 12 Months)
-                st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>EVOLUÇÃO (12 MESES)</div>", unsafe_allow_html=True)
-                
-                # Logic: Simulated Backtest
-                # We calculate what the CURRENT portfolio would be worth in the past 12 months.
-                
-                with st.spinner("⏳"):
-                    try:
-                        # 1. Prepare Data
-                        if sel_filter == "TODAS":
-                             df_hist_base = db.get_portfolio(st.session_state['user_id'])
-                        else:
-                             df_hist_base = db.get_portfolio(st.session_state['user_id'], wallet_id=target_wallet_id)
-                        
                 # CHART 2: PROFITABILITY HISTORY (Real Transaction Replay)
                 st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>EVOLUÇÃO REAL</div>", unsafe_allow_html=True)
                 
