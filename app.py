@@ -2053,239 +2053,108 @@ with tab_carteira:
                 st_echarts(options=options, height="280px")
 
             with h2:
-                # CHART 2: PROFITABILITY HISTORY (Real Transaction Replay)
-                st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>EVOLUÇÃO REAL</div>", unsafe_allow_html=True)
+                # CHART 2: WALLET COMPARISON (Bar Chart)
+                st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>RENTABILIDADE POR CARTEIRA</div>", unsafe_allow_html=True)
                 
-                # Helper for robust normalization
-                def safe_normalize(dt):
-                    try:
-                        return pd.Timestamp(dt).normalize()
-                    except:
-                        # Fallback for weird types
-                        return pd.to_datetime(dt).normalize()
-
-                with st.spinner("⏳ Processando histórico..."):
-                    try:
-                        # 1. Fetch Transactions
-                        df_trans = db.get_transactions(st.session_state['user_id'])
+                # Logic: We need ALL wallets data, regardless of filter
+                # We can reuse df_w IF filter is ALL, otherwise we need to fetch all
+                if sel_filter == "TODAS":
+                    df_comp = df_w.copy()
+                else:
+                    # Fetch fresh full data for comparison
+                    df_comp = db.get_portfolio(st.session_state['user_id'])
+                    # Apply prices (reuse curr_data map if possible or re-map)
+                    df_comp['curr_price'] = 0.0
+                    df_comp['total_val'] = 0.0
+                    for idx, row in df_comp.iterrows():
+                        y_t = get_yahoo_ticker(row['ticker'])
+                        c_price = 0
+                        if isinstance(curr_data, (int, float, np.number)):
+                             if len(df_w) == 1: c_price = float(curr_data) # Risk if mismatch, but unlikely
+                        elif isinstance(curr_data, pd.Series):
+                            c_price = float(curr_data[y_t]) if y_t in curr_data else 0
+                        elif isinstance(curr_data, pd.DataFrame): 
+                            c_price = float(curr_data[y_t]) if y_t in curr_data.columns else 0
                         
-                        if not df_trans.empty:
-                            # 2. Replay Engine
-                            # Structure: { wallet_id: { date: value } }
-                            
-                            # Filter by selected wallet if needed
-                            if sel_filter != "TODAS" and target_wallet_id:
-                                # Filter transactions that match target_wallet_id
-                                # Note: 'wallet_id' in transactions might be float/int or NaN
-                                if 'wallet_id' in df_trans.columns:
-                                     df_trans = df_trans[df_trans['wallet_id'] == float(target_wallet_id)]
-                            
-                            # Determine Date Range
-                            # Start: First Transaction Date
-                            # End: Now
-                            if not df_trans.empty:
-                                df_trans['date'] = pd.to_datetime(df_trans['date'])
-                                start_date = safe_normalize(df_trans['date'].min())
-                                end_date = safe_normalize(datetime.now())
-                                
-                                # Generate Date Range (Daily)
-                                if start_date == end_date:
-                                    # If created today, show at least "Yesterday" to "Today" or just Today
-                                    date_range = [start_date]
-                                else:
-                                    date_range = pd.date_range(start=start_date, end=end_date, freq='D')
-                                
-                                # Holdings State: { wallet_id: { ticker: qty } }
-                                # We need to track cost basis too to calculate %? 
-                                # User wants "Performance". Usually (Value - Invested) / Invested.
-                                
-                                # Pre-fetch prices history for all tickers involved
-                                all_involved_tickers = df_trans['ticker'].unique()
-                                
-                                # Fetch History (Start Date -> Now)
-                                # yfinance expects string dates YYYY-MM-DD
-                                yf_start = start_date.strftime('%Y-%m-%d')
-                                # Ensure we have data even if start is today (yf might define start=today as empty)
-                                # If start == today, we just use current price.
-                                
-                                # Optimized Price Map: { date: { ticker: price } }
-                                price_map_history = {}
-                                
-                                if len(date_range) > 1:
-                                    try:
-                                        t_list = [get_yahoo_ticker(t) for t in all_involved_tickers]
-                                        hf = yf.download(t_list, start=yf_start, interval="1d", progress=False)['Close']
-                                        hf = hf.ffill().fillna(0)
-                                        # Convert to dict of dicts for fast lookup
-                                        for d in hf.index:
-                                            d_key = safe_normalize(d)
-                                            price_map_history[d_key] = {}
-                                            if isinstance(hf, pd.DataFrame):
-                                                for c in hf.columns:
-                                                     price_map_history[d_key][c] = hf.loc[d, c]
-                                            else:
-                                                # Single ticker series
-                                                price_map_history[d_key][hf.name] = hf.loc[d]
-                                    except: pass
-                                
-                                # Replay Loop
-                                wallet_series = {} # { "Wallet Name": [ {date, pct} ] }
-                                
-                                # Identify involved wallets
-                                # If transaction has no wallet_id, map to "Padrão" or Main.
-                                w_ids = df_trans['wallet_id'].dropna().unique() if 'wallet_id' in df_trans.columns else []
-                                if not len(w_ids) and sel_filter == "TODAS": w_ids = [0] # Dummy
-                                
-                                # Mapping IDs to Names
-                                w_names = {}
-                                w_df_ref = db.get_wallets(st.session_state['user_id'])
-                                for _, r in w_df_ref.iterrows(): w_names[r['id']] = r['name']
-                                
-                                # We need to iterate CHRONOLOGICALLY processing all transactions
-                                cursor_trans = 0
-                                n_trans = len(df_trans)
-                                
-                                # Global Holdings State trackers per wallet
-                                state_holdings = {} # { wallet_id: { ticker: qty } }
-                                state_invested = {} # { wallet_id: total_BRL_invested }
-                                
-                                series_data = {} # { wallet_name: { dates: [], values: [] } }
-                                
-                                for d in date_range:
-                                    curr_d = pd.Timestamp(d)
-                                    
-                                    # Process transactions for this day
-                                    while cursor_trans < n_trans:
-                                        row_t = df_trans.iloc[cursor_trans]
-                                        t_date = safe_normalize(row_t['date'])
-                                        
-                                        if t_date > curr_d:
-                                            break # Stop, this transaction is in future of current replay step
-                                        
-                                        # Apply Transaction
-                                        wid = row_t.get('wallet_id')
-                                        if pd.isna(wid): wid = list(w_names.keys())[0] if w_names else 0 # Fallback
-                                        wid = int(wid)
-                                        
-                                        if wid not in state_holdings: 
-                                            state_holdings[wid] = {}
-                                            state_invested[wid] = 0.0
-                                            
-                                        # Update Qty
-                                        tic = row_t['ticker']
-                                        q = row_t['quantity'] # Positive for buy, Negative for sell/remove?
-                                        # Only Log "BUY" and "SELL" in transactions currently?
-                                        # db.add_to_wallet logs "BUY"/"SELL" based on q>0. Quantity is signed? 
-                                        # add_to_wallet stores q as int. But remove_from_wallet stores 0? 
-                                        # Wait, remove_from_wallet stores quantity=0 ??
-                                        # `log_sql = "... VALUES (:u, :t, 0, 0, 'REMOVE', :d)"`
-                                        # Current DB logs 0 for remove. This breaks replay of removal (qty doesn't decrease).
-                                        # LIMITATION: We cannot replay Removals properly if quantity is 0 in log.
-                                        # For now, assume pure Accumulation (Buy/Sell/Add). 
-                                        # If type is REMOVE, we should ideally zero out? But we don't know total.
-                                        # Let's trust QTY. If QTY is correct in DB log...
-                                        # DB Log in `add_to_wallet`: quantity is input quantity.
-                                        # If user selects negative qty in edit? `update_wallet_item`? 
-                                        # Update doesn't log to transactions in my current code? 
-                                        # Only `add_to_wallet` logs. `remove_from_wallet` logs 0.
-                                        # `update_wallet_item` DOES NOT log transactions currently?
-                                        # This means replay is imperfect for Edits/Removals.
-                                        # ACCEPTABLE as "Refactoring Phase 1" for new users who just Added.
-                                        
-                                        if row_t['type'] == 'REMOVE':
-                                            # Wipe
-                                            state_holdings[wid][tic] = 0
-                                        else:
-                                            state_holdings[wid][tic] = state_holdings[wid].get(tic, 0) + q
-                                            state_invested[wid] += (q * row_t['price'])
-                                        
-                                        cursor_trans += 1
-                                    
-                                    # Calculate Daily Valuation for each active wallet
-                                    for wid, holdings in state_holdings.items():
-                                        market_val = 0.0
-                                        for t, q in holdings.items():
-                                            # Get Price
-                                            p = 0
-                                            y_t = get_yahoo_ticker(t)
-                                            
-                                            # 1. Try History Map
-                                            if curr_d in price_map_history and y_t in price_map_history[curr_d]:
-                                                 p = price_map_history[curr_d][y_t]
-                                            # 2. If Today/Recent, try curr_data global snapshot
-                                            elif curr_d >= datetime.now().normalize():
-                                                 # Try fetching current price
-                                                 if isinstance(curr_data, pd.Series) and y_t in curr_data:
-                                                     p = curr_data[y_t]
-                                            
-                                            # 3. Fallback: Use transaction price or last known
-                                            if p == 0: p = row_t['price'] # Roughly
-                                            
-                                            market_val += (q * p)
-                                            
-                                        inv = state_invested[wid]
-                                        pct = ((market_val - inv) / inv * 100) if inv > 0 else 0
-                                        
-                                        w_name = w_names.get(wid, f"Cart. {wid}")
-                                        if w_name not in series_data: series_data[w_name] = {"dates": [], "vals": []}
-                                        
-                                        # Date string
-                                        d_str = curr_d.strftime('%d/%m') if len(date_range) < 60 else curr_d.strftime('%b/%y')
-                                        series_data[w_name]["dates"].append(d_str)
-                                        series_data[w_name]["vals"].append(round(pct, 2))
-                                
-                                # Render Chart
-                                if series_data:
-                                    final_xAxis = []
-                                    series_list = []
-                                    
-                                    # Align Dates (Use the wallet with most history or just the master range)
-                                    # ECharts handles category sync if names match.
-                                    # Let's take the dates from the first series, assuming sync.
-                                    first_key = list(series_data.keys())[0]
-                                    final_xAxis = series_data[first_key]['dates']
-                                    
-                                    for wname, dat in series_data.items():
-                                        series_list.append({
-                                            "name": wname,
-                                            "type": "line",
-                                            "data": dat['vals'],
-                                            "smooth": True,
-                                            "showSymbol": True, # Show dots even if single point
-                                            "symbolSize": 6
-                                            # No Area Style for comparison to avoid clutter
-                                        })
-                                    
-                                    opt_evol = {
-                                        "tooltip": {"trigger": "axis"},
-                                        "legend": {"top": "0%", "textStyle": {"color": "#fff"}},
-                                        "grid": {"left": "10%", "right": "5%", "top": "15%", "bottom": "10%", "containLabel": True},
-                                        "xAxis": {
-                                            "type": "category",
-                                            "boundaryGap": False,
-                                            "data": final_xAxis,
-                                            "axisLine": {"show": False},
-                                            "axisTick": {"show": False},
-                                            "axisLabel": {"color": "#888", "fontSize": 10}
-                                        },
-                                        "yAxis": {
-                                            "type": "value",
-                                            "splitLine": {"show": True, "lineStyle": {"color": "#333", "type": "dashed"}},
-                                            "axisLabel": {"color": "#888", "fontSize": 10, "formatter": "{value}%"}
-                                        },
-                                        "series": series_list
-                                    }
-                                    st_echarts(options=opt_evol, height="280px")
+                        # Fallback from market_data
+                        if c_price == 0 and 'market_data' in st.session_state:
+                             f = st.session_state['market_data']
+                             f_p = f[f['ticker'] == row['ticker']]
+                             if not f_p.empty: c_price = float(f_p.iloc[0]['price'])
+                        
+                        if c_price == 0: c_price = row['avg_price'] # Fallback
+                        df_comp.at[idx, 'curr_price'] = c_price
+                        df_comp.at[idx, 'total_val'] = c_price * row['quantity']
 
-                                else:
-                                    st.info("Aguardando mais dados para gerar histórico.")
-                                    
-                            else:
-                                st.caption("Sem transações registradas.")
-                        else:
-                            st.caption("Sem histórico.")
-                    except Exception as e:
-                        st.error(f"Erro Histórico: {e}")
+                # Group by Wallet Name
+                if not df_comp.empty and 'wallet_name' in df_comp.columns:
+                     # Fill NA wallet names
+                     df_comp['wallet_name'] = df_comp['wallet_name'].fillna("Padrão")
+                     
+                     grp = df_comp.groupby('wallet_name').apply(
+                         lambda x: pd.Series({
+                             'invested': (x['quantity'] * x['avg_price']).sum(),
+                             'current': (x['quantity'] * x['curr_price']).sum()
+                         })
+                     ).reset_index()
+                     
+                     grp['diff'] = grp['current'] - grp['invested']
+                     grp['pct'] = (grp['diff'] / grp['invested']) * 100
+                     grp = grp.fillna(0)
+                     
+                     # Prepare ECharts Data
+                     # Horizontal Bar Chart
+                     # X Axis: Pct
+                     # Y Axis: Wallet Name
+                     
+                     # Sort by performance
+                     grp = grp.sort_values('pct', ascending=True)
+                     
+                     y_data = grp['wallet_name'].tolist()
+                     x_data = [round(v, 2) for v in grp['pct'].tolist()]
+                     
+                     # Color logic: Green if > 0 else Red
+                     item_styles = [{"value": v, "itemStyle": {"color": "#00ff41" if v >= 0 else "#ff4444"}} for v in x_data]
+                     
+                     opt_bar = {
+                        "tooltip": {"trigger": "axis", "formatter": "{b}: {c}%"},
+                        "grid": {"left": "30%", "right": "10%", "top": "5%", "bottom": "5%"},
+                        "xAxis": {
+                            "type": "value", 
+                            "show": False, 
+                            "splitLine": {"show": False}
+                        },
+                        "yAxis": {
+                            "type": "category", 
+                            "data": y_data,
+                            "axisLine": {"show": False},
+                            "axisTick": {"show": False},
+                            "axisLabel": {
+                                "color": "#FFF", 
+                                "fontSize": 10, 
+                                "fontWeight": "bold",
+                                "interval": 0
+                            }
+                        },
+                        "series": [
+                            {
+                                "data": item_styles,
+                                "type": "bar",
+                                "label": {
+                                    "show": True,
+                                    "position": "right", 
+                                    "formatter": "{c}%",
+                                    "color": "#fff",
+                                    "fontSize": 10
+                                },
+                                "barWidth": "60%",
+                                "roam": False
+                            }
+                        ]
+                     }
+                     st_echarts(options=opt_bar, height="280px")
+                else:
+                    st.caption("Sem dados comparativos.")
 
 
             with h3:
