@@ -2644,12 +2644,12 @@ with tab_acoes:
         key="ms_market_sel"
     )
         
-        # Logic to trigger update if changed
-        if selected_m != st.session_state.get('selected_markets'):
-            st.session_state['selected_markets'] = selected_m
-            # Clear data
-            if 'market_data' in st.session_state: del st.session_state['market_data']
-            st.rerun()
+    # Logic to trigger update if changed
+    if selected_m != st.session_state.get('selected_markets'):
+        st.session_state['selected_markets'] = selected_m
+        # Clear data
+        if 'market_data' in st.session_state: del st.session_state['market_data']
+        st.rerun()
 
     if 'market_data' not in st.session_state:
         if st.button("⚡ INICIAR VARREDURA AÇÕES", key="btn_scan_acoes"):
