@@ -1561,19 +1561,12 @@ def edit_position_dialog(ticker, current_qty, current_avg):
 # ------------------------------------------------------------------------------
 # LAYOUT & NAVIGATION (TOP NAVBAR)
 # ------------------------------------------------------------------------------
-# MARKET SELECTOR (SIDEBAR)
-if 'market_region' not in st.session_state: st.session_state['market_region'] = 'BR'
+# MARKET SELECTOR MOVED TO AÇÕES TAB
+if 'selected_markets' not in st.session_state: 
+    st.session_state['selected_markets'] = ["🇧🇷 Brasil (B3)"]
 
-with st.sidebar:
-    st.markdown("### 🌐 MERCADO")
-    m_sel = st.radio("Selecione a Região:", ["🇧🇷 Brasil (B3)", "🇺🇸 Estados Unidos"], index=0 if st.session_state['market_region'] == 'BR' else 1)
-    
-    new_region = 'BR' if "Brasil" in m_sel else 'US'
-    if new_region != st.session_state['market_region']:
-        st.session_state['market_region'] = new_region
-        # Clear data to force reload
-        if 'market_data' in st.session_state: del st.session_state['market_data']
-        st.rerun()
+# Cleanup old key if exists
+if 'market_region' in st.session_state: del st.session_state['market_region']
 
 # Custom Top Header
 # Custom Top Header - RENOVATED
@@ -1628,25 +1621,32 @@ with c3:
 # HELPER FUNCTIONS FOR DATA LOADING (PIPELINES)
 # ------------------------------------------------------------------------------
 def load_data_acoes_pipeline():
-    region = st.session_state.get('market_region', 'BR')
+    selected = st.session_state.get('selected_markets', ["🇧🇷 Brasil (B3)"])
     
-    if region == 'US':
-        df_a = get_data_usa()
-    else:
-        df_a = get_data_acoes() 
+    df_final = pd.DataFrame()
+    
+    # Check BR
+    if any("Brasil" in s for s in selected):
+        df_br = get_data_acoes() 
+        if not df_br.empty:
+            df_br['Region'] = 'BR'
+            # FILTER: Exclude ETFs
+            df_br['IsETF'] = df_br['ticker'].apply(is_likely_etf)
+            df_br = df_br[~df_br['IsETF']].copy()
+            df_final = pd.concat([df_final, df_br])
+            
+    # Check US
+    if any("Estados Unidos" in s for s in selected):
+        df_us = get_data_usa()
+        if not df_us.empty:
+            df_us['Region'] = 'US'
+            if 'IsETF' not in df_us.columns: df_us['IsETF'] = False
+            df_final = pd.concat([df_final, df_us])
+
+    if not df_final.empty:
+        df_acoes = df_final
         
-    if not df_a.empty:
-        # FILTER: Exclude ETFs (Only if BR, as US list handles it differently or mixed)
-        if region == 'BR':
-            df_a['IsETF'] = df_a['ticker'].apply(is_likely_etf)
-            df_acoes = df_a[~df_a['IsETF']].copy()
-        else:
-            # US Pipeline currently assumes stocks, but let's keep it safe
-            # If IsETF column exists, use it, else False
-            if 'IsETF' not in df_a.columns: df_a['IsETF'] = False
-            df_acoes = df_a.copy()
-        
-        # Apply filters
+        # Apply general filters for liquidity and price
         df_acoes = df_acoes[(df_acoes['liquidezmediadiaria']>0) & (df_acoes['price']>0)].copy()
 
         # GRAHAM FORMULA
@@ -1663,6 +1663,11 @@ def load_data_acoes_pipeline():
             df_magic_calc['MagicRank'] = df_magic_calc['Score'].rank(ascending=True)
         
         # Merge Magic Formula ranks
+        # Logic: We must merge carefully to not duplicate or drop rows
+        # Drop old rank cols if exist
+        cols_to_drop = ['Score', 'MagicRank', 'R_EV', 'R_ROIC']
+        df_acoes = df_acoes.drop(columns=[c for c in cols_to_drop if c in df_acoes.columns], errors='ignore')
+        
         df_acoes = df_acoes.merge(df_magic_calc[['ticker', 'Score', 'MagicRank', 'R_EV', 'R_ROIC']], on='ticker', how='left')
         
         st.session_state['market_data'] = df_acoes
@@ -2628,6 +2633,17 @@ with tab_carteira:
 with tab_acoes:
 
     st.divider()
+    with tab_acoes:
+    # MARKET SELECTION WIDGET
+        selected_m = st.multiselect("SELECIONE OS MERCADOS:", ["🇧🇷 Brasil (B3)", "🇺🇸 Estados Unidos"], default=st.session_state.get('selected_markets', ["🇧🇷 Brasil (B3)"]), key="ms_market_sel")
+        
+        # Logic to trigger update if changed
+        if selected_m != st.session_state.get('selected_markets'):
+            st.session_state['selected_markets'] = selected_m
+            # Clear data
+            if 'market_data' in st.session_state: del st.session_state['market_data']
+            st.rerun()
+
     if 'market_data' not in st.session_state:
         if st.button("⚡ INICIAR VARREDURA AÇÕES", key="btn_scan_acoes"):
             with st.spinner("Baixando Dados Ações..."):
@@ -2643,8 +2659,8 @@ with tab_acoes:
                  st.rerun()
 
         df = st.session_state['market_data']
-        region_label = "B3 (BRASIL)" if st.session_state.get('market_region', 'BR') == 'BR' else "EUA (LISTA TOP)"
-        st.success(f"BASE AÇÕES: {len(df)} ATIVOS [{region_label}]")
+        # region_label = "B3 (BRASIL)" if st.session_state.get('market_region', 'BR') == 'BR' else "EUA (LISTA TOP)"
+        st.success(f"BASE AÇÕES: {len(df)} ATIVOS [GLOBAL]")
         
         st.markdown("### 🎯 MIRA LASER (IA)")
         c_sel, c_btn, c_unit, _ = st.columns([2, 1, 1.5, 4.5])
@@ -2692,16 +2708,18 @@ with tab_acoes:
         
         
         # New Fintech Card Logic (With Dynamic Currency)
-        def format_money(val):
-            sym = "R$" if st.session_state.get('market_region', 'BR') == 'BR' else "US$"
+        def format_money_row(val, region):
+            sym = "US$" if region == "US" else "R$"
             try:
                 if isinstance(val, str): val = float(val)
                 return f"{sym} {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             except: return f"{sym} 0,00"
 
-        def fintech_card(t, p, l1, v1, l2, v2, idx):
+        def fintech_card(t, p, l1, v1, l2, v2, idx, region):
             sim_html = ""
             if 'invest_acoes' in st.session_state and st.session_state['invest_acoes'] > 0:
+                 # Check currency match approximately? Assuming input is BRL, need conversion if US.
+                 # For now, simplistic division.
                  qtd_sim = int(st.session_state['invest_acoes'] // p)
                  if qtd_sim > 0:
                      # Safe concatenation
@@ -2711,7 +2729,7 @@ with tab_acoes:
             div_start = '<div class="glass-card">'
             row1 = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">'
             row1 += '<div style="font-size:20px; font-weight:700;">' + str(t) + '</div>'
-            row1 += '<div style="font-size:18px; color:#5DD9C2; font-weight:600;">' + format_money(p) + '</div></div>'
+            row1 += '<div style="font-size:18px; color:#5DD9C2; font-weight:600;">' + format_money_row(p, region) + '</div></div>'
             
             row2 = '<div style="display:flex; justify-content:space-between;">'
             col1 = '<div><div style="font-size:11px; color:#CCC; text-transform:uppercase;">' + str(l1) + '</div>'
@@ -2735,7 +2753,9 @@ with tab_acoes:
                  st.info("Nenhuma ação no padrão Graham hoje.")
             else:
                 for i, r in df_g.reset_index().iterrows():
-                    st.markdown(fintech_card(r['ticker'], r['price'], "VALOR JUSTO", format_money(r['ValorJusto']), "POTENCIAL", f"{r['Margem']:.1%}", i+1), unsafe_allow_html=True)
+                    # Check Region
+                    reg = r.get('Region', 'BR')
+                    st.markdown(fintech_card(r['ticker'], r['price'], "VALOR JUSTO", format_money_row(r['ValorJusto'], reg), "POTENCIAL", f"{r['Margem']:.1%}", i+1, reg), unsafe_allow_html=True)
                     bc1, bc2 = st.columns([4, 1])
                     with bc1: 
                         if st.button(f"VER DETALHES", key=f"g_{r['ticker']}"): show_graham_details(r['ticker'], r)
@@ -2753,7 +2773,8 @@ with tab_acoes:
                 st.info("Nenhuma ação Magic Formula hoje.")
             else:
                 for i, r in df_m.reset_index().iterrows():
-                     st.markdown(fintech_card(r['ticker'], r['price'], "EV/EBIT", f"{r['ev_ebit']:.2f}", "ROIC", f"{r['roic']:.1%}", i+1), unsafe_allow_html=True)
+                     reg = r.get('Region', 'BR')
+                     st.markdown(fintech_card(r['ticker'], r['price'], "EV/EBIT", f"{r['ev_ebit']:.2f}", "ROIC", f"{r['roic']:.1%}", i+1, reg), unsafe_allow_html=True)
                      bc1, bc2 = st.columns([4, 1])
                      with bc1:
                          if st.button(f"VER DETALHES", key=f"m_{r['ticker']}"): show_magic_details(r['ticker'], r)
