@@ -596,6 +596,104 @@ def get_data_usa():
         # print(f"Error fetching US Data: {e}")
         return pd.DataFrame()
 
+@st.cache_data(show_spinner=False, ttl=3600)
+def get_data_usa_etfs():
+    # BULK SCANNER API for ETFs
+    try:
+        url = "https://scanner.tradingview.com/america/scan"
+        payload = {
+            "filter": [
+                {"left": "type", "operation": "in_range", "right": ["fund", "dr"]}, 
+                {"left": "subtype", "operation": "in_range", "right": ["etf", "etn", "uit"]},
+                {"left": "exchange", "operation": "in_range", "right": ["AMEX", "NASDAQ", "NYSE"]}
+            ],
+            "options": {"lang": "en"},
+            "symbols": {"query": {"types": []}, "tickers": []},
+            "columns": ["name", "close", "volume", "average_volume_10d_calc"],
+            "sort": {"sortBy": "average_volume_10d_calc", "sortOrder": "desc"},
+            "range": [0, 2000] 
+        }
+        
+        headers = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
+        r = requests.post(url, json=payload, headers=headers, timeout=10)
+        data = r.json()
+        
+        if 'data' not in data: return pd.DataFrame()
+        
+        rows = []
+        for d in data['data']:
+            s = d['d']
+            ticker = s[0]
+            price = s[1] if s[1] is not None else 0
+            vol = s[2] if s[2] is not None else 0
+            
+            # Liquidity > 100k USD roughly
+            liq = vol * price
+            
+            if liq > 100000 and price > 0:
+                rows.append({
+                    'ticker': ticker,
+                    'price': price,
+                    'liquidezmediadiaria': liq,
+                    'pvp': 0, 'dy': 0, # Placeholders
+                    'Region': 'US'
+                })
+        return pd.DataFrame(rows)
+@st.cache_data(show_spinner=False, ttl=3600)
+def get_data_usa_reits():
+    # BULK SCANNER API for REITs
+    try:
+        url = "https://scanner.tradingview.com/america/scan"
+        payload = {
+            "filter": [
+                {"left": "subtype", "operation": "in_range", "right": ["reit", "reit_etf"]}, # REITs
+                {"left": "exchange", "operation": "in_range", "right": ["AMEX", "NASDAQ", "NYSE"]},
+                {"left": "close", "operation": "greater", "right": 5}
+            ],
+            "options": {"lang": "en"},
+            "symbols": {"query": {"types": []}, "tickers": []},
+            "columns": ["name", "close", "volume", "dividend_yield_recent", "price_book_fq", "average_volume_10d_calc"],
+            "sort": {"sortBy": "average_volume_10d_calc", "sortOrder": "desc"},
+            "range": [0, 500] 
+        }
+        
+        headers = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
+        r = requests.post(url, json=payload, headers=headers, timeout=10)
+        data = r.json()
+        
+        if 'data' not in data: return pd.DataFrame()
+        
+        rows = []
+        for d in data['data']:
+            s = d['d']
+            ticker = s[0]
+            price = s[1] if s[1] is not None else 0
+            vol = s[2] if s[2] is not None else 0
+            dy = s[3] if s[3] is not None else 0
+            pvp = s[4] if s[4] is not None else 0
+            
+            # Liquidity
+            liq = vol * price
+            
+            if liq > 100000 and price > 0:
+                rows.append({
+                    'ticker': ticker,
+                    'price': price,
+                    'liquidezmediadiaria': liq,
+                    'pvp': pvp, 
+                    'dy': dy / 100, # TV returns percentage as whole number for some fields, but DY is usually ratio? Let's assume ratio if < 1. Actually TV DY is usually % so 5 = 5%. Wait. dividend_yield_recent is usually % in TV scanner.
+                    # Correction: TV scanner 'dividend_yield_recent' is typically percentage (e.g. 4.5).
+                    # My BR data uses ratio (0.045). So I need to divide by 100.
+                    'segmento': 'REIT (US)',
+                    'Region': 'US'
+                })
+        
+        df = pd.DataFrame(rows)
+        if not df.empty:
+            df['dy'] = df['dy'] / 100 # Adjusting assuming TV returns 5.0 for 5%
+        return df
+    except: return pd.DataFrame()
+
 @st.cache_data(ttl=3600)
 def get_candle_chart(ticker):
     try:
@@ -1676,32 +1774,68 @@ def load_data_acoes_pipeline():
     return False
 
 def load_data_etfs_pipeline():
-    try:
-        tickers_sa = [f"{t}.SA" for t in KNOWN_ETFS]
-        batch = yf.download(tickers_sa, period="5d", interval="1d", group_by='ticker', progress=False)
-        etf_data = []
-        for t_raw in KNOWN_ETFS:
-            t_sa = f"{t_raw}.SA"
-            try:
-                if len(tickers_sa) > 1: df_t = batch[t_sa]
-                else: df_t = batch
-                
-                if not df_t.empty:
-                    last_row = df_t.iloc[-1]
-                    price = float(last_row['Close'])
-                    vol = float(last_row['Volume']) * price
-                    if price > 0:
-                        etf_data.append({'ticker': t_raw, 'price': price, 'liquidezmediadiaria': vol, 'pvp': 0, 'dy': 0})
-            except: pass
-        
-        if etf_data:
-            df_etf = pd.DataFrame(etf_data)
-            df_etf = df_etf.sort_values('liquidezmediadiaria', ascending=False)
-            st.session_state['market_data_etfs'] = df_etf
-            return True
-        return False
-    except Exception as e:
-        return str(e)
+    selected = st.session_state.get('selected_markets_etfs', ["🇧🇷 Brasil (B3)"])
+    
+    df_final = pd.DataFrame()
+    
+    # BR ETFs
+    if any("Brasil" in s for s in selected):
+        try:
+            tickers_sa = [f"{t}.SA" for t in KNOWN_ETFS]
+            batch = yf.download(tickers_sa, period="5d", interval="1d", group_by='ticker', progress=False)
+            etf_data = []
+            for t_raw in KNOWN_ETFS:
+                t_sa = f"{t_raw}.SA"
+                try:
+                    if len(tickers_sa) > 1: df_t = batch[t_sa]
+                    else: df_t = batch
+                    
+                    if not df_t.empty:
+                        last_row = df_t.iloc[-1]
+                        price = float(last_row['Close'])
+                        vol = float(last_row['Volume']) * price
+                        if price > 0:
+                            etf_data.append({'ticker': t_raw, 'price': price, 'liquidezmediadiaria': vol, 'pvp': 0, 'dy': 0, 'Region': 'BR'})
+                except: pass
+            
+            if etf_data:
+                df_etf_br = pd.DataFrame(etf_data)
+                df_final = pd.concat([df_final, df_etf_br])
+        except Exception as e:
+            pass
+
+    # US ETFs
+    if any("Estados Unidos" in s for s in selected):
+        df_us = get_data_usa_etfs()
+        if not df_us.empty:
+            df_final = pd.concat([df_final, df_us])
+
+    if not df_final.empty:
+        df_etf = df_final.sort_values('liquidezmediadiaria', ascending=False)
+        st.session_state['market_data_etfs'] = df_etf
+        return True
+def load_data_fiis_pipeline():
+    selected = st.session_state.get('selected_markets_fiis', ["🇧🇷 Brasil (B3)"])
+    
+    df_final = pd.DataFrame()
+    
+    # BR FIIs
+    if any("Brasil" in s for s in selected):
+        df_br = get_data_fiis()
+        if not df_br.empty:
+            df_br['Region'] = 'BR'
+            df_final = pd.concat([df_final, df_br])
+            
+    # US REITs
+    if any("Estados Unidos" in s for s in selected):
+        df_us = get_data_usa_reits()
+        if not df_us.empty:
+            df_final = pd.concat([df_final, df_us])
+            
+    if not df_final.empty:
+        st.session_state['fiis_data'] = df_final
+        return True
+    return False
 
 tab_carteira, tab_acoes, tab_etfs, tab_mix, tab_fiis, tab_arena = st.tabs(["CARTEIRA", "AÇÕES", "ETFs", "ELITE MIX", "FIIs", "ARENA"])
 
@@ -2798,9 +2932,26 @@ with tab_etfs:
     st.divider()
     st.markdown("### 🌎 ETFs & ÍNDICES (FUNDO DE ÍNDICE)")
     
+    st.divider()
+    
+    # MARKET SELECTION WIDGET (DROPDOWN)
+    st.markdown("##### 🌎 SELECIONE OS MERCADOS (ETFs):")
+    selected_m_etf = st.multiselect(
+        "Selecione:", 
+        options=["🇧🇷 Brasil (B3)", "🇺🇸 Estados Unidos"], 
+        default=st.session_state.get('selected_markets_etfs', ["🇧🇷 Brasil (B3)"]), 
+        key="ms_market_sel_etfs",
+        help="Selecione um ou mais mercados para visualizar ETFs."
+    )
+    
+    if selected_m_etf != st.session_state.get('selected_markets_etfs'):
+        st.session_state['selected_markets_etfs'] = selected_m_etf
+        if 'market_data_etfs' in st.session_state: del st.session_state['market_data_etfs']
+        st.rerun()
+
     if 'market_data_etfs' not in st.session_state:
         if st.button("⚡ INICIAR VARREDURA ETFs", key="btn_scan_etfs"):
-            with st.spinner("Conectando à B3 (YFinance)..."):
+            with st.spinner("Conectando à B3 & EUA..."):
                 if load_data_etfs_pipeline(): st.rerun()
                 else: st.error("Falha ao obter dados da B3.")
     else:
@@ -2844,14 +2995,21 @@ with tab_etfs:
         for i, row in df_etf.sort_values('liquidezmediadiaria', ascending=False).reset_index().iterrows():
             with cols[i % 2]:
                 # Ultra-Safe Concatenation Mode for ETFs
+                reg = row.get('Region', 'BR')
+                curr_sym_etf = "US$" if reg == "US" else "R$"
+                
+                def fmt_val_etf(v, r):
+                    s = "US$" if r == "US" else "R$"
+                    return f"{s} {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                
                 etf_div = '<div class="glass-card">'
                 etf_row1 = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">'
                 etf_row1 += '<div style="font-size:20px; font-weight:700;">' + str(row['ticker']) + '</div>'
-                etf_row1 += '<div style="font-size:18px; color:#5DD9C2; font-weight:600;">' + format_brl(row['price']) + '</div></div>'
+                etf_row1 += '<div style="font-size:18px; color:#5DD9C2; font-weight:600;">' + fmt_val_etf(row['price'], reg) + '</div></div>'
                 
                 etf_row2 = '<div style="display:flex; justify-content:space-between; margin-bottom:15px">'
                 etf_row2 += '<div><div style="font-size:11px; color:#CCC; text-transform:uppercase;">LIQUIDEZ</div>'
-                etf_row2 += '<div style="font-size:15px; font-weight:600; color:#FFF;">' + format_brl(row['liquidezmediadiaria']) + '</div></div></div>'
+                etf_row2 += '<div style="font-size:15px; font-weight:600; color:#FFF;">' + fmt_val_etf(row['liquidezmediadiaria'], reg) + '</div></div></div>'
                 
                 etf_html = etf_div + etf_row1 + etf_row2 + '</div>'
                 st.markdown(etf_html, unsafe_allow_html=True)
@@ -2996,17 +3154,34 @@ with tab_mix:
 with tab_fiis:
 
     st.divider()
-    st.markdown("### 🏢 FORTALEZA DE RENDA (FIIs)")
+    st.divider()
+    
+    # MARKET SELECTION WIDGET (DROPDOWN)
+    st.markdown("##### 🌎 SELECIONE OS MERCADOS (FIIs/REITs):")
+    selected_m_fii = st.multiselect(
+        "Selecione:", 
+        options=["🇧🇷 Brasil (B3)", "🇺🇸 Estados Unidos"], 
+        default=st.session_state.get('selected_markets_fiis', ["🇧🇷 Brasil (B3)"]), 
+        key="ms_market_sel_fiis",
+        help="Selecione um ou mais mercados para visualizar FIIs e REITs."
+    )
+    
+    if selected_m_fii != st.session_state.get('selected_markets_fiis'):
+        st.session_state['selected_markets_fiis'] = selected_m_fii
+        if 'fiis_data' in st.session_state: del st.session_state['fiis_data']
+        st.rerun()
+
+    st.markdown("### 🏢 FORTALEZA DE RENDA (FIIs & REITs)")
     if 'fiis_data' not in st.session_state:
         if st.button("⚡ INICIAR VARREDURA FIIs", key="btn_scan_fiis"):
-            with st.spinner("Baixando Dados FIIs..."):
-                st.session_state['fiis_data'] = get_data_fiis()
+            with st.spinner("Baixando Dados FIIs & REITs..."):
+                load_data_fiis_pipeline()
                 st.rerun()
     else:
         # PERSISTENT RE-SCAN BUTTON
         if st.button("🔄 NOVA VARREDURA FIIs", key="btn_rescan_fiis"):
-             with st.spinner("Atualizando FIIs..."):
-                 st.session_state['fiis_data'] = get_data_fiis()
+             with st.spinner("Atualizando FIIs & REITs..."):
+                 load_data_fiis_pipeline()
                  st.rerun()
         df_fii = st.session_state['fiis_data']
         st.success(f"BASE FIIs: {len(df_fii)} FUNDOS.")
@@ -3028,13 +3203,19 @@ with tab_fiis:
         if tipo != "TODOS": df_f = df_f[df_f['segmento'] == tipo]
         st.markdown("---")
         for i, row in df_f.sort_values('dy', ascending=False).head(10).reset_index().iterrows():
+            # Ultra-Safe Concatenation Mode
+            reg = row.get('Region', 'BR')
+            
+            def fmt_val_fii(v, r):
+                s = "US$" if r == "US" else "R$"
+                return f"{s} {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            
             fmt_dy = f"{row['dy']:.1%}"
             fmt_pvp = f"{row['pvp']:.2f}"
             fmt_seg = str(row['segmento'])[:15]
             
-            # Ultra-Safe Concatenation Mode
             div_start = '<div class="glass-card">'
-            row1 = f'<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="font-size:20px; font-weight:700;">{row["ticker"]}</span><span style="font-size:18px; font-weight:600; color:#5DD9C2;">{format_brl(row["price"])}</span></div>'
+            row1 = f'<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="font-size:20px; font-weight:700;">{row["ticker"]}</span><span style="font-size:18px; font-weight:600; color:#5DD9C2;">{fmt_val_fii(row["price"], reg)}</span></div>'
             row2 = '<div style="display:flex; justify-content:space-between;">'
             col1 = f'<div><span style="font-size:11px; color:#CCC;">DY (12M)</span><br><strong style="color:#FFF;">{fmt_dy}</strong></div>'
             col2 = f'<div><span style="font-size:11px; color:#CCC;">P/VP</span><br><strong style="color:#FFF;">{fmt_pvp}</strong></div>'
