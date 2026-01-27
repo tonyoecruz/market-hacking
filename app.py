@@ -2056,6 +2056,14 @@ with tab_carteira:
                 # CHART 2: PROFITABILITY HISTORY (Real Transaction Replay)
                 st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>EVOLUÇÃO REAL</div>", unsafe_allow_html=True)
                 
+                # Helper for robust normalization
+                def safe_normalize(dt):
+                    try:
+                        return pd.Timestamp(dt).normalize()
+                    except:
+                        # Fallback for weird types
+                        return pd.to_datetime(dt).normalize()
+
                 with st.spinner("⏳ Processando histórico..."):
                     try:
                         # 1. Fetch Transactions
@@ -2077,8 +2085,8 @@ with tab_carteira:
                             # End: Now
                             if not df_trans.empty:
                                 df_trans['date'] = pd.to_datetime(df_trans['date'])
-                                start_date = df_trans['date'].min().normalize()
-                                end_date = datetime.now().normalize()
+                                start_date = safe_normalize(df_trans['date'].min())
+                                end_date = safe_normalize(datetime.now())
                                 
                                 # Generate Date Range (Daily)
                                 if start_date == end_date:
@@ -2110,7 +2118,7 @@ with tab_carteira:
                                         hf = hf.ffill().fillna(0)
                                         # Convert to dict of dicts for fast lookup
                                         for d in hf.index:
-                                            d_key = pd.Timestamp(d).normalize()
+                                            d_key = safe_normalize(d)
                                             price_map_history[d_key] = {}
                                             if isinstance(hf, pd.DataFrame):
                                                 for c in hf.columns:
@@ -2149,7 +2157,7 @@ with tab_carteira:
                                     # Process transactions for this day
                                     while cursor_trans < n_trans:
                                         row_t = df_trans.iloc[cursor_trans]
-                                        t_date = row_t['date'].normalize()
+                                        t_date = safe_normalize(row_t['date'])
                                         
                                         if t_date > curr_d:
                                             break # Stop, this transaction is in future of current replay step
