@@ -386,40 +386,41 @@ def remove_from_wallet(user_id, ticker, wallet_id):
         return True, "Removido!"
     return False, msg
 
+def ensure_migrations():
+    """Garante que a estrutura do banco esteja atualizada"""
+    conn = get_db_connection()
+    try:
+        # Check if column exists by selecting it (limit 0)
+        # This is db-agnostic enough for our needs
+        conn.query("SELECT wallet_id FROM transactions LIMIT 1", ttl=0)
+        return True
+    except Exception:
+        # Dictionary query failed, likely column missing. Try adding it.
+        print("Migrating: Adding wallet_id to transactions...")
+        try:
+             # Force a raw connection execute if possible, or use run_transaction
+             # Using run_transaction which wraps session
+             run_transaction("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS wallet_id BIGINT")
+             return True
+        except Exception as e2:
+             st.error(f"FATAL DB MIGRATION ERROR: {e2}")
+             return False
+
 def get_transactions(user_id):
-    sql = "SELECT ticker, quantity, price, type, date, wallet_id FROM transactions WHERE user_id = :u ORDER BY date ASC"
-    # Note: wallet_id might not be in transactions table if it wasn't added in previous migrations.
-    # Let's check the insert logic.
-    # In `add_to_wallet` log_sql: 
-    # INSERT INTO transactions (user_id, ticker, quantity, price, type, date) VALUES ...
-    # It does NOT store wallet_id currently!
-    # This is a limitation for "One Line Per Wallet" if we can't distinguish transactions by wallet.
-    # However, we can TRY to infer or just update the table layout?
-    # Updating table layout is risky/slow. 
-    # Alternative: Use the CURRENT wallet composition to separate the lines?
-    # No, that doesn't work for history.
-    # User Request: "é uma linha por Carteira".
-    # If I don't have wallet_id in transactions, I can't split history by wallet strictly accurately if assets moved.
-    # BUT, I can show the chart for the *currently selected wallet* assuming all its assets have the same history? 
-    # Or, I can check if I can join with current portfolio? No.
-    # Let's check if I can modify the transaction table?
-    # The user just created the wallets.
-    # Maybe I can just start storing wallet_id NOW?
-    # But for existing rows (if any), it's missing.
-    # The user said "criei hoje". So maybe I can migrate and wipe? Or just add the column nullable.
+    ensure_migrations() # Attempt migration
     
-    # STRATEGY CHANGE: 
-    # Visualizing "Current Holdings" History is a standard approximation. 
-    # "How did the assets I hold TODAY perform over the last 12 months?" -> The user REJECTED this.
-    # They said: "My wallets I created today... only info from Jan 2026".
-    # This implies they WANT the 'Transaction-based' view.
-    # If `transactions` table lacks `wallet_id`, I cannot separate by wallet easily.
-    # However, since they "created today", maybe I can assume for now we plot the Total, or I try to Add the Column.
-    
-    # Let's try to add `wallet_id` to transactions table via a safe migration check.
-    # And update `add_to_wallet` to save it.
-    
-    return run_query(sql, {"u": user_id})
+    # Try the full query
+    try:
+        sql = "SELECT ticker, quantity, price, type, date, wallet_id FROM transactions WHERE user_id = :u ORDER BY date ASC"
+        return run_query(sql, {"u": user_id})
+    except Exception:
+        # Fallback for when migration completely fails (avoids app crash)
+        # Return without wallet_id
+        sql_fallback = "SELECT ticker, quantity, price, type, date FROM transactions WHERE user_id = :u ORDER BY date ASC"
+        df = run_query(sql_fallback, {"u": user_id})
+        if not df.empty:
+            df['wallet_id'] = None # Manually add column so app.py logic doesn't break
+        return df
 
 # Initialize (Optional now as we don't create tables in code, but good validation)
 # init_db()
