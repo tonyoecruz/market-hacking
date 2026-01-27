@@ -510,9 +510,11 @@ def get_data_usa():
         url = "https://scanner.tradingview.com/america/scan"
         payload = {
             "filter": [
-                {"left": "type", "operation": "in_range", "right": ["stock", "dr", "fund"]},
-                {"left": "subtype", "operation": "in_range", "right": ["common", "preference", "etf", "unit", "mutual", "money", "reit", "trust"]},
-                {"left": "exchange", "operation": "in_range", "right": ["AMEX", "NASDAQ", "NYSE"]}
+                {"left": "type", "operation": "in_range", "right": ["stock", "dr"]}, # Common Stock + ADRs (Solid Companies often use ADRs)
+                {"left": "subtype", "operation": "in_range", "right": ["common", "foreign-issuer"]}, # Strict Common/Foreign
+                {"left": "exchange", "operation": "in_range", "right": ["NASDAQ", "NYSE"]}, # Exclude OTC/Pink
+                {"left": "close", "operation": "greater", "right": 2}, # Penny Stock Filter
+                {"left": "market_cap_basic", "operation": "greater", "right": 50000000} # Market Cap > $50M
             ],
             "options": {"lang": "en"},
             "symbols": {"query": {"types": []}, "tickers": []},
@@ -569,26 +571,25 @@ def get_data_usa():
             if pvp > 0 and price > 0:
                 vpa = price / pvp
             
-            if price > 0:
-                rows.append({
-                    'ticker': ticker,
-                    'price': price,
-                    'pl': pl,
-                    'pvp': pvp,
-                    'ev_ebit': ev_ebit,
-                    'roic': roic,
-                    'liquidezmediadiaria': liq, # Mapped
-                    'dy': dy,
-                    'lpa': lpa,
-                    'vpa': vpa,
-                    'Margem': margin / 100, # Margin is usually % in logic? TV sends 20.5 for 20.5%. Fundamentus logic expects decimal? Let's check filter logic.
-                    # B3 Logic: df['Margem'] = (df['ValorJusto']/df['price']) - 1 (Wait, that's Margin of Safety)
-                    # Ah, `fintech_card` shows 'POTENCIAL' which uses 'Margem'.
-                    # But Graham Logic uses 'Margem' as Safety Margin calculated from VPA/LPA.
-                    # Let's keep this as 'net_margin' for other uses if needed, but Graham calculates its own.
-                    'net_margin': margin,
-                    'IsETF': False
-                })
+            # LIQUIDITY FILTER (User Request: > 100k shares OR > $500k volume)
+            # Vol > 100,000 OR (Vol * Price) > 500,000
+            if (vol > 100000) or (liq > 500000):
+                if price > 0:
+                    rows.append({
+                        'ticker': ticker,
+                        'price': price,
+                        'pl': pl,
+                        'pvp': pvp,
+                        'ev_ebit': ev_ebit,
+                        'roic': roic,
+                        'liquidezmediadiaria': liq, # Mapped
+                        'dy': dy,
+                        'lpa': lpa,
+                        'vpa': vpa,
+                        'Margem': margin / 100, 
+                        'net_margin': margin,
+                        'IsETF': False
+                    })
                 
         return pd.DataFrame(rows)
     except Exception as e:
