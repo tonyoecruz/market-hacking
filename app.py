@@ -639,6 +639,8 @@ def get_data_usa_etfs():
                     'Region': 'US'
                 })
         return pd.DataFrame(rows)
+    except: return pd.DataFrame()
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def get_data_usa_reits():
     # BULK SCANNER API for REITs
