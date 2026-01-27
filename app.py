@@ -2053,108 +2053,102 @@ with tab_carteira:
                 st_echarts(options=options, height="280px")
 
             with h2:
-                # CHART 2: WALLET COMPARISON (Bar Chart)
-                st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>RENTABILIDADE POR CARTEIRA</div>", unsafe_allow_html=True)
+                # CHART 2: PROFITABILITY HISTORY (Line Chart - 12 Months)
+                st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>EVOLUÇÃO (12 MESES)</div>", unsafe_allow_html=True)
                 
-                # Logic: We need ALL wallets data, regardless of filter
-                # We can reuse df_w IF filter is ALL, otherwise we need to fetch all
-                if sel_filter == "TODAS":
-                    df_comp = df_w.copy()
-                else:
-                    # Fetch fresh full data for comparison
-                    df_comp = db.get_portfolio(st.session_state['user_id'])
-                    # Apply prices (reuse curr_data map if possible or re-map)
-                    df_comp['curr_price'] = 0.0
-                    df_comp['total_val'] = 0.0
-                    for idx, row in df_comp.iterrows():
-                        y_t = get_yahoo_ticker(row['ticker'])
-                        c_price = 0
-                        if isinstance(curr_data, (int, float, np.number)):
-                             if len(df_w) == 1: c_price = float(curr_data) # Risk if mismatch, but unlikely
-                        elif isinstance(curr_data, pd.Series):
-                            c_price = float(curr_data[y_t]) if y_t in curr_data else 0
-                        elif isinstance(curr_data, pd.DataFrame): 
-                            c_price = float(curr_data[y_t]) if y_t in curr_data.columns else 0
+                # Logic: Simulated Backtest
+                # We calculate what the CURRENT portfolio would be worth in the past 12 months.
+                
+                with st.spinner("⏳"):
+                    try:
+                        # 1. Prepare Data
+                        if sel_filter == "TODAS":
+                             df_hist_base = db.get_portfolio(st.session_state['user_id'])
+                        else:
+                             df_hist_base = db.get_portfolio(st.session_state['user_id'], wallet_id=target_wallet_id)
                         
-                        # Fallback from market_data
-                        if c_price == 0 and 'market_data' in st.session_state:
-                             f = st.session_state['market_data']
-                             f_p = f[f['ticker'] == row['ticker']]
-                             if not f_p.empty: c_price = float(f_p.iloc[0]['price'])
-                        
-                        if c_price == 0: c_price = row['avg_price'] # Fallback
-                        df_comp.at[idx, 'curr_price'] = c_price
-                        df_comp.at[idx, 'total_val'] = c_price * row['quantity']
+                        if not df_hist_base.empty:
+                            # 2. Get Historical Prices (Batch)
+                            hist_tickers = [get_yahoo_ticker(t) for t in df_hist_base['ticker'].unique()]
+                            if hist_tickers:
+                                # Fetch 1 Year History, Monthly Interval
+                                hist_data = yf.download(hist_tickers, period="1y", interval="1mo", progress=False)['Close']
+                                
+                                # Process Data for Chart
+                                # We want a single line for the Total Portfolio Value % Change
+                                
+                                # Clean data: Drop last row (often incomplete month) if needed, but '1mo' usually fine.
+                                # Forward Fill to handle missing data
+                                hist_data = hist_data.ffill().fillna(0)
+                                
+                                # Calculate Portfolio Value Series
+                                # V_t = Sum(Qty_i * Price_i,t)
+                                
+                                portfolio_series = pd.Series(0.0, index=hist_data.index)
+                                total_invested_static = (df_hist_base['quantity'] * df_hist_base['avg_price']).sum()
+                                
+                                valid_calc = False
+                                
+                                for _, row in df_hist_base.iterrows():
+                                    y_t = get_yahoo_ticker(row['ticker'])
+                                    qty = row['quantity']
+                                    
+                                    if isinstance(hist_data, pd.DataFrame) and y_t in hist_data.columns:
+                                         portfolio_series += hist_data[y_t] * qty
+                                         valid_calc = True
+                                    elif isinstance(hist_data, pd.Series) and str(y_t) == str(hist_data.name): # Single asset case
+                                         portfolio_series += hist_data * qty
+                                         valid_calc = True
+                                
+                                if valid_calc and total_invested_static > 0:
+                                    # Normalize to Percentage Return relative to COST BASIS (Static)
+                                    # Logic: (Value_t - Cost) / Cost
+                                    # Users usually want to see "How much I gained". 
+                                    
+                                    pct_series = ((portfolio_series - total_invested_static) / total_invested_static) * 100
+                                    
+                                    # Prepare ECharts Data
+                                    dates_str = [d.strftime('%b/%y') for d in pct_series.index]
+                                    vals = [round(v, 2) for v in pct_series.values]
+                                    
+                                    # Color: Green if last val > 0 else Red
+                                    line_color = "#00ff41" if vals[-1] >= 0 else "#ff4444"
+                                    area_color = "rgba(0, 255, 65, 0.1)" if vals[-1] >= 0 else "rgba(255, 68, 68, 0.1)"
 
-                # Group by Wallet Name
-                if not df_comp.empty and 'wallet_name' in df_comp.columns:
-                     # Fill NA wallet names
-                     df_comp['wallet_name'] = df_comp['wallet_name'].fillna("Padrão")
-                     
-                     grp = df_comp.groupby('wallet_name').apply(
-                         lambda x: pd.Series({
-                             'invested': (x['quantity'] * x['avg_price']).sum(),
-                             'current': (x['quantity'] * x['curr_price']).sum()
-                         })
-                     ).reset_index()
-                     
-                     grp['diff'] = grp['current'] - grp['invested']
-                     grp['pct'] = (grp['diff'] / grp['invested']) * 100
-                     grp = grp.fillna(0)
-                     
-                     # Prepare ECharts Data
-                     # Horizontal Bar Chart
-                     # X Axis: Pct
-                     # Y Axis: Wallet Name
-                     
-                     # Sort by performance
-                     grp = grp.sort_values('pct', ascending=True)
-                     
-                     y_data = grp['wallet_name'].tolist()
-                     x_data = [round(v, 2) for v in grp['pct'].tolist()]
-                     
-                     # Color logic: Green if > 0 else Red
-                     item_styles = [{"value": v, "itemStyle": {"color": "#00ff41" if v >= 0 else "#ff4444"}} for v in x_data]
-                     
-                     opt_bar = {
-                        "tooltip": {"trigger": "axis", "formatter": "{b}: {c}%"},
-                        "grid": {"left": "30%", "right": "10%", "top": "5%", "bottom": "5%"},
-                        "xAxis": {
-                            "type": "value", 
-                            "show": False, 
-                            "splitLine": {"show": False}
-                        },
-                        "yAxis": {
-                            "type": "category", 
-                            "data": y_data,
-                            "axisLine": {"show": False},
-                            "axisTick": {"show": False},
-                            "axisLabel": {
-                                "color": "#FFF", 
-                                "fontSize": 10, 
-                                "fontWeight": "bold",
-                                "interval": 0
-                            }
-                        },
-                        "series": [
-                            {
-                                "data": item_styles,
-                                "type": "bar",
-                                "label": {
-                                    "show": True,
-                                    "position": "right", 
-                                    "formatter": "{c}%",
-                                    "color": "#fff",
-                                    "fontSize": 10
-                                },
-                                "barWidth": "60%",
-                                "roam": False
-                            }
-                        ]
-                     }
-                     st_echarts(options=opt_bar, height="280px")
-                else:
-                    st.caption("Sem dados comparativos.")
+                                    opt_line = {
+                                        "tooltip": {"trigger": "axis", "formatter": "{b}<br/>{c}%"},
+                                        "grid": {"left": "10%", "right": "5%", "top": "10%", "bottom": "10%", "containLabel": True},
+                                        "xAxis": {
+                                            "type": "category",
+                                            "boundaryGap": False,
+                                            "data": dates_str,
+                                            "axisLine": {"show": False},
+                                            "axisTick": {"show": False},
+                                            "axisLabel": {"color": "#888", "fontSize": 10}
+                                        },
+                                        "yAxis": {
+                                            "type": "value",
+                                            "splitLine": {"show": True, "lineStyle": {"color": "#333", "type": "dashed"}},
+                                            "axisLabel": {"color": "#888", "fontSize": 10, "formatter": "{value}%"}
+                                        },
+                                        "series": [{
+                                            "data": vals,
+                                            "type": "line",
+                                            "smooth": True,
+                                            "showSymbol": False,
+                                            "lineStyle": {"width": 3, "color": line_color},
+                                            "areaStyle": {"color": area_color}
+                                        }]
+                                    }
+                                    st_echarts(options=opt_line, height="280px")
+                                else:
+                                    st.info("Dados históricos insuficientes para gráfico.")
+                            else:
+                               st.caption("Sem ativos para histórico.")     
+                        else:
+                             st.caption("Carteira vazia.")
+                    except Exception as e:
+                        st.error(f"Erro gráfico: {str(e)}")
 
 
             with h3:
