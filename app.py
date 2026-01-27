@@ -502,6 +502,99 @@ def get_data_fiis():
         return df
     except: return pd.DataFrame()
 
+@st.cache_data(show_spinner=False, ttl=3600)
+def get_data_usa():
+    # BULK SCANNER API (TradingView Source - Public Endpoint)
+    # Fetches ~8000+ US Stocks with all fundamental indicators instantly
+    try:
+        url = "https://scanner.tradingview.com/america/scan"
+        payload = {
+            "filter": [
+                {"left": "type", "operation": "in_range", "right": ["stock", "dr", "fund"]},
+                {"left": "subtype", "operation": "in_range", "right": ["common", "preference", "etf", "unit", "mutual", "money", "reit", "trust"]},
+                {"left": "exchange", "operation": "in_range", "right": ["AMEX", "NASDAQ", "NYSE"]}
+            ],
+            "options": {"lang": "en"},
+            "symbols": {"query": {"types": []}, "tickers": []},
+            "columns": [
+                "name", 
+                "close", 
+                "volume", 
+                "market_cap_basic",
+                "price_earnings_ttm", 
+                "price_book_fq", 
+                "enterprise_value_ebitda_ttm", 
+                "return_on_invested_capital_fq", 
+                "dividend_yield_recent",
+                "earnings_per_share_basic_ttm",
+                "net_margin_ttm"
+            ],
+            "sort": {"sortBy": "market_cap_basic", "sortOrder": "desc"},
+            "range": [0, 8000] 
+        }
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Content-Type": "application/json"
+        }
+        
+        r = requests.post(url, json=payload, headers=headers, timeout=10)
+        data = r.json()
+        
+        if 'data' not in data: return pd.DataFrame()
+        
+        rows = []
+        for d in data['data']:
+            s = d['d'] # Data array matches columns order
+            # Mapping:
+            # 0: name, 1: close, 2: volume, 3: mcap, 4: pl, 5: pvp, 6: ev_ebit, 7: roic, 8: dy, 9: lpa, 10: margin
+            
+            ticker = s[0]
+            price = s[1] if s[1] is not None else 0
+            
+            # Liquidity approximation (Volume * Price)
+            vol = s[2] if s[2] is not None else 0
+            liq = vol * price
+            
+            pl = s[4] if s[4] is not None else 0
+            pvp = s[5] if s[5] is not None else 0
+            ev_ebit = s[6] if s[6] is not None else 0
+            roic = s[7] if s[7] is not None else 0
+            dy = s[8] if s[8] is not None else 0 # TV returns decimal? Test showed 0.02 etc.
+            lpa = s[9] if s[9] is not None else 0
+            margin = s[10] if s[10] is not None else 0
+            
+            # Derived VPA for Graham (P/VP = P / VPA -> VPA = P / PVP)
+            vpa = 0
+            if pvp > 0 and price > 0:
+                vpa = price / pvp
+            
+            if price > 0:
+                rows.append({
+                    'ticker': ticker,
+                    'price': price,
+                    'pl': pl,
+                    'pvp': pvp,
+                    'ev_ebit': ev_ebit,
+                    'roic': roic,
+                    'liquidezmediadiaria': liq, # Mapped
+                    'dy': dy,
+                    'lpa': lpa,
+                    'vpa': vpa,
+                    'Margem': margin / 100, # Margin is usually % in logic? TV sends 20.5 for 20.5%. Fundamentus logic expects decimal? Let's check filter logic.
+                    # B3 Logic: df['Margem'] = (df['ValorJusto']/df['price']) - 1 (Wait, that's Margin of Safety)
+                    # Ah, `fintech_card` shows 'POTENCIAL' which uses 'Margem'.
+                    # But Graham Logic uses 'Margem' as Safety Margin calculated from VPA/LPA.
+                    # Let's keep this as 'net_margin' for other uses if needed, but Graham calculates its own.
+                    'net_margin': margin,
+                    'IsETF': False
+                })
+                
+        return pd.DataFrame(rows)
+    except Exception as e:
+        # print(f"Error fetching US Data: {e}")
+        return pd.DataFrame()
+
 @st.cache_data(ttl=3600)
 def get_candle_chart(ticker):
     try:
@@ -1465,8 +1558,22 @@ def edit_position_dialog(ticker, current_qty, current_avg):
 # ------------------------------------------------------------------------------
 # LAYOUT & NAVIGATION (TOP NAVBAR)
 # ------------------------------------------------------------------------------
-# Remove Sidebar content (Terminal Mode leftovers)
-st.sidebar.empty()
+# ------------------------------------------------------------------------------
+# LAYOUT & NAVIGATION (TOP NAVBAR)
+# ------------------------------------------------------------------------------
+# MARKET SELECTOR (SIDEBAR)
+if 'market_region' not in st.session_state: st.session_state['market_region'] = 'BR'
+
+with st.sidebar:
+    st.markdown("### 🌐 MERCADO")
+    m_sel = st.radio("Selecione a Região:", ["🇧🇷 Brasil (B3)", "🇺🇸 Estados Unidos"], index=0 if st.session_state['market_region'] == 'BR' else 1)
+    
+    new_region = 'BR' if "Brasil" in m_sel else 'US'
+    if new_region != st.session_state['market_region']:
+        st.session_state['market_region'] = new_region
+        # Clear data to force reload
+        if 'market_data' in st.session_state: del st.session_state['market_data']
+        st.rerun()
 
 # Custom Top Header
 # Custom Top Header - RENOVATED
@@ -1521,11 +1628,23 @@ with c3:
 # HELPER FUNCTIONS FOR DATA LOADING (PIPELINES)
 # ------------------------------------------------------------------------------
 def load_data_acoes_pipeline():
-    df_a = get_data_acoes() 
+    region = st.session_state.get('market_region', 'BR')
+    
+    if region == 'US':
+        df_a = get_data_usa()
+    else:
+        df_a = get_data_acoes() 
+        
     if not df_a.empty:
-        # FILTER: Exclude ETFs
-        df_a['IsETF'] = df_a['ticker'].apply(is_likely_etf)
-        df_acoes = df_a[~df_a['IsETF']].copy()
+        # FILTER: Exclude ETFs (Only if BR, as US list handles it differently or mixed)
+        if region == 'BR':
+            df_a['IsETF'] = df_a['ticker'].apply(is_likely_etf)
+            df_acoes = df_a[~df_a['IsETF']].copy()
+        else:
+            # US Pipeline currently assumes stocks, but let's keep it safe
+            # If IsETF column exists, use it, else False
+            if 'IsETF' not in df_a.columns: df_a['IsETF'] = False
+            df_acoes = df_a.copy()
         
         # Apply filters
         df_acoes = df_acoes[(df_acoes['liquidezmediadiaria']>0) & (df_acoes['price']>0)].copy()
@@ -1649,7 +1768,14 @@ with tab_carteira:
         st.info("Sua carteira está vazia. Comece adicionando ativos nas abas 'AÇÕES' ou 'FIIs'.")
     else:
         # 2. Update Prices
-        tickers = [f"{t}.SA" for t in df_w['ticker'].unique()]
+        # LOGIC: BR tickers usually have digits (PETR4, ALZR11). US tickers are letters only (AAPL, MSFT).
+        # Exception: BDRs (AAPL34).
+        # Heuristic: If has digit -> .SA. Else -> US (No suffix).
+        def get_yahoo_ticker(t):
+             has_digit = any(char.isdigit() for char in t)
+             return f"{t}.SA" if has_digit else t
+
+        tickers = [get_yahoo_ticker(t) for t in df_w['ticker'].unique()]
         try:
             raw_data = yf.download(tickers, period="5d", progress=False)['Close']
             if not raw_data.empty: curr_data = raw_data.ffill().iloc[-1]
@@ -1664,15 +1790,15 @@ with tab_carteira:
         df_w['total_val'] = 0.0
         
         for idx, row in df_w.iterrows():
-            t_sa = f"{row['ticker']}.SA"
+            y_t = get_yahoo_ticker(row['ticker'])
             c_price = 0
             # Price Logic
             if isinstance(curr_data, (int, float, np.number)):
                  if len(df_w) == 1: c_price = float(curr_data)
             elif isinstance(curr_data, pd.Series):
-                c_price = float(curr_data[t_sa]) if t_sa in curr_data else 0
+                c_price = float(curr_data[y_t]) if y_t in curr_data else 0
             elif isinstance(curr_data, pd.DataFrame): 
-                c_price = float(curr_data[t_sa]) if t_sa in curr_data.columns else 0
+                c_price = float(curr_data[y_t]) if y_t in curr_data.columns else 0
             
             # Fallback
             if c_price == 0 and 'market_data' in st.session_state:
@@ -1689,6 +1815,15 @@ with tab_carteira:
 
         variation = total_current - total_invested
         var_pct = (variation / total_invested) if total_invested > 0 else 0
+        
+        # Determine Currency Symbol for Display
+        # If we have mixed assets, this is tricky. For now, check Market Region logic.
+        curr_sym = "US$" if st.session_state.get('market_region') == 'US' else "R$"
+        # If we are in "Global" or mixed, we might need mixed display. 
+        # But for total, let's assume the user context dominates.
+        
+        def fmt_curr(v):
+             return f"{curr_sym} {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
         # WRAPPER FOR GLASS CARD EFFECT
         with st.container(border=True):
@@ -1739,7 +1874,7 @@ with tab_carteira:
 
                 # ECharts Options (Strict User Schema)
                 options = {
-                    "tooltip": {"trigger": "item", "formatter": "{b}: R$ {c} ({d}%)"},
+                    "tooltip": {"trigger": "item", "formatter": "{b}: " + curr_sym + " {c} ({d}%)"},
                     "legend": {"top": "0%", "left": "center", "textStyle": {"color": "#fff"}}, # Moved simple legend to top
                     "series": [
                         {
@@ -1774,8 +1909,6 @@ with tab_carteira:
                     ]
                 }
                 st_echarts(options=options, height="280px")
-                
-                st_echarts(options=opt_ring, height="280px")
 
             with h2:
                 # CHART 2: WALLET COMPARISON (Bar Chart)
@@ -1792,14 +1925,14 @@ with tab_carteira:
                     df_comp['curr_price'] = 0.0
                     df_comp['total_val'] = 0.0
                     for idx, row in df_comp.iterrows():
-                        t_sa = f"{row['ticker']}.SA"
+                        y_t = get_yahoo_ticker(row['ticker'])
                         c_price = 0
                         if isinstance(curr_data, (int, float, np.number)):
                              if len(df_w) == 1: c_price = float(curr_data) # Risk if mismatch, but unlikely
                         elif isinstance(curr_data, pd.Series):
-                            c_price = float(curr_data[t_sa]) if t_sa in curr_data else 0
+                            c_price = float(curr_data[y_t]) if y_t in curr_data else 0
                         elif isinstance(curr_data, pd.DataFrame): 
-                            c_price = float(curr_data[t_sa]) if t_sa in curr_data.columns else 0
+                            c_price = float(curr_data[y_t]) if y_t in curr_data.columns else 0
                         
                         # Fallback from market_data
                         if c_price == 0 and 'market_data' in st.session_state:
@@ -1898,7 +2031,7 @@ with tab_carteira:
                         st.rerun()
 
                 show = st.session_state['privacy_show']
-                val_display = format_brl(total_current) if show else "R$ ---"
+                val_display = fmt_curr(total_current) if show else f"{curr_sym} ---"
                 
                 # ---------------- ECHARTS PROFIT RING ----------------
                 profit_val = total_current - total_invested
@@ -1906,7 +2039,7 @@ with tab_carteira:
                 
                 var_pct_val = (profit_val / total_invested) if total_invested > 0 else 0
                 pct_fmt = f"{'+' if is_profit else ''}{var_pct_val:.1%}" if show else "XX%"
-                money_diff = format_brl(profit_val) if show else "R$ ---"
+                money_diff = fmt_curr(profit_val) if show else f"{curr_sym} ---"
                 pct_color = "#00ff41" if is_profit else "#ff0055"
                 if not show: pct_color = "#AAA"
                 
@@ -1929,7 +2062,7 @@ with tab_carteira:
 
                 # ECharts Rich Text for Center Info
                 opt_ring = {
-                    "tooltip": {"trigger": "item", "formatter": "{b}: R$ {c} ({d}%)"},
+                    "tooltip": {"trigger": "item", "formatter": "{b}: " + curr_sym + " {c} ({d}%)"},
                     "title": {
                         "text": '{label|SALDO BRUTO}\n{val|' + str(val_display) + '}\n{line|────────}\n{sublabel|RENTABILIDADE}\n{subval|' + str(pct_fmt) + ' (' + str(money_diff) + ')}',
                         "left": "center",
@@ -2498,42 +2631,10 @@ with tab_acoes:
     if 'market_data' not in st.session_state:
         if st.button("⚡ INICIAR VARREDURA AÇÕES", key="btn_scan_acoes"):
             with st.spinner("Baixando Dados Ações..."):
-                df_a = get_data_acoes() # Assuming get_data_acoes() returns the full dataframe
-                if df_a.empty:
-                    st.warning("Sem dados de ações no momento.")
-                else:
-                    # FILTER: Exclude ETFs from this tab (using is_likely_etf logic)
-                    # We must filter out ETFs because they don't have P/L, ROIC etc like stocks
-                    df_a['IsETF'] = df_a['ticker'].apply(is_likely_etf)
-                    df_acoes = df_a[~df_a['IsETF']].copy()
-                    
-                    # --- RISK FILTERING (GLOBAL REMOVED) ---
-                    # User wants Risky Assets available in Search (Mira Laser)
-                    # We will filter them ONLY in the Top 10 Lists logic later.
-                    # df_acoes = filter_risky_stocks(df_acoes) <--- REMOVED
-                    
-                    # Apply general filters for liquidity and price
-                    df_acoes = df_acoes[(df_acoes['liquidezmediadiaria']>0) & (df_acoes['price']>0)].copy()
-
-                    # GRAHAM FORMULA
-                    df_acoes['graham_term'] = (22.5 * df_acoes['lpa'] * df_acoes['vpa']).apply(lambda x: x if x>0 else 0)
-                    df_acoes['ValorJusto'] = np.sqrt(df_acoes['graham_term'])
-                    df_acoes['Margem'] = (df_acoes['ValorJusto']/df_acoes['price']) - 1
-                    
-                    # MAGIC FORMULA
-                    # High ROIC + Low EV/EBIT
-                    df_magic_calc = df_acoes[(df_acoes['ev_ebit']>0) & (df_acoes['roic']>0)].copy()
-                    if not df_magic_calc.empty:
-                        df_magic_calc['R_EV'] = df_magic_calc['ev_ebit'].rank(ascending=True)
-                        df_magic_calc['R_ROIC'] = df_magic_calc['roic'].rank(ascending=False)
-                        df_magic_calc['Score'] = df_magic_calc['R_EV'] + df_magic_calc['R_ROIC']
-                        df_magic_calc['MagicRank'] = df_magic_calc['Score'].rank(ascending=True)
-                    
-                    # Merge Magic Formula ranks back to the main df_acoes
-                    df_acoes = df_acoes.merge(df_magic_calc[['ticker', 'Score', 'MagicRank', 'R_EV', 'R_ROIC']], on='ticker', how='left')
-                    
-                    st.session_state['market_data'] = df_acoes
+                if load_data_acoes_pipeline():
                     st.rerun()
+                else:
+                    st.warning("Sem dados de ações no momento.")
     else:
         # PERSISTENT RE-SCAN BUTTON
         if st.button("🔄 NOVA VARREDURA", key="btn_rescan_acoes"):
@@ -2542,7 +2643,8 @@ with tab_acoes:
                  st.rerun()
 
         df = st.session_state['market_data']
-        st.success(f"BASE AÇÕES: {len(df)} ATIVOS.")
+        region_label = "B3 (BRASIL)" if st.session_state.get('market_region', 'BR') == 'BR' else "EUA (LISTA TOP)"
+        st.success(f"BASE AÇÕES: {len(df)} ATIVOS [{region_label}]")
         
         st.markdown("### 🎯 MIRA LASER (IA)")
         c_sel, c_btn, c_unit, _ = st.columns([2, 1, 1.5, 4.5])
@@ -2589,7 +2691,14 @@ with tab_acoes:
         df_fin = df[df['liquidezmediadiaria'] > min_liq].copy()
         
         
-        # New Fintech Card Logic
+        # New Fintech Card Logic (With Dynamic Currency)
+        def format_money(val):
+            sym = "R$" if st.session_state.get('market_region', 'BR') == 'BR' else "US$"
+            try:
+                if isinstance(val, str): val = float(val)
+                return f"{sym} {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            except: return f"{sym} 0,00"
+
         def fintech_card(t, p, l1, v1, l2, v2, idx):
             sim_html = ""
             if 'invest_acoes' in st.session_state and st.session_state['invest_acoes'] > 0:
@@ -2602,7 +2711,7 @@ with tab_acoes:
             div_start = '<div class="glass-card">'
             row1 = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">'
             row1 += '<div style="font-size:20px; font-weight:700;">' + str(t) + '</div>'
-            row1 += '<div style="font-size:18px; color:#5DD9C2; font-weight:600;">' + format_brl(p) + '</div></div>'
+            row1 += '<div style="font-size:18px; color:#5DD9C2; font-weight:600;">' + format_money(p) + '</div></div>'
             
             row2 = '<div style="display:flex; justify-content:space-between;">'
             col1 = '<div><div style="font-size:11px; color:#CCC; text-transform:uppercase;">' + str(l1) + '</div>'
@@ -2626,7 +2735,7 @@ with tab_acoes:
                  st.info("Nenhuma ação no padrão Graham hoje.")
             else:
                 for i, r in df_g.reset_index().iterrows():
-                    st.markdown(fintech_card(r['ticker'], r['price'], "VALOR JUSTO", format_brl(r['ValorJusto']), "POTENCIAL", f"{r['Margem']:.1%}", i+1), unsafe_allow_html=True)
+                    st.markdown(fintech_card(r['ticker'], r['price'], "VALOR JUSTO", format_money(r['ValorJusto']), "POTENCIAL", f"{r['Margem']:.1%}", i+1), unsafe_allow_html=True)
                     bc1, bc2 = st.columns([4, 1])
                     with bc1: 
                         if st.button(f"VER DETALHES", key=f"g_{r['ticker']}"): show_graham_details(r['ticker'], r)
