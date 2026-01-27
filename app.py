@@ -1597,10 +1597,23 @@ with tab_carteira:
     # CSS to force black text on Selectbox for visibility
     st.markdown("""
     <style>
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+    /* Force Text Color Black for the Selected Value */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] div {
         color: black !important;
-        background-color: white !important;
+        -webkit-text-fill-color: black !important;
     }
+    
+    /* Ensure the container background is white */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        background-color: white !important;
+        border-color: #ccc !important;
+    }
+    
+    /* Input/Placeholder text specific fix */
+    div[data-testid="stSelectbox"] input {
+        color: black !important;
+    }
+
     div[data-testid="stSelectbox"] p {
         color: #eee !important; /* Label Color */
         font-weight: bold;
@@ -1680,8 +1693,8 @@ with tab_carteira:
         # WRAPPER FOR GLASS CARD EFFECT
         with st.container(border=True):
             # 3. HERO DASHBOARD (Glass Layout - RENOVATED)
-            # Balanced Columns
-            h1, h2 = st.columns([1, 1])
+            # Balanced Columns: Allocation | Comparison | Total
+            h1, h2, h3 = st.columns([1, 1.2, 1])
             
             # --- LOGIC: ASSET CLASSIFICATION ---
             def get_asset_class(ticker):
@@ -1762,8 +1775,116 @@ with tab_carteira:
                 }
                 st_echarts(options=options, height="280px")
                 
+                st_echarts(options=opt_ring, height="280px")
+
             with h2:
+                # CHART 2: WALLET COMPARISON (Bar Chart)
+                st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>RENTABILIDADE POR CARTEIRA</div>", unsafe_allow_html=True)
+                
+                # Logic: We need ALL wallets data, regardless of filter
+                # We can reuse df_w IF filter is ALL, otherwise we need to fetch all
+                if sel_filter == "TODAS":
+                    df_comp = df_w.copy()
+                else:
+                    # Fetch fresh full data for comparison
+                    df_comp = db.get_portfolio(st.session_state['user_id'])
+                    # Apply prices (reuse curr_data map if possible or re-map)
+                    df_comp['curr_price'] = 0.0
+                    df_comp['total_val'] = 0.0
+                    for idx, row in df_comp.iterrows():
+                        t_sa = f"{row['ticker']}.SA"
+                        c_price = 0
+                        if isinstance(curr_data, (int, float, np.number)):
+                             if len(df_w) == 1: c_price = float(curr_data) # Risk if mismatch, but unlikely
+                        elif isinstance(curr_data, pd.Series):
+                            c_price = float(curr_data[t_sa]) if t_sa in curr_data else 0
+                        elif isinstance(curr_data, pd.DataFrame): 
+                            c_price = float(curr_data[t_sa]) if t_sa in curr_data.columns else 0
+                        
+                        # Fallback from market_data
+                        if c_price == 0 and 'market_data' in st.session_state:
+                             f = st.session_state['market_data']
+                             f_p = f[f['ticker'] == row['ticker']]
+                             if not f_p.empty: c_price = float(f_p.iloc[0]['price'])
+                        
+                        if c_price == 0: c_price = row['avg_price'] # Fallback
+                        df_comp.at[idx, 'curr_price'] = c_price
+                        df_comp.at[idx, 'total_val'] = c_price * row['quantity']
+
+                # Group by Wallet Name
+                if not df_comp.empty and 'wallet_name' in df_comp.columns:
+                     # Fill NA wallet names
+                     df_comp['wallet_name'] = df_comp['wallet_name'].fillna("Padrão")
+                     
+                     grp = df_comp.groupby('wallet_name').apply(
+                         lambda x: pd.Series({
+                             'invested': (x['quantity'] * x['avg_price']).sum(),
+                             'current': (x['quantity'] * x['curr_price']).sum()
+                         })
+                     ).reset_index()
+                     
+                     grp['diff'] = grp['current'] - grp['invested']
+                     grp['pct'] = (grp['diff'] / grp['invested']) * 100
+                     grp = grp.fillna(0)
+                     
+                     # Prepare ECharts Data
+                     # Horizontal Bar Chart
+                     # X Axis: Pct
+                     # Y Axis: Wallet Name
+                     
+                     # Sort by performance
+                     grp = grp.sort_values('pct', ascending=True)
+                     
+                     y_data = grp['wallet_name'].tolist()
+                     x_data = [round(v, 2) for v in grp['pct'].tolist()]
+                     
+                     # Color logic: Green if > 0 else Red
+                     item_styles = [{"value": v, "itemStyle": {"color": "#00ff41" if v >= 0 else "#ff4444"}} for v in x_data]
+                     
+                     opt_bar = {
+                        "tooltip": {"trigger": "axis", "formatter": "{b}: {c}%"},
+                        "grid": {"left": "30%", "right": "10%", "top": "5%", "bottom": "5%"},
+                        "xAxis": {
+                            "type": "value", 
+                            "show": False, 
+                            "splitLine": {"show": False}
+                        },
+                        "yAxis": {
+                            "type": "category", 
+                            "data": y_data,
+                            "axisLine": {"show": False},
+                            "axisTick": {"show": False},
+                            "axisLabel": {
+                                "color": "#FFF", 
+                                "fontSize": 10, 
+                                "fontWeight": "bold",
+                                "interval": 0
+                            }
+                        },
+                        "series": [
+                            {
+                                "data": item_styles,
+                                "type": "bar",
+                                "label": {
+                                    "show": True,
+                                    "position": "right", 
+                                    "formatter": "{c}%",
+                                    "color": "#fff",
+                                    "fontSize": 10
+                                },
+                                "barWidth": "60%",
+                                "roam": False
+                            }
+                        ]
+                     }
+                     st_echarts(options=opt_bar, height="280px")
+                else:
+                    st.caption("Sem dados comparativos.")
+
+
+            with h3:
                 # Privacy Logic
+
                 if 'privacy_show' not in st.session_state: st.session_state['privacy_show'] = False
                 
                 # Header with Privacy Button aligned
