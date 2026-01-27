@@ -2634,14 +2634,14 @@ with tab_carteira:
 with tab_acoes:
 
     st.divider()
-    # MARKET SELECTION WIDGET (PILLS UI)
+    # MARKET SELECTION WIDGET (DROPDOWN MENU)
     st.markdown("##### 🌎 SELECIONE OS MERCADOS:")
-    selected_m = st.pills(
+    selected_m = st.multiselect(
         "Selecione:", 
         options=["🇧🇷 Brasil (B3)", "🇺🇸 Estados Unidos"], 
         default=st.session_state.get('selected_markets', ["🇧🇷 Brasil (B3)"]), 
-        selection_mode="multi", 
-        key="ms_market_sel"
+        key="ms_market_sel",
+        help="Selecione um ou mais mercados para visualizar."
     )
         
     # Logic to trigger update if changed
