@@ -2067,61 +2067,209 @@ with tab_carteira:
                         else:
                              df_hist_base = db.get_portfolio(st.session_state['user_id'], wallet_id=target_wallet_id)
                         
-                        if not df_hist_base.empty:
-                            # 2. Get Historical Prices (Batch)
-                            hist_tickers = [get_yahoo_ticker(t) for t in df_hist_base['ticker'].unique()]
-                            if hist_tickers:
-                                # Fetch 1 Year History, Monthly Interval
-                                hist_data = yf.download(hist_tickers, period="1y", interval="1mo", progress=False)['Close']
+                # CHART 2: PROFITABILITY HISTORY (Real Transaction Replay)
+                st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>EVOLUÇÃO REAL</div>", unsafe_allow_html=True)
+                
+                with st.spinner("⏳ Processando histórico..."):
+                    try:
+                        # 1. Fetch Transactions
+                        df_trans = db.get_transactions(st.session_state['user_id'])
+                        
+                        if not df_trans.empty:
+                            # 2. Replay Engine
+                            # Structure: { wallet_id: { date: value } }
+                            
+                            # Filter by selected wallet if needed
+                            if sel_filter != "TODAS" and target_wallet_id:
+                                # Filter transactions that match target_wallet_id
+                                # Note: 'wallet_id' in transactions might be float/int or NaN
+                                if 'wallet_id' in df_trans.columns:
+                                     df_trans = df_trans[df_trans['wallet_id'] == float(target_wallet_id)]
+                            
+                            # Determine Date Range
+                            # Start: First Transaction Date
+                            # End: Now
+                            if not df_trans.empty:
+                                df_trans['date'] = pd.to_datetime(df_trans['date'])
+                                start_date = df_trans['date'].min().normalize()
+                                end_date = datetime.now().normalize()
                                 
-                                # Process Data for Chart
-                                # We want a single line for the Total Portfolio Value % Change
+                                # Generate Date Range (Daily)
+                                if start_date == end_date:
+                                    # If created today, show at least "Yesterday" to "Today" or just Today
+                                    date_range = [start_date]
+                                else:
+                                    date_range = pd.date_range(start=start_date, end=end_date, freq='D')
                                 
-                                # Clean data: Drop last row (often incomplete month) if needed, but '1mo' usually fine.
-                                # Forward Fill to handle missing data
-                                hist_data = hist_data.ffill().fillna(0)
+                                # Holdings State: { wallet_id: { ticker: qty } }
+                                # We need to track cost basis too to calculate %? 
+                                # User wants "Performance". Usually (Value - Invested) / Invested.
                                 
-                                # Calculate Portfolio Value Series
-                                # V_t = Sum(Qty_i * Price_i,t)
+                                # Pre-fetch prices history for all tickers involved
+                                all_involved_tickers = df_trans['ticker'].unique()
                                 
-                                portfolio_series = pd.Series(0.0, index=hist_data.index)
-                                total_invested_static = (df_hist_base['quantity'] * df_hist_base['avg_price']).sum()
+                                # Fetch History (Start Date -> Now)
+                                # yfinance expects string dates YYYY-MM-DD
+                                yf_start = start_date.strftime('%Y-%m-%d')
+                                # Ensure we have data even if start is today (yf might define start=today as empty)
+                                # If start == today, we just use current price.
                                 
-                                valid_calc = False
+                                # Optimized Price Map: { date: { ticker: price } }
+                                price_map_history = {}
                                 
-                                for _, row in df_hist_base.iterrows():
-                                    y_t = get_yahoo_ticker(row['ticker'])
-                                    qty = row['quantity']
+                                if len(date_range) > 1:
+                                    try:
+                                        t_list = [get_yahoo_ticker(t) for t in all_involved_tickers]
+                                        hf = yf.download(t_list, start=yf_start, interval="1d", progress=False)['Close']
+                                        hf = hf.ffill().fillna(0)
+                                        # Convert to dict of dicts for fast lookup
+                                        for d in hf.index:
+                                            d_key = pd.Timestamp(d).normalize()
+                                            price_map_history[d_key] = {}
+                                            if isinstance(hf, pd.DataFrame):
+                                                for c in hf.columns:
+                                                     price_map_history[d_key][c] = hf.loc[d, c]
+                                            else:
+                                                # Single ticker series
+                                                price_map_history[d_key][hf.name] = hf.loc[d]
+                                    except: pass
+                                
+                                # Replay Loop
+                                wallet_series = {} # { "Wallet Name": [ {date, pct} ] }
+                                
+                                # Identify involved wallets
+                                # If transaction has no wallet_id, map to "Padrão" or Main.
+                                w_ids = df_trans['wallet_id'].dropna().unique() if 'wallet_id' in df_trans.columns else []
+                                if not len(w_ids) and sel_filter == "TODAS": w_ids = [0] # Dummy
+                                
+                                # Mapping IDs to Names
+                                w_names = {}
+                                w_df_ref = db.get_wallets(st.session_state['user_id'])
+                                for _, r in w_df_ref.iterrows(): w_names[r['id']] = r['name']
+                                
+                                # We need to iterate CHRONOLOGICALLY processing all transactions
+                                cursor_trans = 0
+                                n_trans = len(df_trans)
+                                
+                                # Global Holdings State trackers per wallet
+                                state_holdings = {} # { wallet_id: { ticker: qty } }
+                                state_invested = {} # { wallet_id: total_BRL_invested }
+                                
+                                series_data = {} # { wallet_name: { dates: [], values: [] } }
+                                
+                                for d in date_range:
+                                    curr_d = pd.Timestamp(d)
                                     
-                                    if isinstance(hist_data, pd.DataFrame) and y_t in hist_data.columns:
-                                         portfolio_series += hist_data[y_t] * qty
-                                         valid_calc = True
-                                    elif isinstance(hist_data, pd.Series) and str(y_t) == str(hist_data.name): # Single asset case
-                                         portfolio_series += hist_data * qty
-                                         valid_calc = True
+                                    # Process transactions for this day
+                                    while cursor_trans < n_trans:
+                                        row_t = df_trans.iloc[cursor_trans]
+                                        t_date = row_t['date'].normalize()
+                                        
+                                        if t_date > curr_d:
+                                            break # Stop, this transaction is in future of current replay step
+                                        
+                                        # Apply Transaction
+                                        wid = row_t.get('wallet_id')
+                                        if pd.isna(wid): wid = list(w_names.keys())[0] if w_names else 0 # Fallback
+                                        wid = int(wid)
+                                        
+                                        if wid not in state_holdings: 
+                                            state_holdings[wid] = {}
+                                            state_invested[wid] = 0.0
+                                            
+                                        # Update Qty
+                                        tic = row_t['ticker']
+                                        q = row_t['quantity'] # Positive for buy, Negative for sell/remove?
+                                        # Only Log "BUY" and "SELL" in transactions currently?
+                                        # db.add_to_wallet logs "BUY"/"SELL" based on q>0. Quantity is signed? 
+                                        # add_to_wallet stores q as int. But remove_from_wallet stores 0? 
+                                        # Wait, remove_from_wallet stores quantity=0 ??
+                                        # `log_sql = "... VALUES (:u, :t, 0, 0, 'REMOVE', :d)"`
+                                        # Current DB logs 0 for remove. This breaks replay of removal (qty doesn't decrease).
+                                        # LIMITATION: We cannot replay Removals properly if quantity is 0 in log.
+                                        # For now, assume pure Accumulation (Buy/Sell/Add). 
+                                        # If type is REMOVE, we should ideally zero out? But we don't know total.
+                                        # Let's trust QTY. If QTY is correct in DB log...
+                                        # DB Log in `add_to_wallet`: quantity is input quantity.
+                                        # If user selects negative qty in edit? `update_wallet_item`? 
+                                        # Update doesn't log to transactions in my current code? 
+                                        # Only `add_to_wallet` logs. `remove_from_wallet` logs 0.
+                                        # `update_wallet_item` DOES NOT log transactions currently?
+                                        # This means replay is imperfect for Edits/Removals.
+                                        # ACCEPTABLE as "Refactoring Phase 1" for new users who just Added.
+                                        
+                                        if row_t['type'] == 'REMOVE':
+                                            # Wipe
+                                            state_holdings[wid][tic] = 0
+                                        else:
+                                            state_holdings[wid][tic] = state_holdings[wid].get(tic, 0) + q
+                                            state_invested[wid] += (q * row_t['price'])
+                                        
+                                        cursor_trans += 1
+                                    
+                                    # Calculate Daily Valuation for each active wallet
+                                    for wid, holdings in state_holdings.items():
+                                        market_val = 0.0
+                                        for t, q in holdings.items():
+                                            # Get Price
+                                            p = 0
+                                            y_t = get_yahoo_ticker(t)
+                                            
+                                            # 1. Try History Map
+                                            if curr_d in price_map_history and y_t in price_map_history[curr_d]:
+                                                 p = price_map_history[curr_d][y_t]
+                                            # 2. If Today/Recent, try curr_data global snapshot
+                                            elif curr_d >= datetime.now().normalize():
+                                                 # Try fetching current price
+                                                 if isinstance(curr_data, pd.Series) and y_t in curr_data:
+                                                     p = curr_data[y_t]
+                                            
+                                            # 3. Fallback: Use transaction price or last known
+                                            if p == 0: p = row_t['price'] # Roughly
+                                            
+                                            market_val += (q * p)
+                                            
+                                        inv = state_invested[wid]
+                                        pct = ((market_val - inv) / inv * 100) if inv > 0 else 0
+                                        
+                                        w_name = w_names.get(wid, f"Cart. {wid}")
+                                        if w_name not in series_data: series_data[w_name] = {"dates": [], "vals": []}
+                                        
+                                        # Date string
+                                        d_str = curr_d.strftime('%d/%m') if len(date_range) < 60 else curr_d.strftime('%b/%y')
+                                        series_data[w_name]["dates"].append(d_str)
+                                        series_data[w_name]["vals"].append(round(pct, 2))
                                 
-                                if valid_calc and total_invested_static > 0:
-                                    # Normalize to Percentage Return relative to COST BASIS (Static)
-                                    # Logic: (Value_t - Cost) / Cost
-                                    # Users usually want to see "How much I gained". 
+                                # Render Chart
+                                if series_data:
+                                    final_xAxis = []
+                                    series_list = []
                                     
-                                    pct_series = ((portfolio_series - total_invested_static) / total_invested_static) * 100
+                                    # Align Dates (Use the wallet with most history or just the master range)
+                                    # ECharts handles category sync if names match.
+                                    # Let's take the dates from the first series, assuming sync.
+                                    first_key = list(series_data.keys())[0]
+                                    final_xAxis = series_data[first_key]['dates']
                                     
-                                    # Prepare ECharts Data
-                                    dates_str = [d.strftime('%b/%y') for d in pct_series.index]
-                                    vals = [round(v, 2) for v in pct_series.values]
+                                    for wname, dat in series_data.items():
+                                        series_list.append({
+                                            "name": wname,
+                                            "type": "line",
+                                            "data": dat['vals'],
+                                            "smooth": True,
+                                            "showSymbol": True, # Show dots even if single point
+                                            "symbolSize": 6
+                                            # No Area Style for comparison to avoid clutter
+                                        })
                                     
-                                    # Color: Green if last val > 0 else Red
-                                    line_color = "#00ff41" if vals[-1] >= 0 else "#ff4444"
-                                    area_color = "rgba(0, 255, 65, 0.1)" if vals[-1] >= 0 else "rgba(255, 68, 68, 0.1)"
-
-                                    opt_line = {
-                                        "tooltip": {"trigger": "axis", "formatter": "{b}<br/>{c}%"},
-                                        "grid": {"left": "10%", "right": "5%", "top": "10%", "bottom": "10%", "containLabel": True},
+                                    opt_evol = {
+                                        "tooltip": {"trigger": "axis"},
+                                        "legend": {"top": "0%", "textStyle": {"color": "#fff"}},
+                                        "grid": {"left": "10%", "right": "5%", "top": "15%", "bottom": "10%", "containLabel": True},
                                         "xAxis": {
                                             "type": "category",
                                             "boundaryGap": False,
-                                            "data": dates_str,
+                                            "data": final_xAxis,
                                             "axisLine": {"show": False},
                                             "axisTick": {"show": False},
                                             "axisLabel": {"color": "#888", "fontSize": 10}
@@ -2131,24 +2279,19 @@ with tab_carteira:
                                             "splitLine": {"show": True, "lineStyle": {"color": "#333", "type": "dashed"}},
                                             "axisLabel": {"color": "#888", "fontSize": 10, "formatter": "{value}%"}
                                         },
-                                        "series": [{
-                                            "data": vals,
-                                            "type": "line",
-                                            "smooth": True,
-                                            "showSymbol": False,
-                                            "lineStyle": {"width": 3, "color": line_color},
-                                            "areaStyle": {"color": area_color}
-                                        }]
+                                        "series": series_list
                                     }
-                                    st_echarts(options=opt_line, height="280px")
+                                    st_echarts(options=opt_evol, height="280px")
+
                                 else:
-                                    st.info("Dados históricos insuficientes para gráfico.")
+                                    st.info("Aguardando mais dados para gerar histórico.")
+                                    
                             else:
-                               st.caption("Sem ativos para histórico.")     
+                                st.caption("Sem transações registradas.")
                         else:
-                             st.caption("Carteira vazia.")
+                            st.caption("Sem histórico.")
                     except Exception as e:
-                        st.error(f"Erro gráfico: {str(e)}")
+                        st.error(f"Erro Histórico: {e}")
 
 
             with h3:

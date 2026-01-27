@@ -269,13 +269,25 @@ def add_to_wallet(user_id, ticker, quantity, price, wallet_id):
     if success:
         # Log Transaction
         tr_type = "BUY" if quantity > 0 else "SELL"
+        
+        # MIGRATION ON THE FLY (Self-Healing)
+        # Check if wallet_id column exists, if not add it (Postgres specific but robust enough)
+        try:
+             # Fast check if column exists is hard without specific catalog query.
+             # We can just try to insert with wallet_id or alter table blindly if we handle error?
+             # Better: Use the column in the INSERT. If it fails, we assume valid column needs to be added?
+             # Actually, let's just run an insensitive ALTER TABLE ADD IF NOT EXISTS or similar.
+             # Postgres `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` is standard from v9.6+.
+             run_transaction("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS wallet_id BIGINT")
+        except: pass
+        
         log_sql = """
-            INSERT INTO transactions (user_id, ticker, quantity, price, type, date)
-            VALUES (:u, :t, :q, :p, :tp, :d)
+            INSERT INTO transactions (user_id, ticker, quantity, price, type, date, wallet_id)
+            VALUES (:u, :t, :q, :p, :tp, :d, :w)
         """
         run_transaction(log_sql, {
             "u": user_id, "t": ticker, "q": int(quantity), 
-            "p": float(price), "tp": tr_type, "d": timestamp
+            "p": float(price), "tp": tr_type, "d": timestamp, "w": wallet_id
         })
         return True, "Carteira atualizada!"
     else:
@@ -373,6 +385,41 @@ def remove_from_wallet(user_id, ticker, wallet_id):
         run_transaction(log_sql, {"u": user_id, "t": ticker, "d": datetime.datetime.now()})
         return True, "Removido!"
     return False, msg
+
+def get_transactions(user_id):
+    sql = "SELECT ticker, quantity, price, type, date, wallet_id FROM transactions WHERE user_id = :u ORDER BY date ASC"
+    # Note: wallet_id might not be in transactions table if it wasn't added in previous migrations.
+    # Let's check the insert logic.
+    # In `add_to_wallet` log_sql: 
+    # INSERT INTO transactions (user_id, ticker, quantity, price, type, date) VALUES ...
+    # It does NOT store wallet_id currently!
+    # This is a limitation for "One Line Per Wallet" if we can't distinguish transactions by wallet.
+    # However, we can TRY to infer or just update the table layout?
+    # Updating table layout is risky/slow. 
+    # Alternative: Use the CURRENT wallet composition to separate the lines?
+    # No, that doesn't work for history.
+    # User Request: "é uma linha por Carteira".
+    # If I don't have wallet_id in transactions, I can't split history by wallet strictly accurately if assets moved.
+    # BUT, I can show the chart for the *currently selected wallet* assuming all its assets have the same history? 
+    # Or, I can check if I can join with current portfolio? No.
+    # Let's check if I can modify the transaction table?
+    # The user just created the wallets.
+    # Maybe I can just start storing wallet_id NOW?
+    # But for existing rows (if any), it's missing.
+    # The user said "criei hoje". So maybe I can migrate and wipe? Or just add the column nullable.
+    
+    # STRATEGY CHANGE: 
+    # Visualizing "Current Holdings" History is a standard approximation. 
+    # "How did the assets I hold TODAY perform over the last 12 months?" -> The user REJECTED this.
+    # They said: "My wallets I created today... only info from Jan 2026".
+    # This implies they WANT the 'Transaction-based' view.
+    # If `transactions` table lacks `wallet_id`, I cannot separate by wallet easily.
+    # However, since they "created today", maybe I can assume for now we plot the Total, or I try to Add the Column.
+    
+    # Let's try to add `wallet_id` to transactions table via a safe migration check.
+    # And update `add_to_wallet` to save it.
+    
+    return run_query(sql, {"u": user_id})
 
 # Initialize (Optional now as we don't create tables in code, but good validation)
 # init_db()
