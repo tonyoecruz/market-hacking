@@ -2025,35 +2025,39 @@ section[data-testid="stSidebar"] {
 
 /* Radio Button "Menu Item" Style */
 div[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] {
-    gap: 8px;
+    gap: 12px; /* More spacing between items */
+    padding-top: 20px;
 }
 
 div[data-testid="stSidebar"] .stRadio label {
     background-color: transparent;
     border: 1px solid transparent;
-    border-radius: 6px;
-    padding: 10px 12px;
+    border-radius: 8px; /* Rounded corners */
+    padding: 12px 16px; /* Larger click area */
     transition: all 0.2s ease;
     color: #888;
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
+    font-size: 15px; /* Bigger font */
     cursor: pointer;
     display: flex;
     align-items: center;
+    margin-bottom: 2px;
 }
 
 /* Hover State */
 div[data-testid="stSidebar"] .stRadio label:hover {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: rgba(255, 255, 255, 0.05);
     color: #FFF;
 }
 
-/* Selected State */
+/* Selected State - HIGH VISIBILITY */
 div[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
     background-color: rgba(0, 255, 157, 0.08) !important;
-    border-left: 3px solid #00FF9D !important;
+    border: 1px solid rgba(0, 255, 157, 0.1) !important;
+    border-left: 4px solid #00FF9D !important; /* Thick accent line */
     color: #00FF9D !important;
-    font-weight: 600;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0, 255, 157, 0.05);
 }
 
 /* Hide Radio Circles */
@@ -2064,8 +2068,13 @@ div[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label div:first-chi
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.image(URL_DO_ICONE, width=60)
-    st.markdown("<div style='margin-bottom:20px; font-weight:700; font-size:18px; color:#FFF; letter-spacing:1px;'>SCOPE3 <span style='font-size:10px; color:#00FF9D; border:1px solid #00FF9D; padding:2px 4px; border-radius:4px;'>V15.0</span></div>", unsafe_allow_html=True)
+    # LOGO HEADER
+    c_logo_1, c_logo_2 = st.columns([1, 3])
+    with c_logo_1:
+        st.image(URL_DO_ICONE, width=75) # Larger Icon
+    with c_logo_2:
+        st.markdown("<div style='margin-top:10px; font-weight:800; font-size:20px; color:#FFF; letter-spacing:1px; line-height:1.2;'>SCOPE3<br><span style='font-size:11px; color:#00FF9D; font-weight:600; background:rgba(0,255,157,0.1); padding:2px 6px; border-radius:4px;'>V15.0</span></div>", unsafe_allow_html=True)
+
     
     # Navigation Menu
     nav_options = ["Dashboard", "Ações", "ETFs", "Elite Mix", "FIIs", "Arena (Beta)"]
