@@ -1767,6 +1767,107 @@ def get_db_prices(tickers):
                 price_map[t] = float(md_etf[md_etf['ticker']==t].iloc[0]['price'])
     return price_map
 
+# ==============================================================================
+# 🧭 SIDEBAR NAVIGATION (VERTICAL MENU) - MOVED TO TOP
+# ==============================================================================
+st.markdown("""
+<style>
+/* Sidebar Container */
+section[data-testid="stSidebar"] {
+    background-color: #0B0E11; /* Match Main Dark Theme */
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Radio Button "Menu Item" Style */
+div[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] {
+    gap: 12px;
+    padding-top: 20px;
+}
+
+div[data-testid="stSidebar"] .stRadio label {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+    color: #888;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+/* Hover State */
+div[data-testid="stSidebar"] .stRadio label:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #FFF;
+}
+
+/* Selected State - HIGH VISIBILITY */
+div[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
+    background-color: rgba(0, 255, 157, 0.08) !important;
+    border: 1px solid rgba(0, 255, 157, 0.1) !important;
+    border-left: 4px solid #00FF9D !important;
+    color: #00FF9D !important;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0, 255, 157, 0.05);
+}
+
+/* Hide Radio Circles */
+div[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label div:first-child {
+    display: none; 
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.sidebar:
+    # LOGO HEADER
+    c_logo_1, c_logo_2 = st.columns([1, 3])
+    with c_logo_1:
+        try:
+            st.image(URL_DO_ICONE, width=75)
+        except:
+            st.markdown("🌐")
+    with c_logo_2:
+        st.markdown("<div style='margin-top:10px; font-weight:800; font-size:20px; color:#FFF; letter-spacing:1px; line-height:1.2;'>SCOPE3<br><span style='font-size:11px; color:#00FF9D; font-weight:600; background:rgba(0,255,157,0.1); padding:2px 6px; border-radius:4px;'>V15.0</span></div>", unsafe_allow_html=True)
+
+    
+    # Navigation Menu
+    nav_options = ["Dashboard", "Ações", "ETFs", "Elite Mix", "FIIs", "Arena (Beta)"]
+    icons = ["🏠", "🏢", "🌎", "🏆", "🏗️", "⚔️"]
+    
+    # Map options to icons for display if needed, but Radio keeps it simple text or formatting
+    # We can format the labels directly in the list if we want icons
+    nav_formatted = [f"{icon}  {opt}" for icon, opt in zip(icons, nav_options)]
+    
+    selected_nav = st.radio("NAVEGAÇÃO", nav_formatted, label_visibility="collapsed")
+    
+    st.markdown("---")
+    
+    # Logout Logic
+    st.markdown(f"<div style='font-size:12px; color:#555; text-align:center'>Logado como<br><b style='color:#DDD'>{st.session_state.get('username','User')}</b></div>", unsafe_allow_html=True)
+    if st.button("SAIR", use_container_width=True):
+         if 'user_id' in st.session_state: db.delete_all_user_sessions(st.session_state['user_id'])
+         try: cookie_manager.delete("auth_token")
+         except: pass
+         st.session_state['logged_in'] = False
+         st.rerun()
+
+# Map Selection back to internal keys
+nav_map = {
+    nav_formatted[0]: "CARTEIRA",
+    nav_formatted[1]: "AÇÕES",
+    nav_formatted[2]: "ETFs",
+    nav_formatted[3]: "ELITE MIX",
+    nav_formatted[4]: "FIIs",
+    nav_formatted[5]: "ARENA"
+}
+
+current_tab = nav_map.get(selected_nav, "CARTEIRA")
+
+
 
 
 
@@ -2015,99 +2116,7 @@ def load_data_fiis_pipeline():
 # ==============================================================================
 
 # Custom CSS for Sidebar Radio Buttons
-st.markdown("""
-<style>
-/* Sidebar Container */
-section[data-testid="stSidebar"] {
-    background-color: #0B0E11; /* Match Main Dark Theme */
-    border-right: 1px solid rgba(255,255,255,0.05);
-}
-
-/* Radio Button "Menu Item" Style */
-div[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] {
-    gap: 12px; /* More spacing between items */
-    padding-top: 20px;
-}
-
-div[data-testid="stSidebar"] .stRadio label {
-    background-color: transparent;
-    border: 1px solid transparent;
-    border-radius: 8px; /* Rounded corners */
-    padding: 12px 16px; /* Larger click area */
-    transition: all 0.2s ease;
-    color: #888;
-    font-family: 'Inter', sans-serif;
-    font-size: 15px; /* Bigger font */
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    margin-bottom: 2px;
-}
-
-/* Hover State */
-div[data-testid="stSidebar"] .stRadio label:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #FFF;
-}
-
-/* Selected State - HIGH VISIBILITY */
-div[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
-    background-color: rgba(0, 255, 157, 0.08) !important;
-    border: 1px solid rgba(0, 255, 157, 0.1) !important;
-    border-left: 4px solid #00FF9D !important; /* Thick accent line */
-    color: #00FF9D !important;
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(0, 255, 157, 0.05);
-}
-
-/* Hide Radio Circles */
-div[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label div:first-child {
-    display: none; 
-}
-</style>
-""", unsafe_allow_html=True)
-
-with st.sidebar:
-    # LOGO HEADER
-    c_logo_1, c_logo_2 = st.columns([1, 3])
-    with c_logo_1:
-        st.image(URL_DO_ICONE, width=75) # Larger Icon
-    with c_logo_2:
-        st.markdown("<div style='margin-top:10px; font-weight:800; font-size:20px; color:#FFF; letter-spacing:1px; line-height:1.2;'>SCOPE3<br><span style='font-size:11px; color:#00FF9D; font-weight:600; background:rgba(0,255,157,0.1); padding:2px 6px; border-radius:4px;'>V15.0</span></div>", unsafe_allow_html=True)
-
-    
-    # Navigation Menu
-    nav_options = ["Dashboard", "Ações", "ETFs", "Elite Mix", "FIIs", "Arena (Beta)"]
-    icons = ["🏠", "🏢", "🌎", "🏆", "🏗️", "⚔️"]
-    
-    # Map options to icons for display if needed, but Radio keeps it simple text or formatting
-    # We can format the labels directly in the list if we want icons
-    nav_formatted = [f"{icon}  {opt}" for icon, opt in zip(icons, nav_options)]
-    
-    selected_nav = st.radio("NAVEGAÇÃO", nav_formatted, label_visibility="collapsed")
-    
-    st.markdown("---")
-    
-    # Logout Logic
-    st.markdown(f"<div style='font-size:12px; color:#555; text-align:center'>Logado como<br><b style='color:#DDD'>{st.session_state.get('username','User')}</b></div>", unsafe_allow_html=True)
-    if st.button("SAIR", use_container_width=True):
-         if 'user_id' in st.session_state: db.delete_all_user_sessions(st.session_state['user_id'])
-         try: cookie_manager.delete("auth_token")
-         except: pass
-         st.session_state['logged_in'] = False
-         st.rerun()
-
-# Map Selection back to internal keys
-nav_map = {
-    nav_formatted[0]: "CARTEIRA",
-    nav_formatted[1]: "AÇÕES",
-    nav_formatted[2]: "ETFs",
-    nav_formatted[3]: "ELITE MIX",
-    nav_formatted[4]: "FIIs",
-    nav_formatted[5]: "ARENA"
-}
-
-current_tab = nav_map.get(selected_nav, "CARTEIRA")
+# (Sidebar Moved to Top)
 
 # Mock Tabs Object to minimize refactor impact (Optional, but using 'if' is cleaner)
 # tab_carteira = (current_tab == "CARTEIRA")
