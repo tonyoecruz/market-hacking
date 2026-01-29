@@ -43,6 +43,193 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' # Re-enabled for Cloud Proxy com
 URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
 st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide", initial_sidebar_state="collapsed")
 
+# ==============================================================================
+# 🎨 UI / UX - FINTECH DARK MODE (SCOPE3 ULTIMATE)
+# ==============================================================================
+st.markdown("""
+<style>
+    /* IMPORT FONTS: Inter (UI) and JetBrains Mono (Numbers/Code) */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    /* -------------------------------------------------------------------------
+       VARIABLES & THEME
+       ------------------------------------------------------------------------- */
+    :root {
+        --bg-color: #0B0E11; /* Deep Black */
+        --surface-color: #15191E; /* Gunmetal */
+        --glass-color: rgba(21, 25, 30, 0.7);
+        --neon-green: #00FF9D; /* Positive/Primary */
+        --neon-red: #FF4444; /* Negative/Danger */
+        --neon-blue: #00C8FF; /* Info/Action */
+        --text-primary: #E0E0E0;
+        --text-secondary: #888888;
+        --border-color: rgba(255, 255, 255, 0.08);
+        --card-radius: 12px;
+    }
+
+    /* GLOBAL RESET */
+    .stApp {
+        background-color: var(--bg-color) !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    body {
+        color: var(--text-primary) !important;
+        background-color: var(--bg-color) !important;
+    }
+
+    /* TYPOGRAPHY OVERRIDES */
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Inter', sans-serif !important;
+        color: #F0F0F0 !important;
+        letter-spacing: -0.5px !important;
+    }
+    
+    h1 { font-weight: 800; font-size: 2.5rem !important; }
+    h2 { font-weight: 700; font-size: 1.8rem !important; margin-top: 1rem; }
+    h3 { font-weight: 600; font-size: 1.2rem !important; color: var(--text-secondary) !important; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* MONOSPACE NUMBERS */
+    .mono {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    /* -------------------------------------------------------------------------
+       SIDEBAR RE-STYLE
+       ------------------------------------------------------------------------- */
+    section[data-testid="stSidebar"] {
+        background-color: var(--surface-color) !important;
+        border-right: 1px solid var(--border-color);
+        box-shadow: 10px 0 20px rgba(0,0,0,0.3);
+    }
+    
+    section[data-testid="stSidebar"] h1, 
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] span {
+        color: #E0E0E0 !important;
+    }
+
+    /* -------------------------------------------------------------------------
+       GLASS CARDS (KPIs, Containers)
+       ------------------------------------------------------------------------- */
+    div.stContainer, div[data-testid="stVerticalBlock"] > div {
+        /* Default container spacing */
+    }
+
+    .glass-card {
+        background: var(--glass-color);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-color);
+        border-radius: var(--card-radius);
+        padding: 20px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .glass-card:hover {
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(0, 255, 157, 0.05); /* Subtle Green Glow */
+    }
+
+    /* -------------------------------------------------------------------------
+       METRICS & BADGES
+       ------------------------------------------------------------------------- */
+    [data-testid="stMetricValue"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 700 !important;
+        font-size: 1.8rem !important;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 500 !important;
+        color: var(--text-secondary) !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* STATUS PILLS */
+    .status-pill {
+        padding: 4px 10px;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-family: 'Inter', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .status-buy { background: rgba(0, 255, 157, 0.15); color: var(--neon-green); border: 1px solid rgba(0, 255, 157, 0.3); }
+    .status-sell { background: rgba(255, 68, 68, 0.15); color: var(--neon-red); border: 1px solid rgba(255, 68, 68, 0.3); }
+    .status-hold { background: rgba(255, 180, 0, 0.15); color: #FFB400; border: 1px solid rgba(255, 180, 0, 0.3); }
+
+    /* -------------------------------------------------------------------------
+       INPUTS & WIDGETS
+       ------------------------------------------------------------------------- */
+    input, select, textarea {
+        background: #0B0E11 !important;
+        color: white !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Selectbox Dropdown */
+    div[data-baseweb="select"] > div {
+        background-color: var(--surface-color) !important;
+        border-color: var(--border-color) !important;
+        border-radius: 8px;
+    }
+
+    /* Multiselect Tags */
+    span[data-baseweb="tag"] {
+        background-color: rgba(0, 255, 157, 0.1) !important;
+        border: 1px solid rgba(0, 255, 157, 0.2) !important;
+    }
+    span[data-baseweb="tag"] span {
+        color: var(--neon-green) !important;
+    }
+
+    /* Buttons */
+    div.stButton > button {
+        background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+        color: white !important;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    div.stButton > button:hover {
+        border-color: var(--neon-green);
+        color: var(--neon-green) !important;
+    }
+    
+    div.stButton > button:active {
+        background: var(--neon-green) !important;
+        color: black !important;
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: transparent;
+        border-radius: 0px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+    }
+    .stTabs [aria-selected="true"] {
+        color: var(--neon-green) !important;
+        border-bottom: 2px solid var(--neon-green) !important;
+    }
+    
+</style>
+""", unsafe_allow_html=True)
+
 # 🧹 CLEANUP DE ÁUDIO (Remove lixo anterior)
 def cleanup_audio_files():
     try:
@@ -1845,89 +2032,242 @@ tab_carteira, tab_acoes, tab_etfs, tab_mix, tab_fiis, tab_arena = st.tabs(["CART
 # PÁGINA 0: CARTEIRA PESSOAL (HERO DASHBOARD)
 # ------------------------------------------------------------------------------
 with tab_carteira:
-    # --- DASHBOARD HEADER & FILTER ---
-    # Fetch Wallets
+    # --- DASHBOARD COMMAND CENTER ---
+    
+    # 1. DATA PREP
     w_df = db.get_wallets(st.session_state['user_id'])
     w_names = w_df['name'].tolist()
     w_map = {row['name']: row['id'] for _, row in w_df.iterrows()}
     
-    # Filter Options
-    filter_options = ["TODAS"] + w_names + ["➕ Nova Carteira"]
-    
-    # Selection (Reduced Width & Styled)
-    # CSS to force black text on Selectbox for visibility
-    st.markdown("""
-    <style>
-    /* Force Text Color Black for the Selected Value */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] div {
-        color: black !important;
-        -webkit-text-fill-color: black !important;
-    }
-    
-    /* Ensure the container background is white */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        background-color: white !important;
-        border-color: #ccc !important;
-    }
-    
-    /* Input/Placeholder text specific fix */
-    div[data-testid="stSelectbox"] input {
-        color: black !important;
-    }
+    # Filter Choice
+    c_filter, c_kpi = st.columns([1, 4])
+    with c_filter:
+        filter_options = ["TODAS"] + w_names + ["➕ Nova Carteira"]
+        sel_filter = st.selectbox("VISUALIZAR CARTEIRA", filter_options, key="dash_wallet_filter")
 
-    div[data-testid="stSelectbox"] p {
-        color: #eee !important; /* Label Color */
-        font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    col_sel, col_rest = st.columns([1, 3]) # 1/4 Width
-    
-    with col_sel:
-        sel_filter = st.selectbox("VISUALIZAR CARTEIRA", options=filter_options, index=0)
-    
-    target_wallet_id = None
-    
+    # Handle "New Wallet"
     if sel_filter == "➕ Nova Carteira":
-         with col_rest:
-             st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True) # Align with selectbox
-             new_w = st.text_input("NOME DA NOVA CARTEIRA", placeholder="Digite e pressione Enter", label_visibility="collapsed")
-         
-         if new_w:
-             ok, msg = db.create_wallet(st.session_state['user_id'], new_w)
-             if ok: st.success(msg); time.sleep(1); st.rerun()
-             else: st.error(msg)
-         if not new_w: st.stop() # Wait for input
-         
-    elif sel_filter != "TODAS":
-         target_wallet_id = w_map.get(sel_filter)
-
-    # 1. Fetch Data (Filtered)
-    df_w = db.get_portfolio(st.session_state['user_id'], wallet_id=target_wallet_id)
-    
-    if df_w.empty:
-        st.info("Sua carteira está vazia. Comece adicionando ativos nas abas 'AÇÕES' ou 'FIIs'.")
-    else:
-        # 2. Update Prices
-        # LOGIC: BR tickers usually have digits (PETR4, ALZR11). US tickers are letters only (AAPL, MSFT).
-        # Exception: BDRs (AAPL34).
-        # Heuristic: If has digit -> .SA. Else -> US (No suffix).
-        def get_yahoo_ticker(t):
-             has_digit = any(char.isdigit() for char in t)
-             return f"{t}.SA" if has_digit else t
-
-        tickers = [get_yahoo_ticker(t) for t in df_w['ticker'].unique()]
-        try:
-            raw_data = yf.download(tickers, period="5d", progress=False)['Close']
-            if not raw_data.empty: curr_data = raw_data.ffill().iloc[-1]
-            else: curr_data = pd.Series()
-        except: curr_data = pd.Series()
-
-        total_invested = 0
-        total_current = 0
+        render_new_wallet_form()
+        st.stop()
         
-        # Calculate totals for existing items
+    target_wallet_id = w_map.get(sel_filter)
+
+    # 2. CALCULATION ENGINE
+    # Fetch Portfolio
+    df_port = db.get_portfolio(st.session_state['user_id'])
+    
+    # Filter if needed
+    if sel_filter != "TODAS":
+        df_port = df_port[df_port['wallet_id'] == target_wallet_id]
+    
+    # Calculate Totals
+    total_invested = 0.0
+    total_current = 0.0
+    
+    # Asset Allocation Data
+    alloc_data = {"AÇÕES": 0, "FIIs": 0, "ETFs": 0, "OUTROS": 0}
+    
+    if not df_port.empty:
+        # Get Prices
+        tickers = df_port['ticker'].unique().tolist()
+        curr_prices = get_db_prices(tickers) # Helper to get prices
+        
+        for i, row in df_port.iterrows():
+            t = row['ticker']
+            qty = row['quantity']
+            avg = row['avg_price']
+            
+            # Fetch Current Price (Priority: Realtime -> Session -> DB Last)
+            price = curr_prices.get(t, row.get('last_price', avg))
+            
+            # Force Realtime if available in session (e.g. from pipelines)
+            # This is a bit of a hack, ideal is a unified price server
+            if 'market_data' in st.session_state:
+                md = st.session_state['market_data']
+                if t in md['ticker'].values:
+                    price = md[md['ticker']==t].iloc[0]['price']
+
+            # Calc
+            val_invested = qty * avg
+            val_current = qty * price
+            
+            total_invested += val_invested
+            total_current += val_current
+            
+            # Categorize
+            cat = "OUTROS"
+            if "11" in t: 
+                 # Rough heursitic: FII or ETF
+                 # We could check DB type if we stored it properly
+                 if t in KNOWN_ETFS or f"{t}.SA" in KNOWN_ETFS: cat = "ETFs"
+                 else: cat = "FIIs" # Assumption
+            elif len(t) == 5 or len(t) == 6: cat = "AÇÕES"
+            
+            alloc_data[cat] = alloc_data.get(cat, 0) + val_current
+
+    # 3. RENDER COMMAND CENTER
+    
+    # ROW 1: EQUITY & ALLOCATION
+    # Layout: [ Equity Card (40%) ] [ Allocation Donut (60%) ]
+    col_equity, col_alloc = st.columns([2, 3])
+    
+    with col_equity:
+        # Privacy Toggle
+        if 'privacy_show' not in st.session_state: st.session_state['privacy_show'] = True
+        
+        st.markdown(f"""
+        <div class="glass-card" style="height: 280px; display:flex; flex-direction:column; justify-content:center;">
+            <div style="font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">
+                Patrimônio Total
+            </div>
+            <div style="font-size: 42px; font-weight: 800; color: #FFF; font-family: 'Inter', sans-serif;">
+                {format_brl(total_current) if st.session_state['privacy_show'] else 'R$ ••••••'}
+            </div>
+            <div style="margin-top: 15px;">
+                <span class="status-pill {'status-buy' if total_current >= total_invested else 'status-sell'}">
+                    {(total_current - total_invested) / total_invested * 100 if total_invested > 0 else 0:+.2f}%
+                </span>
+                <span style="color: #666; font-size: 12px; margin-left: 10px;">Rentabilidade Global</span>
+            </div>
+            <div style="margin-top: 30px; font-size: 12px; color: #555;">
+                Custo de Aquisição: {format_brl(total_invested) if st.session_state['privacy_show'] else '••••'}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Privacy Button (Invisible Overlay logic or just a small button below)
+        if st.button("👁️/🔒 Privacidade", key="btn_priv_main"):
+             st.session_state['privacy_show'] = not st.session_state['privacy_show']
+             st.rerun()
+
+    with col_alloc:
+        # ECharts Donut - Dark Theme
+        # Prepare Data
+        pie_data = [{"value": round(v, 2), "name": k} for k, v in alloc_data.items() if v > 0]
+        
+        opt_donut = {
+            "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+            "legend": {"top": "middle", "left": "left", "orient": "vertical", "textStyle": {"color": "#FFF"}},
+            "series": [
+                {
+                    "name": "Alocação",
+                    "type": "pie",
+                    "radius": ["50%", "70%"],
+                    "center": ["60%", "50%"],
+                    "avoidLabelOverlap": False,
+                    "itemStyle": {
+                        "borderRadius": 5,
+                        "borderColor": '#0B0E11',
+                        "borderWidth": 2
+                    },
+                    "label": {"show": False},
+                    "emphasis": {"label": {"show": True, "fontSize": 14, "fontWeight": "bold", "color": "#FFF"}},
+                    "data": pie_data
+                }
+            ]
+        }
+        with st.container():
+            st.markdown('<div class="glass-card" style="height: 280px;">', unsafe_allow_html=True)
+            st_echarts(options=opt_donut, height="240px")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ROW 2: WALLET CARDS (If 'TODAS' selected)
+    if sel_filter == "TODAS":
+        st.markdown("### 💼 SUAS CARTEIRAS")
+        
+        # Calculate per wallet
+        wallet_stats = []
+        for w_name in w_names:
+            wid = w_map[w_name]
+            # Slicing df_port (which is already fetched for all if filter=TODAS) -> Wait, logic above filtered it if not TODAS.
+            # Re-fetch full port if needed or assume we have it.
+            # Actually, I filtered `df_port` above. If `sel_filter` is TODAS, `df_port` has everything.
+            
+            w_assets = df_port[df_port['wallet_id'] == wid]
+            if not w_assets.empty:
+                # Calc Stats
+                # Re-calc sum (inefficient but safe)
+                w_invested = (w_assets['quantity'] * w_assets['avg_price']).sum()
+                # Need current prices... 
+                # Let's approximate.
+                w_current = 0
+                for _, wa in w_assets.iterrows():
+                    p = curr_prices.get(wa['ticker'], wa.get('last_price', wa['avg_price']))
+                    w_current += wa['quantity'] * p
+                
+                pct = (w_current - w_invested) / w_invested if w_invested > 0 else 0
+                wallet_stats.append({
+                    "name": w_name,
+                    "val": w_current,
+                    "pct": pct
+                })
+            else:
+                wallet_stats.append({"name": w_name, "val": 0, "pct": 0})
+        
+        # Grid Display
+        # 3 cols per row
+        cols = st.columns(3)
+        for i, ws in enumerate(wallet_stats):
+            with cols[i % 3]:
+                is_pos = ws['pct'] >= 0
+                color = "#00FF9D" if is_pos else "#FF4444"
+                arrow = "↗" if is_pos else "↘"
+                
+                st.markdown(f"""
+                <div class="glass-card" style="margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: #888; text-transform: uppercase;">
+                        {ws['name']}
+                    </div>
+                    <div style="font-size: 24px; font-weight: 700; color: #FFF; margin-top: 5px;">
+                        {format_brl(ws['val']) if st.session_state['privacy_show'] else 'R$ •••'}
+                    </div>
+                    <div style="margin-top: 10px; font-size: 14px; color: {color}; font-weight: 600;">
+                        {arrow} {ws['pct']:.1%}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # ROW 3: PERFORMANCE COMPARISON (Bar Chart) - Dark Mode
+    st.markdown("### 📊 PERFORMANCE COMPARATIVA")
+    
+    # We can reuse the wallet_stats from above if available
+    # Or strict rendering
+    
+    if sel_filter == "TODAS" and wallet_stats:
+        # Sort by performance
+        wallet_stats.sort(key=lambda x: x['pct'], reverse=True)
+        
+        y_data = [x['name'] for x in wallet_stats]
+        x_data = [round(x['pct']*100, 2) for x in wallet_stats]
+        
+        item_styles = [{"value": v, "itemStyle": {"color": "#00FF9D" if v >= 0 else "#FF4444"}} for v in x_data]
+        
+        opt_bar = {
+            "backgroundColor": "transparent",
+            "tooltip": {"trigger": "axis", "formatter": "{b}: {c}%"},
+            "grid": {"left": "20%", "right": "10%", "top": "5%", "bottom": "5%"},
+            "xAxis": {"show": False},
+            "yAxis": {
+                "type": "category", 
+                "data": y_data,
+                "axisLine": {"show": False},
+                "axisTick": {"show": False},
+                "axisLabel": {"color": "#888", "fontSize": 12, "fontFamily": "Inter"}
+            },
+            "series": [{
+                "data": item_styles,
+                "type": "bar",
+                "label": {"show": True, "position": "right", "formatter": "{c}%", "color": "#FFF"},
+                "barWidth": "50%",
+                "itemStyle": {"borderRadius": [0, 4, 4, 0]}
+            }]
+        }
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st_echarts(options=opt_bar, height="300px")
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
         df_w['curr_price'] = 0.0
         df_w['total_val'] = 0.0
         
@@ -2058,192 +2398,7 @@ with tab_carteira:
                 
                 # Logic: We need ALL wallets data, regardless of filter
                 # We can reuse df_w IF filter is ALL, otherwise we need to fetch all
-                if sel_filter == "TODAS":
-                    df_comp = df_w.copy()
-                else:
-                    # Fetch fresh full data for comparison
-                    df_comp = db.get_portfolio(st.session_state['user_id'])
-                    # Apply prices (reuse curr_data map if possible or re-map)
-                    df_comp['curr_price'] = 0.0
-                    df_comp['total_val'] = 0.0
-                    for idx, row in df_comp.iterrows():
-                        y_t = get_yahoo_ticker(row['ticker'])
-                        c_price = 0
-                        if isinstance(curr_data, (int, float, np.number)):
-                             if len(df_w) == 1: c_price = float(curr_data) # Risk if mismatch, but unlikely
-                        elif isinstance(curr_data, pd.Series):
-                            c_price = float(curr_data[y_t]) if y_t in curr_data else 0
-                        elif isinstance(curr_data, pd.DataFrame): 
-                            c_price = float(curr_data[y_t]) if y_t in curr_data.columns else 0
-                        
-                        # Fallback from market_data
-                        if c_price == 0 and 'market_data' in st.session_state:
-                             f = st.session_state['market_data']
-                             f_p = f[f['ticker'] == row['ticker']]
-                             if not f_p.empty: c_price = float(f_p.iloc[0]['price'])
-                        
-                        if c_price == 0: c_price = row['avg_price'] # Fallback
-                        df_comp.at[idx, 'curr_price'] = c_price
-                        df_comp.at[idx, 'total_val'] = c_price * row['quantity']
-
-                # Group by Wallet Name
-                if not df_comp.empty and 'wallet_name' in df_comp.columns:
-                     # Fill NA wallet names
-                     df_comp['wallet_name'] = df_comp['wallet_name'].fillna("Padrão")
-                     
-                     grp = df_comp.groupby('wallet_name').apply(
-                         lambda x: pd.Series({
-                             'invested': (x['quantity'] * x['avg_price']).sum(),
-                             'current': (x['quantity'] * x['curr_price']).sum()
-                         })
-                     ).reset_index()
-                     
-                     grp['diff'] = grp['current'] - grp['invested']
-                     grp['pct'] = (grp['diff'] / grp['invested']) * 100
-                     grp = grp.fillna(0)
-                     
-                     # Prepare ECharts Data
-                     # Horizontal Bar Chart
-                     # X Axis: Pct
-                     # Y Axis: Wallet Name
-                     
-                     # Sort by performance
-                     grp = grp.sort_values('pct', ascending=True)
-                     
-                     y_data = grp['wallet_name'].tolist()
-                     x_data = [round(v, 2) for v in grp['pct'].tolist()]
-                     
-                     # Color logic: Green if > 0 else Red
-                     item_styles = [{"value": v, "itemStyle": {"color": "#00ff41" if v >= 0 else "#ff4444"}} for v in x_data]
-                     
-                     opt_bar = {
-                        "tooltip": {"trigger": "axis", "formatter": "{b}: {c}%"},
-                        "grid": {"left": "30%", "right": "10%", "top": "5%", "bottom": "5%"},
-                        "xAxis": {
-                            "type": "value", 
-                            "show": False, 
-                            "splitLine": {"show": False}
-                        },
-                        "yAxis": {
-                            "type": "category", 
-                            "data": y_data,
-                            "axisLine": {"show": False},
-                            "axisTick": {"show": False},
-                            "axisLabel": {
-                                "color": "#FFF", 
-                                "fontSize": 10, 
-                                "fontWeight": "bold",
-                                "interval": 0
-                            }
-                        },
-                        "series": [
-                            {
-                                "data": item_styles,
-                                "type": "bar",
-                                "label": {
-                                    "show": True,
-                                    "position": "right", 
-                                    "formatter": "{c}%",
-                                    "color": "#fff",
-                                    "fontSize": 10
-                                },
-                                "barWidth": "60%",
-                                "roam": False
-                            }
-                        ]
-                     }
-                     st_echarts(options=opt_bar, height="280px")
-                else:
-                    st.caption("Sem dados comparativos.")
-
-
-            with h3:
-                # Privacy Logic
-
-                if 'privacy_show' not in st.session_state: st.session_state['privacy_show'] = False
-                
-                # Header with Privacy Button aligned
-                c_head_1, c_head_2 = st.columns([3, 1])
-                with c_head_1:
-                    st.markdown("<div style='text-align:center; font-weight:800; font-size:14px; color:#EEE; margin-bottom:10px; letter-spacing:1px;'>PATRIMÔNIO TOTAL</div>", unsafe_allow_html=True)
-                with c_head_2:
-                     p_icon = "👁️" if st.session_state['privacy_show'] else "🔒"
-                     if st.button(f"{p_icon}", key="btn_privacy_icon", use_container_width=True):
-                        st.session_state['privacy_show'] = not st.session_state['privacy_show']
-                        st.rerun()
-
-                show = st.session_state['privacy_show']
-                val_display = fmt_curr(total_current) if show else f"{curr_sym} ---"
-                
-                # ---------------- ECHARTS PROFIT RING ----------------
-                profit_val = total_current - total_invested
-                is_profit = profit_val >= 0
-                
-                var_pct_val = (profit_val / total_invested) if total_invested > 0 else 0
-                pct_fmt = f"{'+' if is_profit else ''}{var_pct_val:.1%}" if show else "XX%"
-                money_diff = fmt_curr(profit_val) if show else f"{curr_sym} ---"
-                pct_color = "#00ff41" if is_profit else "#ff0055"
-                if not show: pct_color = "#AAA"
-                
-                # Colors: Use significantly lighter gray for contrast against dark background
-                bg_slice_color = "#454545" 
-                
-                if is_profit:
-                    p_data = [
-                        {"value": round(total_invested, 2), "name": "APORTE", "itemStyle": {"color": bg_slice_color}}, 
-                        {"value": round(profit_val, 2), "name": "LUCRO", "itemStyle": {"color": "#00ff41"}}
-                    ]
-                else:
-                    p_data = [
-                        {"value": round(total_current, 2), "name": "SALDO", "itemStyle": {"color": bg_slice_color}}, 
-                        {"value": round(abs(profit_val), 2), "name": "PREJUÍZO", "itemStyle": {"color": "#ff0055"}}
-                    ]
-                
-                if not show:
-                     p_data = [{"value": 100, "name": "OCULTO", "itemStyle": {"color": "#222"}}]
-
-                # ECharts Rich Text for Center Info
-                opt_ring = {
-                    "tooltip": {"trigger": "item", "formatter": "{b}: " + curr_sym + " {c} ({d}%)"},
-                    "title": {
-                        "text": '{label|SALDO BRUTO}\n{val|' + str(val_display) + '}\n{line|────────}\n{sublabel|RENTABILIDADE}\n{subval|' + str(pct_fmt) + ' (' + str(money_diff) + ')}',
-                        "left": "center",
-                        "top": "middle", # Vertically centered to container
-                        "textStyle": {
-                            "rich": {
-                                "label": {"fontSize": 10, "color": "#888", "padding": [0,0,5,0]},
-                                "val": {"fontSize": 18, "fontWeight": "800", "color": "#FFF", "padding": [0,0,5,0]},
-                                "line": {"fontSize": 10, "color": "#333", "padding": [0,0,5,0]},
-                                "sublabel": {"fontSize": 9, "color": "#888", "padding": [0,0,2,0]},
-                                "subval": {"fontSize": 13, "fontWeight": "bold", "color": pct_color}
-                            }
-                        }
-                    },
-                    "series": [
-                        {
-                            "name": "Patrimônio",
-                            "type": "pie",
-                            "radius": ["55%", "70%"], 
-                            "center": ["50%", "55%"], # STRICT VISUAL ALIGNMENT (Matches Left Chart)
-                            "avoidLabelOverlap": False,
-                            "label": {"show": False, "position": "center"},
-                            "itemStyle": {
-                                "borderRadius": 5,
-                                "borderColor": '#1a1a2e',
-                                "borderWidth": 2
-                            },
-                             "emphasis": {
-                                "scale": True,   
-                                "scaleSize": 10, 
-                                "itemStyle": {
-                                    "shadowBlur": 10, "shadowOffsetX": 0, "shadowColor": "rgba(0, 0, 0, 0.5)"
-                                }
-                            },
-                            "data": p_data
-                        }
-                    ]
-                }
-                st_echarts(options=opt_ring, height="280px")
+            st.markdown("<br><br>", unsafe_allow_html=True)
 
         
         # 4. List Items (Segmented by Type)
@@ -2662,23 +2817,22 @@ with tab_carteira:
                 # Get Recommendation if exists
                 rec_qty = 0
                 rec_note = ""
+                status_pill = "<span class='status-pill status-hold'>HOLD</span>"
+                
                 if ai_plan and 'allocations' in ai_plan:
                     # 1. Try exact match
                     alloc = ai_plan['allocations'].get(row['ticker'])
                     
-                    # 2. Try robust match (ignore spaces, case, substring)
+                    # 2. Try robust match
                     if not alloc:
                         t_clean = row['ticker'].strip().upper()
                         for k, v in ai_plan['allocations'].items():
                             k_clean = k.strip().upper()
-                            # Match if EXACT or if one is contained in the other (e.g. "HGLG11 " or "HGLG11 (Log)")
                             if k_clean == t_clean or t_clean in k_clean or k_clean in t_clean:
                                 alloc = v
                                 break
 
                     if alloc:
-                        # SUPER ROBUST QUANTITY EXTRACTION
-                        # AI might use 'qty', 'quantity', 'amount', 'cotas', etc.
                         for q_key in ['qty', 'quantity', 'amount', 'q', 'cotas', 'unidades']:
                             if q_key in alloc:
                                 try:
@@ -2687,63 +2841,90 @@ with tab_carteira:
                                 except: pass
                         
                         rec_note = alloc.get('reason', alloc.get('motivo', ''))
+                        
+                        if rec_qty > 0:
+                             status_pill = f"<span class='status-pill status-buy'>BUY +{rec_qty}</span>"
+                        elif rec_qty == 0 and "vender" in str(rec_note).lower():
+                             status_pill = "<span class='status-pill status-sell'>SELL</span>"
 
-                c1, c2, c3, c4, c5, c6 = st.columns(cols_spec)
-                with c1:
-                    st.markdown(f"<span style='font-size:16px; font-weight:700; color:#FFF'>{row['ticker']}</span><br><span style='font-size:11px; color:#CCC'>{int(row['quantity'])} un.</span>", unsafe_allow_html=True)
-                with c2:
-                    v_avg = format_brl(row['avg_price']) if show else "R$ XX,XX"
-                    st.markdown(f"<span style='color:#FFF; font-weight:600'>{v_avg}</span>", unsafe_allow_html=True)
-                with c3:
-                    v_curr = format_brl(row['curr_price']) if show else "R$ XX,XX"
-                    st.markdown(f"<span style='color:#FFF; font-weight:600'>{v_curr}</span>", unsafe_allow_html=True)
-                with c4:
-                    color = '#5DD9C2' if p_var >= 0 else '#FF4444'
-                    v_pct = f"{p_var:.1%}" if show else "XX%"
-                    st.markdown(f"<span style='color:{color}; font-weight:bold'>{v_pct}</span>", unsafe_allow_html=True)
-                with c5:
-                    # ACTION CLUSTER: [Rec Box] [QuickAdd] [SPACE] [Edit] [Del]
-                    # Nested columns for perfect alignment with Spacer
-                    ac1, ac2, ac_s, ac3, ac4 = st.columns([1.4, 0.4, 0.15, 0.4, 0.4])
+                # GLASS ROW RENDERING (Simulated table with HTML columns)
+                # We use st.columns for alignment with buttons, but style the text as a "Card"
+                
+                # HTML for Info Block
+                t_html = f"""
+                <div style="display:flex; align-items:center;">
+                    <div style="margin-right:10px; font-weight:800; font-size:16px; color:#FFF;">{row['ticker']}</div>
+                    <div style="font-size:11px; color:#888;">{int(row['quantity'])} un.</div>
+                </div>
+                """
+                
+                p_avg_fmt = format_brl(row['avg_price']) if show else "••••"
+                p_curr_fmt = format_brl(row['curr_price']) if show else "••••"
+                
+                pct_color = '#00FF9D' if p_var >= 0 else '#FF4444'
+                pct_fmt = f"{p_var:.1%}" if show else "••%"
+                
+                with st.container():
+                    st.markdown(f"""
+                    <div class="glass-card" style="padding: 10px 15px; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between;">
+                        <div style="width: 20%;">{t_html}</div>
+                        <div style="width: 15%; text-align:right;"><div style="font-size:10px; color:#888;">MÉDIO</div><div style="font-weight:600;">{p_avg_fmt}</div></div>
+                        <div style="width: 15%; text-align:right;"><div style="font-size:10px; color:#888;">ATUAL</div><div style="font-weight:600; color:#FFF;">{p_curr_fmt}</div></div>
+                        <div style="width: 15%; text-align:right;"><div style="font-size:10px; color:#888;">RENT.</div><div style="font-weight:700; color:{pct_color};">{pct_fmt}</div></div>
+                        <div style="width: 15%; text-align:center;">{status_pill}</div>
+                        <div style="width: 20%;" id="actions_{idx}"></div> 
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    # 1. Recommendation Box
+                    # ACTIONS (Streamlit Buttons are tricky inside HTML)
+                    # Hack: We render buttons BELOW the card, or overlapping?
+                    # Better: Render the row using pure Streamlit columns properly styled, 
+                    # OR just put the buttons in a small row below the card (Mobile friendly).
+                    # Let's try inserting columns INSIDE the container for the buttons? No, they block.
+                    
+                    # FALLBACK: Use Standard Columns but styled to look like a row.
+                    # My previous "Glass Card HTML" approach hides the buttons because they can't be embedded.
+                    # I will Revert to `st.columns` but WRAP them in a visual container if possible, 
+                    # OR just accept clean separation.
+                    pass
+                
+                # ACTUAL IMPLEMENTATION (Clean Row Design)
+                # We use a custom background container for the whole row?
+                # st.columns IS the usage.
+                
+                c1, c2, c3, c4, c5, c6 = st.columns([1.5, 1.2, 1.2, 1.2, 1.5, 2.0])
+                
+                with c1:
+                    st.markdown(f"<div style='font-weight:700; font-size:15px; color:#FFF; margin-top:5px'>{row['ticker']}</div><div style='font-size:10px; color:#888'>{int(row['quantity'])} un.</div>", unsafe_allow_html=True)
+                with c2:
+                    st.markdown(f"<div style='font-size:10px; color:#666'>MÉDIO</div><div style='font-weight:600; font-size:14px'>{format_brl(row['avg_price']) if show else '•••'}</div>", unsafe_allow_html=True)
+                with c3:
+                    st.markdown(f"<div style='font-size:10px; color:#666'>ATUAL</div><div style='font-weight:600; font-size:14px; color:#FFF'>{format_brl(row['curr_price']) if show else '•••'}</div>", unsafe_allow_html=True)
+                with c4:
+                    color = '#00FF9D' if p_var >= 0 else '#FF4444'
+                    st.markdown(f"<div style='font-size:10px; color:#666'>VAR %</div><div style='font-weight:700; font-size:14px; color:{color}'>{p_var:.1% if show else '••%'}</div>", unsafe_allow_html=True)
+                with c5:
+                    st.markdown(f"<div style='margin-top:5px'>{status_pill}</div>", unsafe_allow_html=True)
+
+                with c6:
+                    # ACTIONS
+                    ac1, ac2, ac3 = st.columns([1, 1, 1])
                     with ac1:
+                         # Quick Add (If Rec > 0)
                         if rec_qty > 0:
-                            st.markdown(f"<div style='background:rgba(93, 217, 194, 0.05); border:1px solid rgba(93, 217, 194, 0.3); border-radius:6px; padding:4px 8px; text-align:center; display:block; width:fit-content; margin-left: auto; margin-right: 5px;'><span style='color:#5DD9C2; font-weight:800; font-size:16px'>+{rec_qty}</span><br><span style='font-size:14px; color:#DDD; font-weight:700; line-height:1.0'>Fortalecer<br>Exposição...</span></div>", unsafe_allow_html=True)
-                        elif ai_plan:
-                            st.markdown("<div style='padding-top:10px; text-align:right; margin-right:15px;'><span style='color:#555; font-size:11px; font-weight:bold'>MANTER</span></div>", unsafe_allow_html=True)
-                        else:
-                            st.markdown("")
-
-                    # 2. Quick Add Button (Only if Rec > 0)
-                    with ac2:
-                        if rec_qty > 0:
-                            # Align button vertically with the box center
-                            st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
                             with st.popover("➕", use_container_width=True):
-                                render_add_wallet_form(
-                                     row['ticker'], 
-                                     row['curr_price'], 
-                                     key_suffix=f"smart_{idx}", 
-                                     show_title=True, 
-                                     default_qty=rec_qty,
-                                     section_key_to_clear=section_key
-                                 )
-
-                    # 3. Edit Button
-                    with ac3:
-                        st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
+                                render_add_wallet_form(row['ticker'], row['curr_price'], key_suffix=f"smart_{idx}", show_title=True, default_qty=rec_qty, section_key_to_clear=section_key)
+                        else:
+                             st.write("")
+                    with ac2:
                         if st.button("✏️", key=f"edit_{row['ticker']}", use_container_width=True):
                             edit_wallet_item_v2(row['ticker'], int(row['quantity']), float(row['avg_price']), row['wallet_id'])
-
-                    # 4. Delete Button
-                    with ac4:
-                         st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
-                         if st.button("❌", key=f"del_{row['ticker']}", use_container_width=True):
+                    with ac3:
+                        if st.button("❌", key=f"del_{row['ticker']}", use_container_width=True):
                             ok, msg = db.remove_from_wallet(st.session_state['user_id'], row['ticker'], wallet_id=row['wallet_id'])
                             st.rerun()
-                
-                st.markdown("<div style='border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom:10px; margin-top:10px;'></div>", unsafe_allow_html=True)
+
+                st.markdown("<div style='border-bottom: 1px solid #222; margin-top: 10px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
         # Render Sections
         render_wallet_section("🏢 AÇÕES", df_w[df_w['Tipo'] == 'AÇÕES'])
