@@ -1124,6 +1124,13 @@ st.markdown(f"""
     header {{ visibility: hidden; }}
     #MainMenu, footer {{ visibility: hidden; }}
 
+    /* FIX: Force Sidebar Toggle Button to be VISIBLE */
+    [data-testid="stSidebarCollapsedControl"] {{
+        visibility: visible !important;
+        display: block !important;
+        color: #5DD9C2 !important;
+    }}
+
     /* Custom Header Text */
     .header-logo-text {{ font-size: 24px; font-weight: 800; color: #fff; letter-spacing: 1px; }}
     .header-version {{ font-size: 12px; font-weight: 600; color: #5DD9C2; background: rgba(93, 217, 194, 0.15); padding: 2px 6px; border-radius: 4px; margin-left: 10px; }}
