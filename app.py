@@ -1745,6 +1745,29 @@ if not st.session_state['logged_in']:
 # 📺 UI PRINCIPAL
 # ==============================================================================
 
+# HELPER: Database Price Fetcher (Fixes NameError)
+def get_db_prices(tickers):
+    """
+    Fetches the latest known price for a list of tickers from Session State (Pipeline) 
+    or returns a fallback dictionary. 
+    """
+    price_map = {}
+    
+    # 1. Try Session State Market Data (Fastest)
+    if 'market_data' in st.session_state:
+        md = st.session_state['market_data']
+        for t in tickers:
+            if t in md['ticker'].values:
+                price_map[t] = float(md[md['ticker']==t].iloc[0]['price'])
+    # 2. Try ETFs Data
+    if 'market_data_etfs' in st.session_state:
+        md_etf = st.session_state['market_data_etfs']
+        for t in tickers:
+            if t not in price_map and t in md_etf['ticker'].values:
+                price_map[t] = float(md_etf[md_etf['ticker']==t].iloc[0]['price'])
+    return price_map
+
+
 
 
 
@@ -2026,12 +2049,108 @@ def load_data_fiis_pipeline():
         return True
     return False
 
-tab_carteira, tab_acoes, tab_etfs, tab_mix, tab_fiis, tab_arena = st.tabs(["CARTEIRA", "AÇÕES", "ETFs", "ELITE MIX", "FIIs", "ARENA"])
+    return False
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# 🧭 SIDEBAR NAVIGATION (VERTICAL MENU)
+# ==============================================================================
+
+# Custom CSS for Sidebar Radio Buttons
+st.markdown("""
+<style>
+/* Sidebar Container */
+section[data-testid="stSidebar"] {
+    background-color: #0B0E11; /* Match Main Dark Theme */
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Radio Button "Menu Item" Style */
+div[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] {
+    gap: 8px;
+}
+
+div[data-testid="stSidebar"] .stRadio label {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 10px 12px;
+    transition: all 0.2s ease;
+    color: #888;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+/* Hover State */
+div[data-testid="stSidebar"] .stRadio label:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #FFF;
+}
+
+/* Selected State */
+div[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
+    background-color: rgba(0, 255, 157, 0.08) !important;
+    border-left: 3px solid #00FF9D !important;
+    color: #00FF9D !important;
+    font-weight: 600;
+}
+
+/* Hide Radio Circles */
+div[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label div:first-child {
+    display: none; 
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.image(URL_DO_ICONE, width=60)
+    st.markdown("<div style='margin-bottom:20px; font-weight:700; font-size:18px; color:#FFF; letter-spacing:1px;'>SCOPE3 <span style='font-size:10px; color:#00FF9D; border:1px solid #00FF9D; padding:2px 4px; border-radius:4px;'>V15.0</span></div>", unsafe_allow_html=True)
+    
+    # Navigation Menu
+    nav_options = ["Dashboard", "Ações", "ETFs", "Elite Mix", "FIIs", "Arena (Beta)"]
+    icons = ["🏠", "🏢", "🌎", "🏆", "🏗️", "⚔️"]
+    
+    # Map options to icons for display if needed, but Radio keeps it simple text or formatting
+    # We can format the labels directly in the list if we want icons
+    nav_formatted = [f"{icon}  {opt}" for icon, opt in zip(icons, nav_options)]
+    
+    selected_nav = st.radio("NAVEGAÇÃO", nav_formatted, label_visibility="collapsed")
+    
+    st.markdown("---")
+    
+    # Logout Logic
+    st.markdown(f"<div style='font-size:12px; color:#555; text-align:center'>Logado como<br><b style='color:#DDD'>{st.session_state.get('username','User')}</b></div>", unsafe_allow_html=True)
+    if st.button("SAIR", use_container_width=True):
+         if 'user_id' in st.session_state: db.delete_all_user_sessions(st.session_state['user_id'])
+         try: cookie_manager.delete("auth_token")
+         except: pass
+         st.session_state['logged_in'] = False
+         st.rerun()
+
+# Map Selection back to internal keys
+nav_map = {
+    nav_formatted[0]: "CARTEIRA",
+    nav_formatted[1]: "AÇÕES",
+    nav_formatted[2]: "ETFs",
+    nav_formatted[3]: "ELITE MIX",
+    nav_formatted[4]: "FIIs",
+    nav_formatted[5]: "ARENA"
+}
+
+current_tab = nav_map.get(selected_nav, "CARTEIRA")
+
+# Mock Tabs Object to minimize refactor impact (Optional, but using 'if' is cleaner)
+# tab_carteira = (current_tab == "CARTEIRA")
+# ... simpler to just replace the 'with tab_X:' lines.
+
+
+# ==============================================================================
 # PÁGINA 0: CARTEIRA PESSOAL (HERO DASHBOARD)
-# ------------------------------------------------------------------------------
-with tab_carteira:
+# ==============================================================================
+if current_tab == "CARTEIRA":
+
     # --- DASHBOARD COMMAND CENTER ---
     
     # 1. DATA PREP
@@ -2946,9 +3065,10 @@ with tab_carteira:
 # PÁGINA 1: AÇÕES (O ORIGINAL)
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # PÁGINA 1: AÇÕES
 # ------------------------------------------------------------------------------
-with tab_acoes:
+if current_tab == "AÇÕES":
 
     st.divider()
     # MARKET SELECTION WIDGET (DROPDOWN MENU)
@@ -3109,9 +3229,10 @@ with tab_acoes:
 
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # PÁGINA X: ETFs (NOVO!!!)
 # ------------------------------------------------------------------------------
-with tab_etfs:
+if current_tab == "ETFs":
     st.divider()
     st.markdown("### 🌎 ETFs & ÍNDICES (FUNDO DE ÍNDICE)")
     
@@ -3210,9 +3331,10 @@ with tab_etfs:
 # PÁGINA 2: ELITE MIX (NOVO!!!)
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # PÁGINA 2: ELITE MIX
 # ------------------------------------------------------------------------------
-with tab_mix:
+if current_tab == "ELITE MIX":
 
     st.divider()
     st.markdown("### 🏆 ELITE MIX: O FILTRO SUPREMO")
@@ -3334,7 +3456,7 @@ with tab_mix:
 # ------------------------------------------------------------------------------
 # PÁGINA 3: FIIs
 # ------------------------------------------------------------------------------
-with tab_fiis:
+if current_tab == "FIIs":
 
     st.divider()
     st.divider()
@@ -3420,7 +3542,7 @@ with tab_fiis:
 # ------------------------------------------------------------------------------
 # PÁGINA 4: ARENA
 # ------------------------------------------------------------------------------
-with tab_arena:
+if current_tab == "ARENA":
 
     st.divider()
     st.markdown("### ⚔️ ARENA DE BATALHA: COMPARADOR")
