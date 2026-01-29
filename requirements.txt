@@ -18,3 +18,4 @@ nest_asyncio
 psycopg2-binary
 SQLAlchemy
 streamlit-echarts
+streamlit-option-menu

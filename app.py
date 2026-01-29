@@ -15,6 +15,7 @@ import os
 from dotenv import load_dotenv
 from google_auth_oauthlib.flow import Flow
 import extra_streamlit_components as stx
+from streamlit_option_menu import option_menu
 import edge_tts
 import asyncio
 import nest_asyncio
@@ -1121,10 +1122,14 @@ st.markdown(f"""
         padding-bottom: 2rem !important;
         max-width: 95% !important;
     }}
-    header {{ visibility: hidden; }}
+    /* header {{ visibility: hidden; }} <-- REMOVED BLOCKING */
     #MainMenu, footer {{ visibility: hidden; }}
-
-    /* FIX: Force Sidebar Toggle Button to be VISIBLE */
+    
+    /* SMART VISIBILITY: Hide Streamlit Decoration and Toolbar, KEEP Toggle */
+    [data-testid="stDecoration"] {{ display: none; }}
+    [data-testid="stToolbar"] {{ visibility: hidden; }}
+    
+    /* Ensure Sidebar Toggle is VISIBLE and COLORED */
     [data-testid="stSidebarCollapsedControl"] {{
         visibility: visible !important;
         display: block !important;
@@ -1840,16 +1845,22 @@ with st.sidebar:
     with c_logo_2:
         st.markdown("<div style='margin-top:10px; font-weight:800; font-size:20px; color:#FFF; letter-spacing:1px; line-height:1.2;'>SCOPE3<br><span style='font-size:11px; color:#00FF9D; font-weight:600; background:rgba(0,255,157,0.1); padding:2px 6px; border-radius:4px;'>V15.0</span></div>", unsafe_allow_html=True)
 
+    st.markdown("---")
     
-    # Navigation Menu
-    nav_options = ["Dashboard", "Ações", "ETFs", "Elite Mix", "FIIs", "Arena (Beta)"]
-    icons = ["🏠", "🏢", "🌎", "🏆", "🏗️", "⚔️"]
-    
-    # Map options to icons for display if needed, but Radio keeps it simple text or formatting
-    # We can format the labels directly in the list if we want icons
-    nav_formatted = [f"{icon}  {opt}" for icon, opt in zip(icons, nav_options)]
-    
-    selected_nav = st.radio("NAVEGAÇÃO", nav_formatted, label_visibility="collapsed")
+    # NEW TECHNOLOGY: Option Menu
+    selected_nav = option_menu(
+        menu_title=None,
+        options=["Dashboard", "Ações", "ETFs", "Elite Mix", "FIIs", "Arena (Beta)"],
+        icons=["house", "bar-chart", "globe", "trophy", "building", "shield"],
+        menu_icon="cast",
+        default_index=0,
+        styles={
+            "container": {"padding": "0!important", "background-color": "transparent"},
+            "icon": {"color": "#888", "font-size": "14px"}, 
+            "nav-link": {"font-size": "15px", "text-align": "left", "margin":"0px", "--hover-color": "rgba(255, 255, 255, 0.05)"},
+            "nav-link-selected": {"background-color": "rgba(0, 255, 157, 0.1)", "color": "#00FF9D", "border-left": "4px solid #00FF9D"},
+        }
+    )
     
     st.markdown("---")
     
@@ -1862,14 +1873,14 @@ with st.sidebar:
          st.session_state['logged_in'] = False
          st.rerun()
 
-# Map Selection back to internal keys
+# Map Selection back to internal keys (Simplified)
 nav_map = {
-    nav_formatted[0]: "CARTEIRA",
-    nav_formatted[1]: "AÇÕES",
-    nav_formatted[2]: "ETFs",
-    nav_formatted[3]: "ELITE MIX",
-    nav_formatted[4]: "FIIs",
-    nav_formatted[5]: "ARENA"
+    "Dashboard": "CARTEIRA",
+    "Ações": "AÇÕES",
+    "ETFs": "ETFs",
+    "Elite Mix": "ELITE MIX",
+    "FIIs": "FIIs",
+    "Arena (Beta)": "ARENA"
 }
 
 current_tab = nav_map.get(selected_nav, "CARTEIRA")
