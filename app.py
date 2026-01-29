@@ -1882,48 +1882,9 @@ if 'market_region' in st.session_state: del st.session_state['market_region']
 # Custom Top Header
 # Custom Top Header - RENOVATED
 # Layout: [Logo + Title] [Tabs (Center)] [User + Logout (Right)]
-c1, c2, c3 = st.columns([3, 5, 2])
 
-with c1:
-    h_col1, h_col2 = st.columns([1, 4])
-    with h_col1: st.image(URL_DO_ICONE, width=55)
-    with h_col2: st.markdown("<div style='margin-top:10px;'><span class='header-logo-text'>SCOPE3</span> <span class='header-version'>V15.0</span></div>", unsafe_allow_html=True)
+# (Legacy Header Removed to Fix Sidebar Conflict)
 
-with c2: 
-    pass # Tabs will render below, but visually they act as the navbar
-
-with c3:
-    # Flex container for User + Button
-    st.markdown(f"""
-    <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:5px;">
-        <span class="header-user">👤 {st.session_state['username']}</span>
-    </div>
-    """, unsafe_allow_html=True)
-    if st.button("SAIR", key="logout_top", use_container_width=True):
-        # 1. Try to delete specific token from DB (if available)
-        cookies = cookie_manager.get_all()
-        # 2. NUCLEAR OPTION: Delete ALL sessions for this user from DB
-        # This prevents auto-relogin even if cookie persists
-        if st.session_state['user_id']:
-            db.delete_all_user_sessions(st.session_state['user_id'])
-            
-        # 3. Delete from Browser (Safe)
-        try:
-            cookie_manager.delete("auth_token")
-        except KeyError:
-            pass # Already deleted or not found
-        except Exception:
-            pass
-        
-        # 4. Clear Session State
-        st.session_state['logged_in'] = False
-        st.session_state['user_id'] = None
-        st.session_state['username'] = None
-        
-        # Wait for cookie deletion to sync with browser
-        st.success("Saindo do sistema...")
-        time.sleep(2) 
-        st.rerun()
 
 
 # MAIN NAVIGATION TABS
