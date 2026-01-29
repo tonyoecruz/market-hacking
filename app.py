@@ -41,7 +41,7 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' # Re-enabled for Cloud Proxy com
 # 🛠️ CONFIG DO APP
 # ==============================================================================
 URL_DO_ICONE = "https://wsrv.nl/?url=raw.githubusercontent.com/tonyoecruz/market-hacking/main/logo.jpeg"
-st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="SCOPE3 ULTIMATE", page_icon=URL_DO_ICONE, layout="wide", initial_sidebar_state="expanded")
 
 # ==============================================================================
 # 🎨 UI / UX - FINTECH DARK MODE (SCOPE3 ULTIMATE)
@@ -2047,8 +2047,6 @@ def load_data_fiis_pipeline():
     if not df_final.empty:
         st.session_state['fiis_data'] = df_final
         return True
-    return False
-
     return False
 
 # ==============================================================================
