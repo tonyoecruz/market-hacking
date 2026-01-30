@@ -1129,11 +1129,23 @@ st.markdown(f"""
     [data-testid="stDecoration"] {{ display: none; }}
     [data-testid="stToolbar"] {{ visibility: hidden; }}
     
-    /* Ensure Sidebar Toggle is VISIBLE and COLORED */
+    /* FORCE SIDEBAR TOGGLE VISIBILITY - FIXED POSITION */
     [data-testid="stSidebarCollapsedControl"] {{
         visibility: visible !important;
         display: block !important;
         color: #5DD9C2 !important;
+        position: fixed !important; /* Float above everything */
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 999999 !important; /* Above the block container */
+        background-color: rgba(0,0,0,0.5); /* Contrast background */
+        border-radius: 8px;
+        padding: 4px;
+    }}
+    
+    section[data-testid="stSidebar"] {{
+        z-index: 999998 !important;
+        display: block !important; /* Ensure sidebar itself is not hidden */
     }}
 
     /* Custom Header Text */
