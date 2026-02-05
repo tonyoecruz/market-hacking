@@ -1126,11 +1126,11 @@ st.markdown(f"""
     #MainMenu, footer {{ visibility: hidden; }}
     
     /* SMART VISIBILITY: Hide Streamlit Decoration and Toolbar, KEEP Toggle */
-    [data-testid="stDecoration"] { display: none; }
-    [data-testid="stToolbar"] { visibility: hidden; }
+    [data-testid="stDecoration"] {{ display: none; }}
+    [data-testid="stToolbar"] {{ visibility: hidden; }}
     
     /* FORCE SIDEBAR TOGGLE VISIBILITY - ULTRA VISIBLE */
-    [data-testid="stSidebarCollapsedControl"] {
+    [data-testid="stSidebarCollapsedControl"] {{
         visibility: visible !important;
         display: block !important;
         position: fixed !important;
@@ -1142,24 +1142,24 @@ st.markdown(f"""
         padding: 8px 12px !important;
         box-shadow: 0 4px 20px rgba(0, 255, 157, 0.5) !important;
         transition: all 0.3s ease !important;
-    }
+    }}
     
-    [data-testid="stSidebarCollapsedControl"]:hover {
+    [data-testid="stSidebarCollapsedControl"]:hover {{
         transform: scale(1.1) !important;
         box-shadow: 0 6px 30px rgba(0, 255, 157, 0.7) !important;
-    }
+    }}
     
-    [data-testid="stSidebarCollapsedControl"] button {
+    [data-testid="stSidebarCollapsedControl"] button {{
         color: #000 !important;
         font-weight: 800 !important;
-    }
+    }}
     
     /* SIDEBAR CONTAINER - ALWAYS VISIBLE */
-    section[data-testid="stSidebar"] {
+    section[data-testid="stSidebar"] {{
         z-index: 999998 !important;
         display: block !important;
         visibility: visible !important;
-    }
+    }}
     
     /* SIDEBAR EXPAND/COLLAPSE BUTTON (when sidebar is open) */
     [data-testid="stSidebar"] button[kind="header"] {{
