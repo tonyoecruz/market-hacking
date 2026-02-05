@@ -1,7 +1,7 @@
 """
-Pydantic Models for Data Validation
+Pydantic Models for Data Validation - SCOPE3 (FastAPI Optimized)
 """
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
@@ -60,8 +60,9 @@ class AssetBase(BaseModel):
     quantity: Decimal = Field(..., gt=0)
     avg_price: Decimal = Field(..., gt=0)
     
-    @validator('ticker')
-    def ticker_uppercase(cls, v):
+    @field_validator('ticker')
+    @classmethod
+    def ticker_uppercase(cls, v: str) -> str:
         return v.upper().strip()
 
 
@@ -92,7 +93,8 @@ class TransactionBase(BaseModel):
     ticker: str
     quantity: Decimal
     price: Decimal
-    transaction_type: str = Field(..., regex="^(buy|sell)$")
+    # CORREÇÃO: 'regex' substituído por 'pattern' para compatibilidade com Pydantic v2
+    transaction_type: str = Field(..., pattern="^(buy|sell)$")
 
 
 class TransactionCreate(TransactionBase):
