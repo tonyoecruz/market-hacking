@@ -1162,7 +1162,7 @@ st.markdown(f"""
     }
     
     /* SIDEBAR EXPAND/COLLAPSE BUTTON (when sidebar is open) */
-    [data-testid="stSidebar"] button[kind="header"] {
+    [data-testid="stSidebar"] button[kind="header"] {{
         color: #00FF9D !important;
     }}
 
