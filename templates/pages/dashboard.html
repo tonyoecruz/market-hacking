@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SCOPE3{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-dark-900">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-dark-800 border-r border-gray-700 flex flex-col">
+        <!-- Logo -->
+        <div class="p-6 border-b border-gray-700">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg">
+                    <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold gradient-text">SCOPE3</h1>
+                    <span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">V2.0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="/dashboard"
+                class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-primary/10 text-primary border-l-4 border-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                    </path>
+                </svg>
+                <span class="font-semibold">Dashboard</span>
+            </a>
+
+            <a href="/acoes"
+                class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                    </path>
+                </svg>
+                <span>Ações</span>
+            </a>
+
+            <a href="/etfs"
+                class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                    </path>
+                </svg>
+                <span>ETFs</span>
+            </a>
+
+            <a href="/elite-mix"
+                class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z">
+                    </path>
+                </svg>
+                <span>Elite Mix</span>
+            </a>
+
+            <a href="/fiis"
+                class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                    </path>
+                </svg>
+                <span>FIIs</span>
+            </a>
+
+            <a href="/arena"
+                class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                    </path>
+                </svg>
+                <span>Arena (Beta)</span>
+            </a>
+        </nav>
+
+        <!-- User Section -->
+        <div class="p-4 border-t border-gray-700">
+            <div class="flex items-center space-x-3 mb-3">
+                <div
+                    class="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-dark-900 font-bold">
+                    {{ user.username[0].upper() }}
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-semibold text-white">{{ user.username }}</p>
+                    <p class="text-xs text-gray-400">{{ user.email }}</p>
+                </div>
+            </div>
+            <form action="/auth/logout" method="POST">
+                <button type="submit"
+                    class="w-full px-4 py-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition text-sm font-semibold">
+                    Sair
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto">
+        <!-- Header -->
+        <header class="bg-dark-800 border-b border-gray-700 p-6">
+            <h2 class="text-2xl font-bold text-white">Minha Carteira</h2>
+            <p class="text-gray-400 mt-1">Acompanhe seus investimentos em tempo real</p>
+        </header>
+
+        <!-- Content -->
+        <div class="p-6">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-400 text-sm">Patrimônio Total</span>
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-3xl font-bold text-white">R$ 0,00</p>
+                    <p class="text-sm text-green-500 mt-1">+0.00%</p>
+                </div>
+
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-400 text-sm">Total Investido</span>
+                        <svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                    </div>
+                    <p class="text-3xl font-bold text-white">R$ 0,00</p>
+                </div>
+
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-400 text-sm">Ativos</span>
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-3xl font-bold text-white">{{ portfolio|length }}</p>
+                </div>
+            </div>
+
+            <!-- Portfolio Table -->
+            <div class="glass rounded-xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white">Seus Ativos</h3>
+                    <button
+                        class="px-4 py-2 bg-gradient-to-r from-primary to-secondary text-dark-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-primary/50 transition">
+                        + Adicionar Ativo
+                    </button>
+                </div>
+
+                {% if portfolio %}
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="text-left py-3 px-4 text-gray-400 font-semibold">Ticker</th>
+                                <th class="text-right py-3 px-4 text-gray-400 font-semibold">Quantidade</th>
+                                <th class="text-right py-3 px-4 text-gray-400 font-semibold">Preço Médio</th>
+                                <th class="text-right py-3 px-4 text-gray-400 font-semibold">Total Investido</th>
+                                <th class="text-right py-3 px-4 text-gray-400 font-semibold">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for asset in portfolio %}
+                            <tr class="border-b border-gray-700/50 hover:bg-dark-700/50 transition">
+                                <td class="py-4 px-4">
+                                    <span class="text-white font-semibold">{{ asset.ticker }}</span>
+                                </td>
+                                <td class="text-right py-4 px-4 text-gray-300">{{ asset.quantity }}</td>
+                                <td class="text-right py-4 px-4 text-gray-300">R$ {{ "%.2f"|format(asset.avg_price) }}
+                                </td>
+                                <td class="text-right py-4 px-4 text-white font-semibold">
+                                    R$ {{ "%.2f"|format(asset.quantity * asset.avg_price) }}
+                                </td>
+                                <td class="text-right py-4 px-4">
+                                    <button class="text-primary hover:text-secondary transition">Editar</button>
+                                    <button class="text-red-500 hover:text-red-400 transition ml-3">Remover</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-12">
+                    <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4">
+                        </path>
+                    </svg>
+                    <p class="text-gray-400 text-lg">Sua carteira está vazia</p>
+                    <p class="text-gray-500 text-sm mt-2">Adicione seu primeiro ativo para começar</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Registro - SCOPE3{% endblock %}
+
+{% block content %}
+<div
+    class="min-h-screen flex items-center justify-center bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 px-4">
+    <div class="max-w-md w-full">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <a href="/auth/login"
+                class="inline-block p-4 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl mb-4 hover:scale-110 transition">
+                <svg class="w-16 h-16 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+            </a>
+            <h1 class="text-3xl font-bold text-white">Criar Conta</h1>
+            <p class="text-gray-400 mt-2">Junte-se ao SCOPE3</p>
+        </div>
+
+        <!-- Register Card -->
+        <div class="bg-dark-800/50 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-700/50 p-8">
+            <form action="/auth/register" method="POST" class="space-y-4">
+                <!-- Username -->
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">
+                        Usuário
+                    </label>
+                    <input type="text" id="username" name="username" required minlength="3"
+                        class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                        placeholder="Escolha um usuário">
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-300 mb-2">
+                        Email
+                    </label>
+                    <input type="email" id="email" name="email" required
+                        class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                        placeholder="seu@email.com">
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
+                        Senha
+                    </label>
+                    <input type="password" id="password" name="password" required minlength="8"
+                        class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                        placeholder="Mínimo 8 caracteres">
+                </div>
+
+                <!-- Password Confirm -->
+                <div>
+                    <label for="password_confirm" class="block text-sm font-medium text-gray-300 mb-2">
+                        Confirmar Senha
+                    </label>
+                    <input type="password" id="password_confirm" name="password_confirm" required minlength="8"
+                        class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                        placeholder="Repita a senha">
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit"
+                    class="w-full py-3 bg-gradient-to-r from-primary to-secondary text-dark-900 font-bold rounded-lg hover:shadow-lg hover:shadow-primary/50 transition-all duration-300 transform hover:scale-105">
+                    CRIAR CONTA
+                </button>
+            </form>
+
+            <!-- Login Link -->
+            <div class="text-center mt-6">
+                <p class="text-gray-400 text-sm">
+                    Já tem uma conta?
+                    <a href="/auth/login" class="text-primary hover:text-secondary font-semibold transition">
+                        Faça login
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
