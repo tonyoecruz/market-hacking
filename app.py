@@ -1126,26 +1126,44 @@ st.markdown(f"""
     #MainMenu, footer {{ visibility: hidden; }}
     
     /* SMART VISIBILITY: Hide Streamlit Decoration and Toolbar, KEEP Toggle */
-    [data-testid="stDecoration"] {{ display: none; }}
-    [data-testid="stToolbar"] {{ visibility: hidden; }}
+    [data-testid="stDecoration"] { display: none; }
+    [data-testid="stToolbar"] { visibility: hidden; }
     
-    /* FORCE SIDEBAR TOGGLE VISIBILITY - FIXED POSITION */
-    [data-testid="stSidebarCollapsedControl"] {{
+    /* FORCE SIDEBAR TOGGLE VISIBILITY - ULTRA VISIBLE */
+    [data-testid="stSidebarCollapsedControl"] {
         visibility: visible !important;
         display: block !important;
-        color: #5DD9C2 !important;
-        position: fixed !important; /* Float above everything */
+        position: fixed !important;
         top: 10px !important;
         left: 10px !important;
-        z-index: 999999 !important; /* Above the block container */
-        background-color: rgba(0,0,0,0.5); /* Contrast background */
-        border-radius: 8px;
-        padding: 4px;
-    }}
+        z-index: 999999 !important;
+        background: linear-gradient(135deg, #00FF9D 0%, #00C8FF 100%) !important;
+        border-radius: 12px !important;
+        padding: 8px 12px !important;
+        box-shadow: 0 4px 20px rgba(0, 255, 157, 0.5) !important;
+        transition: all 0.3s ease !important;
+    }
     
-    section[data-testid="stSidebar"] {{
+    [data-testid="stSidebarCollapsedControl"]:hover {
+        transform: scale(1.1) !important;
+        box-shadow: 0 6px 30px rgba(0, 255, 157, 0.7) !important;
+    }
+    
+    [data-testid="stSidebarCollapsedControl"] button {
+        color: #000 !important;
+        font-weight: 800 !important;
+    }
+    
+    /* SIDEBAR CONTAINER - ALWAYS VISIBLE */
+    section[data-testid="stSidebar"] {
         z-index: 999998 !important;
-        display: block !important; /* Ensure sidebar itself is not hidden */
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* SIDEBAR EXPAND/COLLAPSE BUTTON (when sidebar is open) */
+    [data-testid="stSidebar"] button[kind="header"] {
+        color: #00FF9D !important;
     }}
 
     /* Custom Header Text */
@@ -1847,6 +1865,23 @@ div[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label div:first-chi
 """, unsafe_allow_html=True)
 
 with st.sidebar:
+    # VISUAL HELPER - MENU INDICATOR
+    st.markdown("""
+    <div style='background: linear-gradient(135deg, rgba(0,255,157,0.1) 0%, rgba(0,200,255,0.1) 100%); 
+                border: 1px solid rgba(0,255,157,0.3); 
+                border-radius: 8px; 
+                padding: 10px; 
+                margin-bottom: 15px;
+                text-align: center;'>
+        <div style='font-size: 11px; color: #00FF9D; font-weight: 700; letter-spacing: 1px;'>
+            📍 MENU DE NAVEGAÇÃO
+        </div>
+        <div style='font-size: 9px; color: #888; margin-top: 3px;'>
+            Selecione uma opção abaixo
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
     # LOGO HEADER
     c_logo_1, c_logo_2 = st.columns([1, 3])
     with c_logo_1:
