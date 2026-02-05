@@ -1122,8 +1122,17 @@ st.markdown(f"""
         padding-bottom: 2rem !important;
         max-width: 95% !important;
     }}
-    /* header {{ visibility: hidden; }} <-- REMOVED BLOCKING */
+    
+    /* HIDE STREAMLIT HEADER AND MENU COMPLETELY */
+    header {{ visibility: hidden !important; height: 0 !important; }}
     #MainMenu, footer {{ visibility: hidden; }}
+    
+    /* HIDE WHITE HEADER BAR */
+    [data-testid="stHeader"] {{
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+    }}
     
     /* SMART VISIBILITY: Hide Streamlit Decoration and Toolbar, KEEP Toggle */
     [data-testid="stDecoration"] {{ display: none; }}
@@ -1159,6 +1168,21 @@ st.markdown(f"""
         z-index: 999998 !important;
         display: block !important;
         visibility: visible !important;
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        height: 100vh !important;
+        width: 21rem !important;
+        background-color: #15191E !important;
+    }}
+    
+    /* FORCE SIDEBAR TO BE EXPANDED (NOT COLLAPSED) */
+    section[data-testid="stSidebar"][aria-expanded="true"] {{
+        transform: translateX(0) !important;
+    }}
+    
+    section[data-testid="stSidebar"][aria-expanded="false"] {{
+        transform: translateX(0) !important;
     }}
     
     /* SIDEBAR EXPAND/COLLAPSE BUTTON (when sidebar is open) */
