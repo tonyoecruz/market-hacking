@@ -69,16 +69,20 @@ async def login(
 
 
 @router.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request):
+async def register_page(request: Request, error: str = None):
     """Render registration page"""
     return templates.TemplateResponse(
         "auth/register.html",
-        {"request": request}
+        {
+            "request": request,
+            "error": error
+        }
     )
 
 
 @router.post("/register")
 async def register(
+    request: Request,
     username: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
@@ -93,9 +97,14 @@ async def register(
     
     # Validate password match
     if password != password_confirm:
-        raise HTTPException(
-            status_code=400,
-            detail="As senhas não coincidem"
+        return templates.TemplateResponse(
+            "auth/register.html",
+            {
+                "request": request,
+                "error": "As senhas não coincidem",
+                "username": username,
+                "email": email
+            }
         )
     
     # Create user
@@ -108,7 +117,15 @@ async def register(
     success, message = UserQueries.create_user(user_data)
     
     if not success:
-        raise HTTPException(status_code=400, detail=message)
+        return templates.TemplateResponse(
+            "auth/register.html",
+            {
+                "request": request,
+                "error": message,
+                "username": username,
+                "email": email
+            }
+        )
     
     # Redirect to login
     return RedirectResponse(url="/auth/login?registered=true", status_code=303)

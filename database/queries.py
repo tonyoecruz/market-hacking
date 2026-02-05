@@ -25,6 +25,16 @@ class UserQueries:
         try:
             supabase = get_supabase_client()
             
+            # Check if username already exists
+            existing_username = supabase.table('users').select('id').eq('username', user_data.username).execute()
+            if existing_username.data:
+                return False, "Nome de usuário já está em uso"
+            
+            # Check if email already exists
+            existing_email = supabase.table('users').select('id').eq('email', user_data.email).execute()
+            if existing_email.data:
+                return False, "Email já está cadastrado"
+            
             # Hash password
             hashed_password = bcrypt.hashpw(
                 user_data.password.encode('utf-8'),
@@ -41,7 +51,18 @@ class UserQueries:
             
             return True, "Usuário criado com sucesso"
         except Exception as e:
-            return False, f"Erro ao criar usuário: {str(e)}"
+            error_msg = str(e)
+            
+            # Parse Supabase errors
+            if 'duplicate key' in error_msg.lower():
+                if 'users_email_key' in error_msg:
+                    return False, "Email já está cadastrado"
+                elif 'users_username_key' in error_msg:
+                    return False, "Nome de usuário já está em uso"
+                else:
+                    return False, "Usuário ou email já existe"
+            
+            return False, f"Erro ao criar usuário: {error_msg}"
     
     @staticmethod
     def verify_user(username: str, password: str) -> Optional[Dict[str, Any]]:
