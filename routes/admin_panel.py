@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from routes.admin_auth import verify_admin_session
 from database.db_manager import db_manager
+from database.connection import get_supabase_client
 from datetime import datetime, timedelta
 from typing import Dict, List
 import os
@@ -136,22 +137,56 @@ async def get_system_stats(session: dict = Depends(verify_admin_session)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/api/users/stats")
+async def get_user_stats(session: dict = Depends(verify_admin_session)):
+    """API endpoint for user statistics"""
+    try:
+        supabase = get_supabase_client()
+        response = supabase.table('users').select('*').execute()
+        users = response.data
+        
+        total_users = len(users)
+        now = datetime.now()
+        week_ago = now - timedelta(days=7)
+        
+        new_this_week = sum(1 for u in users if u.get('created_at') and datetime.fromisoformat(u['created_at'].replace('Z', '+00:00')) > week_ago)
+        active_users = sum(1 for u in users if u.get('last_login') and datetime.fromisoformat(u['last_login'].replace('Z', '+00:00')) > week_ago)
+        total_logins = sum(u.get('login_count', 0) for u in users)
+        
+        return JSONResponse({
+            "status": "success",
+            "data": {
+                "total_users": total_users,
+                "new_this_week": new_this_week,
+                "active_users": active_users,
+                "total_logins": total_logins
+            }
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/api/users")
 async def get_users(session: dict = Depends(verify_admin_session)):
     """API endpoint to list all users"""
     try:
-        # This would query the users table
-        # For now, return mock data since we don't have user management yet
-        users = [
-            {
-                "id": 1,
-                "username": "admin",
-                "email": "admin@scope3.com",
-                "created_at": "2026-01-01T00:00:00",
-                "last_login": "2026-02-06T10:00:00",
-                "is_active": True
-            }
-        ]
+        # Get Supabase client
+        supabase = get_supabase_client()
+        
+        # Query users table
+        response = supabase.table('users').select('*').order('created_at', desc=True).execute()
+        
+        users = []
+        for user in response.data:
+            users.append({
+                "id": user.get('id'),
+                "username": user.get('username'),
+                "email": user.get('email'),
+                "created_at": user.get('created_at'),
+                "last_login": user.get('last_login'),
+                "is_active": user.get('is_active', True),
+                "login_count": user.get('login_count', 0)
+            })
         
         return JSONResponse({
             "status": "success",
@@ -171,14 +206,26 @@ async def delete_user(
 ):
     """Delete a user"""
     try:
-        # Prevent deleting admin user
-        if user_id == 1:
+        # Get Supabase client
+        supabase = get_supabase_client()
+        
+        # Check if user exists
+        user_response = supabase.table('users').select('*').eq('id', user_id).execute()
+        
+        if not user_response.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Prevent deleting admin user (you can adjust this logic)
+        user = user_response.data[0]
+        if user.get('username') == 'admin':
             raise HTTPException(status_code=403, detail="Cannot delete admin user")
         
-        # TODO: Implement actual user deletion
+        # Delete user
+        supabase.table('users').delete().eq('id', user_id).execute()
+        
         return JSONResponse({
             "status": "success",
-            "message": f"User {user_id} deleted successfully"
+            "message": f"User {user.get('username')} deleted successfully"
         })
     except HTTPException:
         raise
@@ -200,10 +247,27 @@ async def reset_user_password(
         if not new_password or len(new_password) < 8:
             raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
         
-        # TODO: Implement actual password reset
+        # Get Supabase client
+        supabase = get_supabase_client()
+        
+        # Check if user exists
+        user_response = supabase.table('users').select('*').eq('id', user_id).execute()
+        
+        if not user_response.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Hash the new password
+        import bcrypt
+        password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Update password
+        supabase.table('users').update({
+            'password_hash': password_hash
+        }).eq('id', user_id).execute()
+        
         return JSONResponse({
             "status": "success",
-            "message": f"Password reset for user {user_id}"
+            "message": f"Password reset for user {user_response.data[0].get('username')}"
         })
     except HTTPException:
         raise
