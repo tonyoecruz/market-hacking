@@ -81,6 +81,7 @@
 
     <!-- User Section -->
     <div class="p-4 border-t border-gray-700">
+        {% if user %}
         <div class="flex items-center space-x-3 mb-3">
             <div
                 class="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-dark-900 font-bold">
@@ -97,5 +98,17 @@
                 Sair
             </button>
         </form>
+        {% else %}
+        <div class="space-y-2">
+            <a href="/auth/login"
+                class="block w-full px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition text-sm font-semibold text-center">
+                Entrar
+            </a>
+            <a href="/auth/register"
+                class="block w-full px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition text-sm font-semibold text-center">
+                Registrar
+            </a>
+        </div>
+        {% endif %}
     </div>
 </aside>

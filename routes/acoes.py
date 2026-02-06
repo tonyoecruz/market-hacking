@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from routes.auth import get_optional_user
 import sys
 import os
 
@@ -16,11 +17,12 @@ templates = Jinja2Templates(directory="templates")
 session_store = {}
 
 @router.get("/", response_class=HTMLResponse)
-async def acoes_page(request: Request):
+async def acoes_page(request: Request, user: dict = Depends(get_optional_user)):
     """Página de Ações"""
     return templates.TemplateResponse("pages/acoes.html", {
         "request": request,
-        "title": "Ações"
+        "title": "Ações",
+        "user": user
     })
 
 @router.post("/api/scan")

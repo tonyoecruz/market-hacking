@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from routes.auth import get_optional_user
 import sys
 import os
 
@@ -14,11 +15,12 @@ templates = Jinja2Templates(directory="templates")
 from routes.acoes import session_store
 
 @router.get("/", response_class=HTMLResponse)
-async def elite_mix_page(request: Request):
+async def elite_mix_page(request: Request, user: dict = Depends(get_optional_user)):
     """Página Elite Mix"""
     return templates.TemplateResponse("pages/elite_mix.html", {
         "request": request,
-        "title": "Elite Mix"
+        "title": "Elite Mix",
+        "user": user
     })
 
 @router.get("/api/data")

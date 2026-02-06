@@ -208,3 +208,31 @@ async def get_current_user_from_cookie(request: Request):
         raise HTTPException(status_code=404, detail="User not found")
     
     return user
+
+
+# Optional user dependency (returns None if not authenticated)
+async def get_optional_user(request: Request):
+    """
+    Optional dependency to get current user from cookie
+    Returns None if not authenticated instead of raising exception
+    Use in pages that work with or without login
+    """
+    try:
+        token = request.cookies.get("access_token")
+        
+        if not token:
+            return None
+        
+        if token.startswith("Bearer "):
+            token = token[7:]
+        
+        payload = decode_access_token(token)
+        
+        if not payload:
+            return None
+        
+        user = UserQueries.get_user_by_id(payload.get("user_id"))
+        
+        return user if user else None
+    except:
+        return None
