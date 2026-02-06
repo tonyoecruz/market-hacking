@@ -65,12 +65,12 @@ class UserQueries:
             return False, f"Erro ao criar usuário: {error_msg}"
     
     @staticmethod
-    def verify_user(username: str, password: str) -> Optional[Dict[str, Any]]:
+    def verify_user(username_or_email: str, password: str) -> Optional[Dict[str, Any]]:
         """
-        Verify user credentials
+        Verify user credentials (accepts username OR email)
         
         Args:
-            username: Username
+            username_or_email: Username or email
             password: Plain text password
             
         Returns:
@@ -79,13 +79,19 @@ class UserQueries:
         try:
             supabase = get_supabase_client()
             
-            # Get user by username
-            result = supabase.table('users').select('*').eq('username', username).execute()
+            # Try to find user by username OR email
+            result = supabase.table('users').select('*').or_(
+                f'username.eq.{username_or_email},email.eq.{username_or_email}'
+            ).execute()
             
             if not result.data:
                 return None
             
             user = result.data[0]
+            
+            # Check if user has password_hash (local auth)
+            if not user.get('password_hash'):
+                return None
             
             # Verify password
             if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
