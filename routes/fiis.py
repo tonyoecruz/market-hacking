@@ -2,8 +2,9 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from routes.auth import get_optional_user
-import os
+from database.db_manager import DatabaseManager
 import pandas as pd
+import os
 import importlib.util
 
 spec = importlib.util.spec_from_file_location("data_utils", 
@@ -11,11 +12,9 @@ spec = importlib.util.spec_from_file_location("data_utils",
 data_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(data_utils)
 
-from database.db_manager import DatabaseManager
-db_instance = DatabaseManager()
-
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+db = DatabaseManager()
 
 @router.get("/", response_class=HTMLResponse)
 async def fiis_page(request: Request, user: dict = Depends(get_optional_user)):
@@ -24,7 +23,10 @@ async def fiis_page(request: Request, user: dict = Depends(get_optional_user)):
 @router.get("/api/data")
 async def get_fiis_data(min_dy: float = 0.0, min_liq: float = 100000):
     try:
-        fiis = db_instance.get_fiis(min_dy=min_dy)
+        fiis = db.get_fiis(min_dy=min_dy)
+        if not fiis:
+            return JSONResponse({'status': 'info', 'message': 'Aguardando atualização de dados.'})
+            
         df = pd.DataFrame(fiis)
         df_filtered = df[df['liquidezmediadiaria'] >= min_liq].copy()
         top_dy = df_filtered.sort_values('dy', ascending=False).head(10)
