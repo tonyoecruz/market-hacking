@@ -1,19 +1,36 @@
 
 # SCOPE3 - FastAPI Requirements
 # Optimized for production deployment on Render.com
+
+# Core Framework
 fastapi
 uvicorn[standard]
 python-multipart
 jinja2
 aiofiles
+
+# Database & Auth
 supabase
 python-jose[cryptography]
 passlib[bcrypt]
 python-dotenv
 pydantic
 email-validator
+
+# HTTP & Data
 httpx
-pandas
-yfinance
-google-generativeai
 requests
+pandas
+numpy
+
+# Financial Data
+yfinance
+beautifulsoup4
+lxml
+
+# AI & Charts
+google-generativeai
+plotly
+
+# Text-to-Speech
+edge-tts
