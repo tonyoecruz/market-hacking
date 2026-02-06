@@ -8,6 +8,9 @@ from apscheduler.triggers.interval import IntervalTrigger
 import logging
 import os
 
+# Importamos a classe para evitar conflitos de nomes
+from database.db_manager import DatabaseManager
+
 from scheduler.data_updater import (
     update_stocks_br,
     update_stocks_us,
@@ -27,7 +30,6 @@ AUTO_UPDATE_ENABLED = os.getenv('AUTO_UPDATE_ENABLED', 'true').lower() == 'true'
 
 # Create scheduler instance
 scheduler = BackgroundScheduler()
-
 
 def start_scheduler():
     """Start the background scheduler"""
@@ -59,7 +61,11 @@ def start_scheduler():
     scheduler.start()
     
     logger.info(f"✅ Scheduler started - Updates every {UPDATE_INTERVAL_HOURS} hour(s)")
-    logger.info(f"📊 Next update: {scheduler.get_job('update_all_data').next_run_time}")
+    try:
+        next_run = scheduler.get_job('update_all_data').next_run_time
+        logger.info(f"📊 Next update: {next_run}")
+    except:
+        logger.warning("⚠️ Could not determine next run time")
 
 
 def stop_scheduler():
@@ -92,18 +98,7 @@ def get_scheduler_status():
     }
 
 
-# For standalone execution
+# For standalone execution (útil para testes manuais via terminal na Render)
 if __name__ == "__main__":
-    logger.info("=" * 60)
-    logger.info("SCHEDULER STANDALONE MODE")
-    logger.info("=" * 60)
-    
-    start_scheduler()
-    
-    try:
-        # Keep running
-        import time
-        while True:
-            time.sleep(60)
-    except (KeyboardInterrupt, SystemExit):
-        stop_scheduler()
+    logger.info("Manual update trigger...")
+    update_all_data()
