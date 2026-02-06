@@ -326,11 +326,30 @@ async def get_update_logs(
 
 
 @router.post("/api/trigger-update")
-async def trigger_manual_update(session: dict = Depends(verify_admin_session)):
+async def trigger_manual_update(
+    sync: bool = False,
+    session: dict = Depends(verify_admin_session)
+):
     """Manually trigger data update"""
     try:
         from scheduler.data_updater import update_all_data
         import threading
+        
+        if sync:
+            logger.info("⚡ TRIGGERING SYNCHRONOUS UPDATE (DEBUG MODE)")
+            try:
+                # Run directly and capture output
+                update_all_data()
+                return JSONResponse({
+                    "status": "success",
+                    "message": "Update completed synchronously. Check logs for details."
+                })
+            except Exception as e:
+                logger.error(f"❌ COMPLETED WITH ERROR: {str(e)}")
+                return JSONResponse({
+                    "status": "error",
+                    "detail": f"Update failed: {str(e)}"
+                }, status_code=500)
         
         # Run update in background thread to avoid blocking
         thread = threading.Thread(target=update_all_data)

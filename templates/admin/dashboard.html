@@ -140,6 +140,10 @@
                                 class="px-4 py-2 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30">
                                 ⚡ Force Update
                             </button>
+                            <button onclick="debugUpdate()"
+                                class="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30">
+                                🐞 Debug Update
+                            </button>
                             <button onclick="refreshData()"
                                 class="px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30">
                                 🔄 Refresh Now
@@ -547,6 +551,36 @@
         } catch (error) {
             console.error('Error triggering update:', error);
             alert('Error triggering update');
+        }
+    }
+
+    async function debugUpdate() {
+        if (!confirm('This will run the update SYNCHRONOUSLY. It will freeze this page for 1-2 minutes until finished. If it fails, you will see the error here. Continue?')) return;
+
+        try {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ Running...';
+            btn.disabled = true;
+
+            const response = await fetch('/admin/api/trigger-update?sync=true', {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('SUCCESS: ' + data.message);
+                loadLogs();
+            } else {
+                alert('FAILED: ' + (data.detail || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error triggering debug update:', error);
+            alert('CRITICAL ERROR: ' + error.message);
+        } finally {
+            // Reload page to reset button state easily
+            window.location.reload();
         }
     }
 

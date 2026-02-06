@@ -18,6 +18,14 @@ import data_utils
 from database.db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
+
+# Force logs to stdout for Render
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 db = DatabaseManager()
 
 def update_stocks_br():
