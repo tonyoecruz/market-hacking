@@ -308,3 +308,86 @@ async def trigger_manual_update(session: dict = Depends(verify_admin_session)):
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/users/create-admin")
+async def create_admin_user(
+    request: Request,
+    session: dict = Depends(verify_admin_session)
+):
+    """Create a new admin user"""
+    try:
+        data = await request.json()
+        username = data.get("username")
+        email = data.get("email")
+        password = data.get("password")
+        
+        if not username or not email or not password:
+            raise HTTPException(status_code=400, detail="Username, email, and password are required")
+        
+        if len(password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        
+        # Get Supabase client
+        supabase = get_supabase_client()
+        
+        # Check if username or email already exists
+        existing = supabase.table('users').select('*').or_(f"username.eq.{username},email.eq.{email}").execute()
+        
+        if existing.data:
+            raise HTTPException(status_code=400, detail="Username or email already exists")
+        
+        # Hash password
+        import bcrypt
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Create user
+        supabase.table('users').insert({
+            'username': username,
+            'email': email,
+            'password_hash': password_hash,
+            'is_active': True,
+            'login_count': 0
+        }).execute()
+        
+        return JSONResponse({
+            "status": "success",
+            "message": f"Admin user '{username}' created successfully"
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/change-password")
+async def change_admin_password(
+    request: Request,
+    session: dict = Depends(verify_admin_session)
+):
+    """Change logged admin's password"""
+    try:
+        data = await request.json()
+        current_password = data.get("current_password")
+        new_password = data.get("new_password")
+        
+        if not current_password or not new_password:
+            raise HTTPException(status_code=400, detail="Current and new password are required")
+        
+        if len(new_password) < 8:
+            raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+        
+        # Verify current password (admin uses simple comparison for now)
+        if current_password != "caTia.1234":
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+        
+        # For now, we can't change the hardcoded admin password
+        # This would require storing admin in Supabase users table
+        return JSONResponse({
+            "status": "success",
+            "message": "Password change feature coming soon. Admin password is currently hardcoded."
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

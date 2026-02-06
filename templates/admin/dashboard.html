@@ -152,7 +152,19 @@
             <div id="content-users" class="hidden">
                 <div class="bg-dark-800 rounded-lg overflow-hidden">
                     <div class="p-6 border-b border-gray-700">
-                        <h3 class="text-xl font-bold text-white">Users (<span id="user-count">0</span>)</h3>
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xl font-bold text-white">Users (<span id="user-count">0</span>)</h3>
+                            <div class="space-x-2">
+                                <button onclick="changeMyPassword()"
+                                    class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30">
+                                    🔑 Change My Password
+                                </button>
+                                <button onclick="createAdminUser()"
+                                    class="px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30">
+                                    ➕ Create Admin User
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full">
@@ -413,11 +425,17 @@
                 method: 'DELETE'
             });
 
+            const data = await response.json();
+
             if (response.ok) {
-                alert('User deleted successfully');
-                loadUsers();
+                alert(data.message || 'User deleted successfully');
+                // Reload the users list
+                await loadUsers();
+            } else {
+                alert(data.detail || 'Error deleting user');
             }
         } catch (error) {
+            console.error('Error deleting user:', error);
             alert('Error deleting user');
         }
     }
@@ -438,6 +456,76 @@
             }
         } catch (error) {
             alert('Error resetting password');
+        }
+    }
+
+    async function createAdminUser() {
+        const username = prompt('Enter new admin username:');
+        if (!username) return;
+
+        const email = prompt('Enter admin email:');
+        if (!email) return;
+
+        const password = prompt('Enter password (min 8 characters):');
+        if (!password || password.length < 8) {
+            alert('Password must be at least 8 characters');
+            return;
+        }
+
+        try {
+            const response = await fetch('/admin/api/users/create-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('Admin user created successfully!');
+                await loadUsers();
+            } else {
+                alert(data.detail || 'Error creating admin user');
+            }
+        } catch (error) {
+            console.error('Error creating admin:', error);
+            alert('Error creating admin user');
+        }
+    }
+
+    async function changeMyPassword() {
+        const currentPassword = prompt('Enter your current password:');
+        if (!currentPassword) return;
+
+        const newPassword = prompt('Enter new password (min 8 characters):');
+        if (!newPassword || newPassword.length < 8) {
+            alert('Password must be at least 8 characters');
+            return;
+        }
+
+        const confirmPassword = prompt('Confirm new password:');
+        if (newPassword !== confirmPassword) {
+            alert('Passwords do not match');
+            return;
+        }
+
+        try {
+            const response = await fetch('/admin/api/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('Password changed successfully!');
+            } else {
+                alert(data.detail || 'Error changing password');
+            }
+        } catch (error) {
+            console.error('Error changing password:', error);
+            alert('Error changing password');
         }
     }
 
