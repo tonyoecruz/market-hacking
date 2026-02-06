@@ -27,23 +27,28 @@ if DATABASE_URL.startswith("postgres://"):
 engine = create_engine(
     DATABASE_URL,
     echo=False,  # Set to True for SQL debugging
-    pool_pre_ping=True
-)
-
-# Logging database connection
-if 'sqlite' in DATABASE_URL:
-    logger.warning("⚠️  USING LOCAL SQLITE DATABASE - Data will not persist on Render!")
-    logger.info(f"📂 Database file: {DATABASE_URL}")
-    
-    # Warn if running in likely cloud environment
-    if os.getenv('RENDER') or os.getenv('PORT'):
-        logger.error("❌ CLOUD ENVIRONMENT DETECTED WITHOUT 'DATABASE_URL'!")
-        logger.error("👉 Please set DATABASE_URL (PostgreSQL) in Render Environment Variables.")
-else:
-    logger.info("🔌 Connecting to PostgreSQL database...")
-    # Mask password for security
-    safe_url = DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else '***'
     logger.info(f"🔗 Host: {safe_url}")
+
+# Database Connection Configuration
+connect_args = {}
+engine_args = {
+    "echo": False,
+    "pool_pre_ping": True
+}
+
+# Check if using Supavisor (Transaction Mode) - Port 6543
+if ':6543' in DATABASE_URL:
+    logger.info("⚡ Using Supabase Connection Pooler (Transaction Mode)")
+    from sqlalchemy.pool import NullPool
+    engine_args["poolclass"] = NullPool
+    # Reduce overhead for pooler connection
+    engine_args["pool_pre_ping"] = False
+
+# Create engine
+engine = create_engine(
+    DATABASE_URL,
+    **engine_args
+)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
