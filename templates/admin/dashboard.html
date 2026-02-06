@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - SCOPE3{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-dark-900">
+    <!-- Sidebar -->
+    <div class="w-64 bg-dark-800 border-r border-gray-700">
+        <div class="p-6">
+            <h1 class="text-2xl font-bold text-white mb-2">🔐 Admin Panel</h1>
+            <p class="text-gray-400 text-sm">{{ user.username }}</p>
+        </div>
+
+        <nav class="px-4 space-y-2">
+            <button onclick="showTab('monitoring')" id="tab-monitoring"
+                class="w-full text-left px-4 py-3 rounded-lg bg-primary/10 text-primary font-semibold">
+                📊 Data Monitoring
+            </button>
+            <button onclick="showTab('users')" id="tab-users"
+                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
+                👥 User Management
+            </button>
+            <button onclick="showTab('stats')" id="tab-stats"
+                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
+                📈 System Stats
+            </button>
+            <button onclick="showTab('logs')" id="tab-logs"
+                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
+                📝 Update Logs
+            </button>
+        </nav>
+
+        <div class="absolute bottom-0 w-64 p-4 border-t border-gray-700">
+            <button onclick="logout()"
+                class="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30">
+                🚪 Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-y-auto">
+        <header class="bg-dark-800 border-b border-gray-700 px-6 py-4">
+            <h2 id="page-title" class="text-2xl font-bold text-white">📊 Data Monitoring</h2>
+        </header>
+
+        <main class="p-6">
+            <!-- Data Monitoring Tab -->
+            <div id="content-monitoring">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <!-- Data Source Cards -->
+                    <div id="card-stocks-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">🇧🇷 Ações Brasil</h3>
+                            <div id="status-stocks-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-stocks-br" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-stocks-br" class="text-sm text-gray-400">Loading...</p>
+                        <p id="time-stocks-br" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+
+                    <div id="card-stocks-us" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">🇺🇸 Ações EUA</h3>
+                            <div id="status-stocks-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-stocks-us" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-stocks-us" class="text-sm text-gray-400">Loading...</p>
+                        <p id="time-stocks-us" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+
+                    <div id="card-etfs-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">📊 ETFs Brasil</h3>
+                            <div id="status-etfs-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-etfs-br" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-etfs-br" class="text-sm text-gray-400">Loading...</p>
+                        <p id="time-etfs-br" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+
+                    <div id="card-etfs-us" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">📊 ETFs EUA</h3>
+                            <div id="status-etfs-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-etfs-us" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-etfs-us" class="text-sm text-gray-400">Loading...</p>
+                        <p id="time-etfs-us" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+
+                    <div id="card-fiis-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">🏢 FIIs Brasil</h3>
+                            <div id="status-fiis-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-fiis-br" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-fiis-br" class="text-sm text-gray-400">Loading...</p>
+                        <p id="time-fiis-br" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+                </div>
+
+                <div class="bg-dark-800 rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-white">Auto-Refresh</h3>
+                        <button onclick="refreshData()"
+                            class="px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30">
+                            🔄 Refresh Now
+                        </button>
+                    </div>
+                    <p class="text-gray-400">Data refreshes automatically every 30 seconds</p>
+                </div>
+            </div>
+
+            <!-- User Management Tab -->
+            <div id="content-users" class="hidden">
+                <div class="bg-dark-800 rounded-lg overflow-hidden">
+                    <div class="p-6 border-b border-gray-700">
+                        <h3 class="text-xl font-bold text-white">Users (<span id="user-count">0</span>)</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-dark-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">ID
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
+                                        Username</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Email
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
+                                        Created</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-tbody" class="divide-y divide-gray-700">
+                                <!-- Users will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Stats Tab -->
+            <div id="content-stats" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-dark-800 rounded-lg p-6">
+                        <h3 class="text-sm font-semibold text-gray-400 mb-2">Total Stocks</h3>
+                        <p id="stat-stocks" class="text-3xl font-bold text-white">-</p>
+                    </div>
+                    <div class="bg-dark-800 rounded-lg p-6">
+                        <h3 class="text-sm font-semibold text-gray-400 mb-2">Total ETFs</h3>
+                        <p id="stat-etfs" class="text-3xl font-bold text-white">-</p>
+                    </div>
+                    <div class="bg-dark-800 rounded-lg p-6">
+                        <h3 class="text-sm font-semibold text-gray-400 mb-2">Total FIIs</h3>
+                        <p id="stat-fiis" class="text-3xl font-bold text-white">-</p>
+                    </div>
+                </div>
+
+                <div class="bg-dark-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold text-white mb-4">Update Statistics</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Success Rate:</span>
+                            <span id="stat-success-rate" class="text-white font-semibold">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Updates:</span>
+                            <span id="stat-total-updates" class="text-white font-semibold">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="content-logs" class="hidden">
+                <div class="bg-dark-800 rounded-lg overflow-hidden">
+                    <div class="p-6 border-b border-gray-700">
+                        <h3 class="text-xl font-bold text-white">Recent Update Logs</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-dark-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Time
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Type
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Market
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Status
+                                    </th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
+                                        Records</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-tbody" class="divide-y divide-gray-700">
+                                <!-- Logs will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    let currentTab = 'monitoring';
+    let refreshInterval;
+
+    // Load data on page load
+    window.addEventListener('DOMContentLoaded', () => {
+        refreshData();
+        // Auto-refresh every 30 seconds
+        refreshInterval = setInterval(refreshData, 30000);
+    });
+
+    function showTab(tab) {
+        currentTab = tab;
+
+        // Update tab buttons
+        const tabs = ['monitoring', 'users', 'stats', 'logs'];
+        tabs.forEach(t => {
+            const btn = document.getElementById(`tab-${t}`);
+            const content = document.getElementById(`content-${t}`);
+
+            if (t === tab) {
+                btn.className = 'w-full text-left px-4 py-3 rounded-lg bg-primary/10 text-primary font-semibold';
+                content.classList.remove('hidden');
+            } else {
+                btn.className = 'w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700';
+                content.classList.add('hidden');
+            }
+        });
+
+        // Update page title
+        const titles = {
+            'monitoring': '📊 Data Monitoring',
+            'users': '👥 User Management',
+            'stats': '📈 System Stats',
+            'logs': '📝 Update Logs'
+        };
+        document.getElementById('page-title').textContent = titles[tab];
+
+        // Load tab-specific data
+        if (tab === 'users') loadUsers();
+        if (tab === 'stats') loadStats();
+        if (tab === 'logs') loadLogs();
+    }
+
+    async function refreshData() {
+        try {
+            const response = await fetch('/admin/api/data-status');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                updateDataCards(data.data);
+            }
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+        }
+    }
+
+    function updateDataCards(data) {
+        const sources = ['stocks_br', 'stocks_us', 'etfs_br', 'etfs_us', 'fiis_br'];
+
+        sources.forEach(source => {
+            const info = data[source];
+            const statusEl = document.getElementById(`status-${source}`);
+            const countEl = document.getElementById(`count-${source}`);
+            const messageEl = document.getElementById(`message-${source}`);
+            const timeEl = document.getElementById(`time-${source}`);
+            const cardEl = document.getElementById(`card-${source}`);
+
+            // Update status indicator
+            statusEl.className = `w-4 h-4 rounded-full ${info.color === 'green' ? 'bg-green-500' :
+                    info.color === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
+                }`;
+
+            // Update border color
+            cardEl.className = `bg-dark-800 rounded-lg p-6 border-l-4 ${info.color === 'green' ? 'border-green-500' :
+                    info.color === 'yellow' ? 'border-yellow-500' : 'border-red-500'
+                }`;
+
+            // Update content
+            countEl.textContent = info.record_count.toLocaleString();
+            messageEl.textContent = info.message;
+            timeEl.textContent = info.last_update || 'Never updated';
+        });
+    }
+
+    async function loadUsers() {
+        try {
+            const response = await fetch('/admin/api/users');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                document.getElementById('user-count').textContent = data.data.total;
+
+                const tbody = document.getElementById('users-tbody');
+                tbody.innerHTML = data.data.users.map(user => `
+                    <tr class="hover:bg-dark-700">
+                        <td class="px-6 py-4 text-white">${user.id}</td>
+                        <td class="px-6 py-4 text-white font-semibold">${user.username}</td>
+                        <td class="px-6 py-4 text-gray-300">${user.email}</td>
+                        <td class="px-6 py-4 text-gray-400">${new Date(user.created_at).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 text-right">
+                            ${user.id !== 1 ? `
+                                <button onclick="resetPassword(${user.id})" class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded mr-2 hover:bg-blue-500/30">
+                                    Reset Password
+                                </button>
+                                <button onclick="deleteUser(${user.id})" class="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30">
+                                    Delete
+                                </button>
+                            ` : '<span class="text-gray-500">Admin</span>'}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading users:', error);
+        }
+    }
+
+    async function loadStats() {
+        try {
+            const response = await fetch('/admin/api/system-stats');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                document.getElementById('stat-stocks').textContent = data.data.database.stocks_count.toLocaleString();
+                document.getElementById('stat-etfs').textContent = data.data.database.etfs_count.toLocaleString();
+                document.getElementById('stat-fiis').textContent = data.data.database.fiis_count.toLocaleString();
+                document.getElementById('stat-success-rate').textContent = data.data.updates.success_rate + '%';
+                document.getElementById('stat-total-updates').textContent = data.data.updates.total;
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+
+    async function loadLogs() {
+        try {
+            const response = await fetch('/admin/api/logs?limit=50');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                const tbody = document.getElementById('logs-tbody');
+                tbody.innerHTML = data.data.map(log => `
+                    <tr class="hover:bg-dark-700">
+                        <td class="px-6 py-4 text-gray-300">${new Date(log.completed_at).toLocaleString()}</td>
+                        <td class="px-6 py-4 text-white">${log.asset_type}</td>
+                        <td class="px-6 py-4 text-gray-400">${log.market || '-'}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 rounded text-xs ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }">
+                                ${log.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right text-white">${log.records_updated || 0}</td>
+                    </tr>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading logs:', error);
+        }
+    }
+
+    async function deleteUser(userId) {
+        if (!confirm('Are you sure you want to delete this user?')) return;
+
+        try {
+            const response = await fetch(`/admin/api/users/${userId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert('User deleted successfully');
+                loadUsers();
+            }
+        } catch (error) {
+            alert('Error deleting user');
+        }
+    }
+
+    async function resetPassword(userId) {
+        const newPassword = prompt('Enter new password (min 8 characters):');
+        if (!newPassword) return;
+
+        try {
+            const response = await fetch(`/admin/api/users/${userId}/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_password: newPassword })
+            });
+
+            if (response.ok) {
+                alert('Password reset successfully');
+            }
+        } catch (error) {
+            alert('Error resetting password');
+        }
+    }
+
+    async function logout() {
+        try {
+            await fetch('/admin/logout', { method: 'POST' });
+            window.location.href = '/admin/login';
+        } catch (error) {
+            window.location.href = '/admin/login';
+        }
+    }
+</script>
+{% endblock %}

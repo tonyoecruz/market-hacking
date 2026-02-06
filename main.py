@@ -11,7 +11,7 @@ import uvicorn
 import logging
 
 # Import routes
-from routes import auth, dashboard, acoes, etfs, elite_mix, fiis, arena, admin
+from routes import auth, dashboard, acoes, etfs, elite_mix, fiis, arena, admin, admin_auth, admin_panel
 
 # Import database and scheduler
 from database.db_manager import init_database, db_manager
@@ -56,6 +56,8 @@ app.include_router(elite_mix.router, prefix="/elite-mix", tags=["Elite Mix"])
 app.include_router(fiis.router, prefix="/fiis", tags=["FIIs"])
 app.include_router(arena.router, prefix="/arena", tags=["Arena"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
+app.include_router(admin_auth.router, prefix="/admin", tags=["Admin Auth"])
+app.include_router(admin_panel.router, prefix="/admin", tags=["Admin Panel"])
 
 
 @app.on_event("startup")
