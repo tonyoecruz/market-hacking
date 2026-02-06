@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 import uvicorn
 
 # Import routes
-from routes import auth, dashboard
+from routes import auth, dashboard, acoes, etfs, elite_mix, fiis, arena
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -41,11 +41,11 @@ templates = Jinja2Templates(directory="templates")
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
-# app.include_router(acoes.router, prefix="/acoes", tags=["Ações"])
-# app.include_router(etfs.router, prefix="/etfs", tags=["ETFs"])
-# app.include_router(elite_mix.router, prefix="/elite-mix", tags=["Elite Mix"])
-# app.include_router(fiis.router, prefix="/fiis", tags=["FIIs"])
-# app.include_router(arena.router, prefix="/arena", tags=["Arena"])
+app.include_router(acoes.router, prefix="/acoes", tags=["Ações"])
+app.include_router(etfs.router, prefix="/etfs", tags=["ETFs"])
+app.include_router(elite_mix.router, prefix="/elite-mix", tags=["Elite Mix"])
+app.include_router(fiis.router, prefix="/fiis", tags=["FIIs"])
+app.include_router(arena.router, prefix="/arena", tags=["Arena"])
 
 
 @app.get("/", response_class=HTMLResponse)

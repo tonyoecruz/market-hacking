@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from routes.auth import get_current_user_from_cookie
 import yfinance as yf
 import math
 
@@ -22,10 +23,13 @@ def calcular_graham(ticker):
     except:
         return "Erro"
 
-@router.get("/acoes", response_class=HTMLResponse)
-async def pagina_acoes(request: Request):
-    # Aqui você pode adicionar a lógica da Magic Formula depois
-    return templates.TemplateResponse("pages/acoes.html", {"request": request})
+@router.get("/", response_class=HTMLResponse)
+async def pagina_acoes(request: Request, user: dict = Depends(get_current_user_from_cookie)):
+    """Render stock analysis page"""
+    return templates.TemplateResponse("pages/acoes.html", {
+        "request": request,
+        "user": user
+    })
 
 @router.get("/api/analise/{ticker}")
 async def analisar_acao(ticker: str):

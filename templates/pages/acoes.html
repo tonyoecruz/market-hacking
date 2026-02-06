@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Ações - SCOPE3{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-dark-900">
+    <!-- Sidebar -->
+    {% include "components/sidebar.html" %}
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden ml-64">
+        <!-- Header -->
+        <header class="bg-dark-800 border-b border-gray-700 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-white">📊 Análise de Ações</h1>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-400">{{ user.username }}</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="flex-1 overflow-y-auto p-6">
+            <!-- Search Section -->
+            <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">Buscar Ação</h2>
+                <div class="flex space-x-4">
+                    <input type="text" id="ticker-input" placeholder="Digite o ticker (ex: PETR4)"
+                        class="flex-1 px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary">
+                    <button onclick="analisarAcao()"
+                        class="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-dark-900 font-bold rounded-lg hover:shadow-lg hover:shadow-primary/50 transition-all">
+                        Analisar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Graham Card -->
+                    <div class="bg-dark-800 rounded-lg p-6">
+                        <h3 class="text-lg font-bold text-white mb-4">📈 Análise Graham</h3>
+                        <div id="graham-result" class="text-gray-300">
+                            <!-- Results will be inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Magic Formula Card -->
+                    <div class="bg-dark-800 rounded-lg p-6">
+                        <h3 class="text-lg font-bold text-white mb-4">✨ Magic Formula</h3>
+                        <div id="magic-result" class="text-gray-300">
+                            <!-- Results will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Insights -->
+                <div class="bg-dark-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">🤖 Insights IA</h3>
+                    <div id="ai-insights" class="text-gray-300">
+                        <!-- AI insights will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-lg p-6">
+                <h3 class="text-lg font-bold text-white mb-2">💡 Como funciona?</h3>
+                <p class="text-gray-300 mb-4">
+                    Analisamos ações usando dois métodos comprovados:
+                </p>
+                <ul class="list-disc list-inside text-gray-300 space-y-2">
+                    <li><strong>Graham:</strong> Valor intrínseco baseado em fundamentos</li>
+                    <li><strong>Magic Formula:</strong> Ranking por qualidade e preço</li>
+                    <li><strong>IA Gemini:</strong> Análise detalhada e recomendações</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    async function analisarAcao() {
+        const ticker = document.getElementById('ticker-input').value.trim().toUpperCase();
+        if (!ticker) {
+            showToast('Digite um ticker válido', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/acoes/api/analise/${ticker}`);
+            const data = await response.json();
+
+            document.getElementById('results').classList.remove('hidden');
+            document.getElementById('graham-result').innerHTML = `
+            <p class="text-2xl font-bold text-primary mb-2">R$ ${data.graham || 'N/A'}</p>
+            <p class="text-sm text-gray-400">Valor Intrínseco</p>
+        `;
+
+            document.getElementById('magic-result').innerHTML = `
+            <p class="text-gray-400">Em desenvolvimento...</p>
+        `;
+
+            document.getElementById('ai-insights').innerHTML = `
+            <p class="text-gray-400">${data.recomendacao_ia}</p>
+        `;
+
+            showToast(`Análise de ${ticker} concluída!`, 'success');
+        } catch (error) {
+            showToast('Erro ao analisar ação', 'error');
+        }
+    }
+
+    // Enter key support
+    document.getElementById('ticker-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') analisarAcao();
+    });
+</script>
+{% endblock %}
