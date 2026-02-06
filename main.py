@@ -12,6 +12,7 @@ import logging
 
 # Import routes
 from routes import auth, dashboard, acoes, etfs, elite_mix, fiis, arena, admin, admin_auth, admin_panel
+from routes import admin_logs  # Real-time logs
 
 # Import database and scheduler
 from database.db_manager import init_database, db_manager
@@ -58,6 +59,7 @@ app.include_router(arena.router, prefix="/arena", tags=["Arena"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 app.include_router(admin_auth.router, prefix="/admin", tags=["Admin Auth"])
 app.include_router(admin_panel.router, prefix="/admin", tags=["Admin Panel"])
+app.include_router(admin_logs.router, prefix="/admin", tags=["Admin Logs"])
 
 
 @app.on_event("startup")
