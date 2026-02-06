@@ -2,6 +2,31 @@
 
 {% block title %}Admin Dashboard - SCOPE3{% endblock %}
 
+<style>
+    @keyframes loadingDots {
+
+        0%,
+        20% {
+            content: '.';
+        }
+
+        40%,
+        60% {
+            content: '..';
+        }
+
+        80%,
+        100% {
+            content: '...';
+        }
+    }
+
+    .loading-dots::after {
+        content: '.';
+        animation: loadingDots 1.5s infinite;
+    }
+</style>
+
 {% block content %}
 <div class="flex h-screen bg-dark-900">
     <!-- Sidebar -->
@@ -55,7 +80,8 @@
                             <div id="status-stocks-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-stocks-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-stocks-br" class="text-sm text-gray-400">Loading...</p>
+                        <p id="message-stocks-br" class="text-sm text-gray-400">Loading<span
+                                class="loading-dots"></span></p>
                         <p id="time-stocks-br" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
 
@@ -65,7 +91,8 @@
                             <div id="status-stocks-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-stocks-us" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-stocks-us" class="text-sm text-gray-400">Loading...</p>
+                        <p id="message-stocks-us" class="text-sm text-gray-400">Loading<span
+                                class="loading-dots"></span></p>
                         <p id="time-stocks-us" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
 
@@ -75,7 +102,8 @@
                             <div id="status-etfs-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-etfs-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-etfs-br" class="text-sm text-gray-400">Loading...</p>
+                        <p id="message-etfs-br" class="text-sm text-gray-400">Loading<span class="loading-dots"></span>
+                        </p>
                         <p id="time-etfs-br" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
 
@@ -85,7 +113,8 @@
                             <div id="status-etfs-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-etfs-us" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-etfs-us" class="text-sm text-gray-400">Loading...</p>
+                        <p id="message-etfs-us" class="text-sm text-gray-400">Loading<span class="loading-dots"></span>
+                        </p>
                         <p id="time-etfs-us" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
 
@@ -95,7 +124,8 @@
                             <div id="status-fiis-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-fiis-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-fiis-br" class="text-sm text-gray-400">Loading...</p>
+                        <p id="message-fiis-br" class="text-sm text-gray-400">Loading<span class="loading-dots"></span>
+                        </p>
                         <p id="time-fiis-br" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
                 </div>
