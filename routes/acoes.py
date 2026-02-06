@@ -9,10 +9,10 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import from utils.py file (not utils/ package)
+# Import from data_utils.py file (not utils/ package)
 import importlib.util
 spec = importlib.util.spec_from_file_location("data_utils", 
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils.py"))
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_utils.py"))
 data_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(data_utils)
 import pandas as pd
@@ -85,7 +85,7 @@ async def get_acoes_data(min_liq: float = 200000, filter_units: bool = False):
         
         # Get Magic selection (top 10)
         df_magic = df_filtered.dropna(subset=['MagicRank']).sort_values('MagicRank', ascending=True)
-        df_magic = utils.filter_risky_stocks(df_magic).head(10)
+        df_magic = data_utils.filter_risky_stocks(df_magic).head(10)
         
         return JSONResponse({
             'status': 'success',
@@ -119,14 +119,14 @@ async def decode_acao(ticker: str):
         row = row.iloc[0]
         
         # Get stock details
-        details = utils.get_stock_details(ticker)
+        details = data_utils.get_stock_details(ticker)
         
         # Check methods
         graham_ok = row['Margem'] > 0
         magic_ok = (row['roic'] > 0.10) and (row['ev_ebit'] > 0)
         
         # Get AI analysis
-        analysis = utils.get_sniper_analysis(
+        analysis = data_utils.get_sniper_analysis(
             ticker,
             row['price'],
             row['ValorJusto'],
@@ -159,7 +159,7 @@ async def decode_acao(ticker: str):
 async def get_chart(ticker: str):
     """API para obter dados do gráfico"""
     try:
-        fig = utils.get_candle_chart(ticker)
+        fig = data_utils.get_candle_chart(ticker)
         if fig:
             return JSONResponse({
                 'status': 'success',
@@ -189,7 +189,7 @@ async def graham_analysis(ticker: str):
         
         row = row.iloc[0]
         
-        analysis = utils.get_graham_analysis(
+        analysis = data_utils.get_graham_analysis(
             ticker,
             row['price'],
             row['ValorJusto'],
@@ -230,7 +230,7 @@ async def magic_analysis(ticker: str):
         
         row = row.iloc[0]
         
-        analysis = utils.get_magic_analysis(
+        analysis = data_utils.get_magic_analysis(
             ticker,
             row['ev_ebit'],
             row['roic'],

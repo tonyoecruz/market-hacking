@@ -8,7 +8,7 @@ import os
 # Import data utilities
 import importlib.util
 spec = importlib.util.spec_from_file_location("data_utils", 
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils.py"))
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_utils.py"))
 data_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(data_utils)
 import pandas as pd
@@ -46,7 +46,7 @@ async def get_elite_mix_data(min_liq: float = 200000):
             (df_filtered['ev_ebit'] > 0)
         ].copy()
         
-        df_elite = utils.filter_risky_stocks(df_elite)
+        df_elite = data_utils.filter_risky_stocks(df_elite)
         df_elite = df_elite.dropna(subset=['MagicRank']).sort_values('MagicRank', ascending=True).head(10)
         
         return JSONResponse({
@@ -76,9 +76,9 @@ async def decode_elite(ticker: str):
             raise HTTPException(status_code=404, detail='Ticker não encontrado')
         
         row = row.iloc[0]
-        details = utils.get_stock_details(ticker)
+        details = data_utils.get_stock_details(ticker)
         
-        analysis = utils.get_mix_analysis(
+        analysis = data_utils.get_mix_analysis(
             ticker,
             row['price'],
             row['ValorJusto'],
@@ -157,7 +157,7 @@ async def simulate_allocation(request: Request):
 async def get_chart(ticker: str):
     """API para obter dados do gráfico"""
     try:
-        fig = utils.get_candle_chart(ticker)
+        fig = data_utils.get_candle_chart(ticker)
         if fig:
             return JSONResponse({'status': 'success', 'chart': fig.to_json()})
         else:

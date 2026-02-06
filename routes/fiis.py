@@ -8,7 +8,7 @@ import os
 # Import data utilities
 import importlib.util
 spec = importlib.util.spec_from_file_location("data_utils", 
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils.py"))
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_utils.py"))
 data_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(data_utils)
 import pandas as pd
@@ -34,7 +34,7 @@ async def scan_fiis(request: Request):
         data = await request.json()
         selected_markets = data.get('markets', ["🇧🇷 Brasil (B3)"])
         
-        df_fiis = utils.load_data_fiis_pipeline(selected_markets)
+        df_fiis = data_utils.load_data_fiis_pipeline(selected_markets)
         
         if df_fiis is not None and not df_fiis.empty:
             session_id = "default"
@@ -102,9 +102,9 @@ async def decode_fii(ticker: str):
             raise HTTPException(status_code=404, detail='Ticker não encontrado')
         
         row = row.iloc[0]
-        details = utils.get_stock_details(ticker)
+        details = data_utils.get_stock_details(ticker)
         
-        analysis = utils.get_fii_analysis(
+        analysis = data_utils.get_fii_analysis(
             ticker,
             row['price'],
             row['pvp'],
@@ -129,7 +129,7 @@ async def decode_fii(ticker: str):
 async def get_chart(ticker: str):
     """API para obter dados do gráfico"""
     try:
-        fig = utils.get_candle_chart(ticker)
+        fig = data_utils.get_candle_chart(ticker)
         if fig:
             return JSONResponse({'status': 'success', 'chart': fig.to_json()})
         else:

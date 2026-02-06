@@ -8,7 +8,7 @@ import os
 # Import data utilities
 import importlib.util
 spec = importlib.util.spec_from_file_location("data_utils", 
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils.py"))
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_utils.py"))
 data_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(data_utils)
 import pandas as pd
@@ -121,7 +121,7 @@ async def battle(request: Request):
         data2_str = format_asset_data(ticker2, df2_data)
         
         # Get AI battle analysis
-        analysis = utils.get_battle_analysis(ticker1, data1_str, ticker2, data2_str)
+        analysis = data_utils.get_battle_analysis(ticker1, data1_str, ticker2, data2_str)
         
         # Store analysis in session for audio generation
         battle_key = f"battle_{ticker1}_{ticker2}"
@@ -130,7 +130,7 @@ async def battle(request: Request):
         session_store[session_id][battle_key] = analysis
         
         # Generate audio
-        audio_path = utils.generate_audio(analysis, key_suffix=battle_key)
+        audio_path = data_utils.generate_audio(analysis, key_suffix=battle_key)
         
         return JSONResponse({
             'status': 'success',
@@ -161,7 +161,7 @@ async def get_audio(ticker1: str, ticker2: str):
         analysis = session_store[session_id][battle_key]
         
         # Generate audio
-        audio_path = utils.generate_audio(analysis, key_suffix=battle_key)
+        audio_path = data_utils.generate_audio(analysis, key_suffix=battle_key)
         
         if audio_path and not audio_path.startswith('ERROR') and os.path.exists(audio_path):
             return FileResponse(audio_path, media_type='audio/mpeg')
