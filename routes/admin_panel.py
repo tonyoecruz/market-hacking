@@ -111,10 +111,13 @@ async def get_data_status(session: dict = Depends(verify_admin_session)):
 async def get_system_stats(session: dict = Depends(verify_admin_session)):
     """API endpoint for system statistics"""
     try:
+        logger.info("📊 Fetching system stats...")
         stats = db_manager.get_stats()
+        logger.info(f"✅ Stats retrieved: {stats}")
         
         # Get recent logs
         logs = db_manager.get_update_logs(limit=10)
+        logger.info(f"📋 Retrieved {len(logs)} update logs")
         
         # Calculate success rate
         total_updates = len(logs)
@@ -134,6 +137,7 @@ async def get_system_stats(session: dict = Depends(verify_admin_session)):
             }
         })
     except Exception as e:
+        logger.error(f"❌ Error fetching system stats: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

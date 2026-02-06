@@ -62,31 +62,56 @@ app.include_router(admin_panel.router, prefix="/admin", tags=["Admin Panel"])
 app.include_router(admin_logs.router, prefix="/admin", tags=["Admin Logs"])
 
 
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and start scheduler on app startup"""
-    logger.info("🚀 Starting SCOPE3 application...")
+    logger.info("="*80)
+    logger.info("🚀 SCOPE3 APPLICATION STARTING...")
+    logger.info("="*80)
     
     # Initialize database
     try:
+        logger.info("📊 Initializing database...")
         init_database()
-        logger.info("✅ Database initialized")
+        logger.info("✅ Database initialized successfully")
         
-        # Check if database is empty and run initial update
+        # Get and log database stats
         stats = db_manager.get_stats()
+        logger.info(f"📈 Database Stats:")
+        logger.info(f"   - Total Stocks: {stats['stocks_count']}")
+        logger.info(f"   - BR Stocks: {stats['stocks_br_count']}")
+        logger.info(f"   - US Stocks: {stats['stocks_us_count']}")
+        logger.info(f"   - ETFs: {stats['etfs_count']}")
+        logger.info(f"   - FIIs: {stats['fiis_count']}")
+        logger.info(f"   - Total Updates: {stats['total_updates']}")
+        logger.info(f"   - Last Update: {stats['last_update']}")
+        
+        # Check if database is empty
         if stats['stocks_count'] == 0:
-            logger.info("📊 Database is empty, running initial data update...")
-            update_all_data()
+            logger.warning("⚠️  Database is EMPTY - No market data found!")
+            logger.info("📊 Scheduler will trigger initial data update...")
+        else:
+            logger.info("✅ Database contains market data")
+            
     except Exception as e:
-        logger.error(f"❌ Database initialization error: {e}")
+        logger.error(f"❌ Database initialization error: {e}", exc_info=True)
     
     # Start background scheduler
     try:
+        logger.info("⏰ Starting background scheduler...")
         start_scheduler()
-        logger.info("✅ Background scheduler started")
+        logger.info("✅ Background scheduler started successfully")
+        logger.info("📅 Scheduled jobs:")
+        logger.info("   - Data update: Every hour")
+        logger.info("   - Log cleanup: Daily at midnight")
+        logger.info("   - Initial update: IMMEDIATE")
     except Exception as e:
-        logger.error(f"❌ Scheduler startup error: {e}")
-
+        logger.error(f"❌ Scheduler startup error: {e}", exc_info=True)
+    
+    logger.info("="*80)
+    logger.info("✅ SCOPE3 APPLICATION READY")
+    logger.info("="*80)
 
 @app.on_event("shutdown")
 async def shutdown_event():
