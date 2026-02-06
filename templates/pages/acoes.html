@@ -7,28 +7,35 @@
     {% include "components/sidebar.html" %}
 
     <div class="flex-1 flex flex-col overflow-hidden ml-64">
-        <header class="bg-dark-800 border-b border-gray-700 px-6 py-4">
+        <header class="bg-dark-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-white">📊 Análise de Ações</h1>
+            <button onclick="loadData()" id="refresh-btn"
+                class="px-4 py-2 bg-primary/20 text-primary font-semibold rounded-lg hover:bg-primary/30 transition-all flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    </path>
+                </svg>
+                <span>Atualizar</span>
+            </button>
         </header>
 
         <main class="flex-1 overflow-y-auto p-6">
-            <!-- Market Selection -->
+            <!-- Info Banner -->
+            <div class="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-6">
+                <p class="text-primary text-sm">
+                    💡 <strong>Dados atualizados automaticamente a cada hora.</strong> Clique em "Atualizar" para
+                    carregar os dados mais recentes.
+                </p>
+            </div>
+
+            <!-- Methodologies Info -->
             <div class="bg-dark-800 rounded-lg p-6 mb-6">
-                <h2 class="text-xl font-bold text-white mb-4">Selecionar Mercados</h2>
-                <div class="flex space-x-4 mb-4">
-                    <label class="flex items-center space-x-2 text-gray-300">
-                        <input type="checkbox" id="market-br" value="🇧🇷 Brasil (B3)" checked class="rounded">
-                        <span>🇧🇷 Brasil (B3)</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-gray-300">
-                        <input type="checkbox" id="market-us" value="🇺🇸 Estados Unidos (NYSE/NASDAQ)" class="rounded">
-                        <span>🇺🇸 Estados Unidos</span>
-                    </label>
-                </div>
-                <button onclick="scanMarkets()" id="scan-btn"
-                    class="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-dark-900 font-bold rounded-lg hover:shadow-lg hover:shadow-primary/50 transition-all">
-                    🔍 Escanear Mercados
-                </button>
+                <h2 class="text-xl font-bold text-white mb-4">💡 Metodologias</h2>
+                <ul class="space-y-2 text-gray-300">
+                    <li><strong>Graham:</strong> Valor intrínseco = √(22.5 × LPA × VPA)</li>
+                    <li><strong>Magic Formula:</strong> Ranking por ROIC (alto) + EV/EBIT (baixo)</li>
+                </ul>
             </div>
 
             <!-- Loading -->
@@ -105,137 +112,104 @@
                 </div>
             </div>
 
-            <!-- Info -->
-            <div class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-lg p-6 mt-6">
-                <h3 class="text-lg font-bold text-white mb-2">💡 Metodologias</h3>
-                <ul class="list-disc list-inside text-gray-300 space-y-2">
-                    <li><strong>Graham:</strong> Valor intrínseco = √(22.5 × LPA × VPA)</li>
-                    <li><strong>Magic Formula:</strong> Ranking por ROIC (alto) + EV/EBIT (baixo)</li>
-                </ul>
+            <!-- Analysis Modal -->
+            <div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                <div class="bg-dark-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-2xl font-bold text-white" id="modal-ticker"></h3>
+                            <button onclick="closeModal()" class="text-gray-400 hover:text-white">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="modal-content" class="text-gray-300 whitespace-pre-wrap"></div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
 </div>
 
-<!-- Analysis Modal -->
-<div id="analysis-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div class="bg-dark-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold text-white" id="modal-title">Análise</h3>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
-                </svg>
-            </button>
-        </div>
-        <div id="modal-content" class="text-gray-300">
-            <!-- Content will be inserted here -->
-        </div>
-    </div>
-</div>
-
 <script>
-    let currentData = { graham: [], magic: [] };
+    let currentTab = 'graham';
 
-    async function scanMarkets() {
-        const markets = [];
-        if (document.getElementById('market-br').checked) markets.push('🇧🇷 Brasil (B3)');
-        if (document.getElementById('market-us').checked) markets.push('🇺🇸 Estados Unidos (NYSE/NASDAQ)');
-
-        if (markets.length === 0) {
-            showToast('Selecione pelo menos um mercado', 'error');
-            return;
-        }
-
-        document.getElementById('loading').classList.remove('hidden');
-        document.getElementById('results').classList.add('hidden');
-        document.getElementById('scan-btn').disabled = true;
-
-        try {
-            const response = await fetch('/acoes/api/scan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ markets })
-            });
-
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                showToast(data.message, 'success');
-                await loadData();
-            } else {
-                showToast(data.message || 'Erro ao escanear', 'error');
-            }
-        } catch (error) {
-            showToast('Erro ao escanear mercados', 'error');
-        } finally {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('scan-btn').disabled = false;
-        }
-    }
+    // Auto-load data on page load
+    window.addEventListener('DOMContentLoaded', () => {
+        loadData();
+    });
 
     async function loadData() {
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('refresh-btn').disabled = true;
+
         try {
             const response = await fetch('/acoes/api/data');
             const data = await response.json();
 
             if (data.status === 'success') {
-                currentData.graham = data.graham;
-                currentData.magic = data.magic;
-
-                renderGrahamTable();
-                renderMagicTable();
-
+                renderGrahamTable(data.graham);
+                renderMagicTable(data.magic);
                 document.getElementById('results').classList.remove('hidden');
+                showToast(`Carregados ${data.total_count} ativos`, 'success');
+            } else {
+                showToast(data.message || 'Erro ao carregar dados', 'error');
             }
         } catch (error) {
-            showToast('Erro ao carregar dados', 'error');
+            showToast('Erro ao carregar dados. Aguarde a atualização automática.', 'error');
+        } finally {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('refresh-btn').disabled = false;
         }
     }
 
-    function renderGrahamTable() {
+    function renderGrahamTable(stocks) {
         const tbody = document.getElementById('graham-tbody');
-        tbody.innerHTML = currentData.graham.map(stock => `
-        <tr class="hover:bg-dark-700">
-            <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
-            <td class="px-4 py-3 text-gray-300">${stock.Empresa || 'N/A'}</td>
-            <td class="px-4 py-3 text-right text-gray-300">R$ ${stock.price.toFixed(2)}</td>
-            <td class="px-4 py-3 text-right text-primary font-semibold">R$ ${stock.ValorJusto.toFixed(2)}</td>
-            <td class="px-4 py-3 text-right ${stock.Margem > 0 ? 'text-green-500' : 'text-red-500'} font-semibold">
-                ${(stock.Margem * 100).toFixed(1)}%
-            </td>
-            <td class="px-4 py-3 text-right">
-                <button onclick="analyzeStock('${stock.ticker}')" 
-                    class="px-3 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 text-sm">
-                    Analisar
-                </button>
-            </td>
-        </tr>
-    `).join('');
+        tbody.innerHTML = stocks.map(stock => `
+            <tr class="hover:bg-dark-700">
+                <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
+                <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
+                <td class="px-4 py-3 text-right text-white">R$ ${stock.price?.toFixed(2) || '-'}</td>
+                <td class="px-4 py-3 text-right text-primary">R$ ${stock.valor_justo?.toFixed(2) || '-'}</td>
+                <td class="px-4 py-3 text-right ${stock.margem > 0 ? 'text-green-400' : 'text-red-400'}">
+                    ${stock.margem ? (stock.margem * 100).toFixed(1) + '%' : '-'}
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <button onclick="analyzeStock('${stock.ticker}')" 
+                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
+                        Analisar
+                    </button>
+                </td>
+            </tr>
+        `).join('');
     }
 
-    function renderMagicTable() {
+    function renderMagicTable(stocks) {
         const tbody = document.getElementById('magic-tbody');
-        tbody.innerHTML = currentData.magic.map(stock => `
-        <tr class="hover:bg-dark-700">
-            <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
-            <td class="px-4 py-3 text-gray-300">${stock.Empresa || 'N/A'}</td>
-            <td class="px-4 py-3 text-right text-green-500 font-semibold">${(stock.roic * 100).toFixed(1)}%</td>
-            <td class="px-4 py-3 text-right text-gray-300">${stock.ev_ebit.toFixed(2)}</td>
-            <td class="px-4 py-3 text-right text-primary font-semibold">#${Math.round(stock.MagicRank)}</td>
-            <td class="px-4 py-3 text-right">
-                <button onclick="analyzeStock('${stock.ticker}')" 
-                    class="px-3 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 text-sm">
-                    Analisar
-                </button>
-            </td>
-        </tr>
-    `).join('');
+        tbody.innerHTML = stocks.map(stock => `
+            <tr class="hover:bg-dark-700">
+                <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
+                <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
+                <td class="px-4 py-3 text-right text-green-400">${stock.roic ? (stock.roic * 100).toFixed(1) + '%' : '-'}</td>
+                <td class="px-4 py-3 text-right text-white">${stock.ev_ebit?.toFixed(2) || '-'}</td>
+                <td class="px-4 py-3 text-right text-primary">${stock.MagicRank?.toFixed(0) || '-'}</td>
+                <td class="px-4 py-3 text-right">
+                    <button onclick="analyzeStock('${stock.ticker}')" 
+                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
+                        Analisar
+                    </button>
+                </td>
+            </tr>
+        `).join('');
     }
 
     function showTab(tab) {
-        // Update buttons
+        currentTab = tab;
+
+        // Update tab buttons
         document.getElementById('tab-graham').className = tab === 'graham'
             ? 'px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary'
             : 'px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600';
@@ -244,67 +218,40 @@
             ? 'px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary'
             : 'px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600';
 
-        // Update content
+        // Show/hide content
         document.getElementById('content-graham').classList.toggle('hidden', tab !== 'graham');
         document.getElementById('content-magic').classList.toggle('hidden', tab !== 'magic');
     }
 
     async function analyzeStock(ticker) {
-        document.getElementById('modal-title').textContent = `Análise: ${ticker}`;
-        document.getElementById('modal-content').innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>';
-        document.getElementById('analysis-modal').classList.remove('hidden');
-
         try {
             const response = await fetch(`/acoes/api/decode/${ticker}`);
             const data = await response.json();
 
             if (data.status === 'success') {
-                const criticalClass = data.is_critical ? 'bg-red-500/10 border-red-500 text-red-500' : '';
-
-                document.getElementById('modal-content').innerHTML = `
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm text-gray-400">Empresa</p>
-                            <p class="text-white font-semibold">${data.details.Empresa || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-400">Setor</p>
-                            <p class="text-white font-semibold">${data.details.Setor || 'N/A'}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex space-x-4">
-                        <div class="flex-1 bg-dark-700 rounded-lg p-4">
-                            <p class="text-sm text-gray-400 mb-1">Graham</p>
-                            <p class="text-2xl font-bold ${data.graham_ok ? 'text-green-500' : 'text-red-500'}">
-                                ${data.graham_ok ? '✓ Aprovado' : '✗ Reprovado'}
-                            </p>
-                        </div>
-                        <div class="flex-1 bg-dark-700 rounded-lg p-4">
-                            <p class="text-sm text-gray-400 mb-1">Magic Formula</p>
-                            <p class="text-2xl font-bold ${data.magic_ok ? 'text-green-500' : 'text-red-500'}">
-                                ${data.magic_ok ? '✓ Aprovado' : '✗ Reprovado'}
-                            </p>
-                        </div>
-                    </div>
-
-                    ${data.is_critical ? '<div class="bg-red-500/10 border border-red-500 rounded-lg p-4"><p class="text-red-500 font-semibold">⚠️ ATENÇÃO: Risco Crítico Detectado</p></div>' : ''}
-
-                    <div class="bg-dark-700 rounded-lg p-4">
-                        <p class="text-sm text-gray-400 mb-2">Análise IA</p>
-                        <p class="text-gray-300 whitespace-pre-line">${data.analysis}</p>
-                    </div>
-                </div>
-            `;
+                document.getElementById('modal-ticker').textContent = ticker;
+                document.getElementById('modal-content').textContent = data.analysis || 'Análise não disponível';
+                document.getElementById('analysis-modal').classList.remove('hidden');
+            } else {
+                showToast('Erro ao carregar análise', 'error');
             }
         } catch (error) {
-            document.getElementById('modal-content').innerHTML = '<p class="text-red-500">Erro ao carregar análise</p>';
+            showToast('Erro ao carregar análise', 'error');
         }
     }
 
     function closeModal() {
         document.getElementById('analysis-modal').classList.add('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+        // Simple toast notification
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
     }
 </script>
 {% endblock %}
