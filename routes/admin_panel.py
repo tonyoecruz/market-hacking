@@ -289,3 +289,22 @@ async def get_update_logs(
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/trigger-update")
+async def trigger_manual_update(session: dict = Depends(verify_admin_session)):
+    """Manually trigger data update"""
+    try:
+        from scheduler.data_updater import update_all_data
+        import threading
+        
+        # Run update in background thread to avoid blocking
+        thread = threading.Thread(target=update_all_data)
+        thread.start()
+        
+        return JSONResponse({
+            "status": "success",
+            "message": "Data update triggered successfully. This may take a few minutes."
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

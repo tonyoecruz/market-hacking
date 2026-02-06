@@ -103,10 +103,16 @@
                 <div class="bg-dark-800 rounded-lg p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold text-white">Auto-Refresh</h3>
-                        <button onclick="refreshData()"
-                            class="px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30">
-                            🔄 Refresh Now
-                        </button>
+                        <div class="space-x-2">
+                            <button onclick="forceUpdate()"
+                                class="px-4 py-2 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30">
+                                ⚡ Force Update
+                            </button>
+                            <button onclick="refreshData()"
+                                class="px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30">
+                                🔄 Refresh Now
+                            </button>
+                        </div>
                     </div>
                     <p class="text-gray-400">Data refreshes automatically every 30 seconds</p>
                 </div>
@@ -277,12 +283,12 @@
 
             // Update status indicator
             statusEl.className = `w-4 h-4 rounded-full ${info.color === 'green' ? 'bg-green-500' :
-                    info.color === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
+                info.color === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
                 }`;
 
             // Update border color
             cardEl.className = `bg-dark-800 rounded-lg p-6 border-l-4 ${info.color === 'green' ? 'border-green-500' :
-                    info.color === 'yellow' ? 'border-yellow-500' : 'border-red-500'
+                info.color === 'yellow' ? 'border-yellow-500' : 'border-red-500'
                 }`;
 
             // Update content
@@ -402,6 +408,25 @@
             }
         } catch (error) {
             alert('Error resetting password');
+        }
+    }
+
+    async function forceUpdate() {
+        if (!confirm('This will trigger a full data update. This may take several minutes. Continue?')) return;
+
+        try {
+            const response = await fetch('/admin/api/trigger-update', {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                alert('Data update triggered! Check the Update Logs tab in a few minutes to see the results.');
+            } else {
+                alert('Error triggering update');
+            }
+        } catch (error) {
+            console.error('Error triggering update:', error);
+            alert('Error triggering update');
         }
     }
 

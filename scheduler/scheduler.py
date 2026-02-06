@@ -61,9 +61,19 @@ def start_scheduler():
     scheduler.start()
     
     logger.info(f"✅ Scheduler started - Updates every {UPDATE_INTERVAL_HOURS} hour(s)")
+    
+    # Run first update immediately in background
+    logger.info("📊 Triggering immediate initial update...")
+    scheduler.add_job(
+        update_all_data,
+        id='initial_update',
+        name='Initial Data Update',
+        replace_existing=True
+    )
+    
     try:
         next_run = scheduler.get_job('update_all_data').next_run_time
-        logger.info(f"📊 Next update: {next_run}")
+        logger.info(f"📊 Next scheduled update: {next_run}")
     except:
         logger.warning("⚠️ Could not determine next run time")
 
