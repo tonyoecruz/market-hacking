@@ -16,9 +16,11 @@ templates = Jinja2Templates(directory="templates")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Admin credentials (hardcoded for now)
+# Password: caTia.1234
+# Pre-computed hash to avoid import-time bcrypt issues
 ADMIN_CREDENTIALS = {
     "admin": {
-        "password_hash": pwd_context.hash("caTia.1234"),
+        "password_hash": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYqgOX8hqKi",  # caTia.1234
         "role": "super_admin",
         "created_at": datetime.now()
     }
