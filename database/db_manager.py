@@ -30,6 +30,21 @@ engine = create_engine(
     pool_pre_ping=True
 )
 
+# Logging database connection
+if 'sqlite' in DATABASE_URL:
+    logger.warning("⚠️  USING LOCAL SQLITE DATABASE - Data will not persist on Render!")
+    logger.info(f"📂 Database file: {DATABASE_URL}")
+    
+    # Warn if running in likely cloud environment
+    if os.getenv('RENDER') or os.getenv('PORT'):
+        logger.error("❌ CLOUD ENVIRONMENT DETECTED WITHOUT 'DATABASE_URL'!")
+        logger.error("👉 Please set DATABASE_URL (PostgreSQL) in Render Environment Variables.")
+else:
+    logger.info("🔌 Connecting to PostgreSQL database...")
+    # Mask password for security
+    safe_url = DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else '***'
+    logger.info(f"🔗 Host: {safe_url}")
+
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
