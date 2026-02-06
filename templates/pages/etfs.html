@@ -12,20 +12,198 @@
         </header>
 
         <main class="flex-1 overflow-y-auto p-6">
-            <div
-                class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-lg p-8 text-center">
-                <h2 class="text-3xl font-bold text-white mb-4">🚧 Em Desenvolvimento</h2>
-                <p class="text-gray-300 text-lg">
-                    A análise de ETFs está sendo implementada. Em breve você poderá:
+            <!-- Market Selection -->
+            <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">Selecionar Mercados</h2>
+                <div class="flex space-x-4 mb-4">
+                    <label class="flex items-center space-x-2 text-gray-300">
+                        <input type="checkbox" id="market-br" value="🇧🇷 Brasil (B3)" checked class="rounded">
+                        <span>🇧🇷 Brasil (B3)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 text-gray-300">
+                        <input type="checkbox" id="market-us" value="🇺🇸 Estados Unidos (NYSE/NASDAQ)" class="rounded">
+                        <span>🇺🇸 Estados Unidos</span>
+                    </label>
+                </div>
+                <button onclick="scanMarkets()" id="scan-btn"
+                    class="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-dark-900 font-bold rounded-lg hover:shadow-lg hover:shadow-primary/50 transition-all">
+                    🔍 Escanear ETFs
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="hidden text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p class="text-gray-400 mt-4">Carregando ETFs...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="hidden">
+                <div class="bg-dark-800 rounded-lg overflow-hidden">
+                    <div class="p-4 bg-dark-700 border-b border-gray-600">
+                        <h3 class="text-lg font-bold text-white">Top 20 ETFs por Liquidez</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-dark-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Ticker
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Nome
+                                    </th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Preço
+                                    </th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
+                                        Liquidez Diária</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="etfs-tbody" class="divide-y divide-gray-700">
+                                <!-- Data will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info -->
+            <div class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-lg p-6 mt-6">
+                <h3 class="text-lg font-bold text-white mb-2">💡 Sobre ETFs</h3>
+                <p class="text-gray-300 mb-2">
+                    ETFs são fundos que replicam índices e são negociados em bolsa como ações.
                 </p>
-                <ul class="list-disc list-inside text-gray-300 mt-4 space-y-2">
-                    <li>Listar todos os ETFs disponíveis</li>
-                    <li>Comparar performance</li>
-                    <li>Analisar composição</li>
-                    <li>Receber recomendações IA</li>
+                <ul class="list-disc list-inside text-gray-300 space-y-1">
+                    <li>Diversificação instantânea</li>
+                    <li>Baixo custo de administração</li>
+                    <li>Alta liquidez</li>
                 </ul>
             </div>
         </main>
     </div>
 </div>
+
+<!-- Analysis Modal -->
+<div id="analysis-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-dark-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white" id="modal-title">Análise</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div id="modal-content" class="text-gray-300">
+            <!-- Content will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    async function scanMarkets() {
+        const markets = [];
+        if (document.getElementById('market-br').checked) markets.push('🇧🇷 Brasil (B3)');
+        if (document.getElementById('market-us').checked) markets.push('🇺🇸 Estados Unidos (NYSE/NASDAQ)');
+
+        if (markets.length === 0) {
+            showToast('Selecione pelo menos um mercado', 'error');
+            return;
+        }
+
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('scan-btn').disabled = true;
+
+        try {
+            const response = await fetch('/etfs/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ markets })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showToast(data.message, 'success');
+                await loadData();
+            } else {
+                showToast(data.message || 'Erro ao escanear', 'error');
+            }
+        } catch (error) {
+            showToast('Erro ao escanear ETFs', 'error');
+        } finally {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('scan-btn').disabled = false;
+        }
+    }
+
+    async function loadData() {
+        try {
+            const response = await fetch('/etfs/api/data');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                renderTable(data.etfs);
+                document.getElementById('results').classList.remove('hidden');
+            }
+        } catch (error) {
+            showToast('Erro ao carregar dados', 'error');
+        }
+    }
+
+    function renderTable(etfs) {
+        const tbody = document.getElementById('etfs-tbody');
+        tbody.innerHTML = etfs.map(etf => `
+        <tr class="hover:bg-dark-700">
+            <td class="px-4 py-3 text-white font-semibold">${etf.ticker}</td>
+            <td class="px-4 py-3 text-gray-300">${etf.Empresa || etf.ticker}</td>
+            <td class="px-4 py-3 text-right text-gray-300">R$ ${etf.price.toFixed(2)}</td>
+            <td class="px-4 py-3 text-right text-primary font-semibold">
+                R$ ${(etf.liquidezmediadiaria / 1000000).toFixed(2)}M
+            </td>
+            <td class="px-4 py-3 text-right">
+                <button onclick="analyzeETF('${etf.ticker}')" 
+                    class="px-3 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 text-sm">
+                    Analisar
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    }
+
+    async function analyzeETF(ticker) {
+        document.getElementById('modal-title').textContent = `Análise: ${ticker}`;
+        document.getElementById('modal-content').innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>';
+        document.getElementById('analysis-modal').classList.remove('hidden');
+
+        try {
+            const response = await fetch(`/etfs/api/decode/${ticker}`);
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                document.getElementById('modal-content').innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-dark-700 rounded-lg p-4">
+                        <p class="text-sm text-gray-400 mb-1">Preço Atual</p>
+                        <p class="text-2xl font-bold text-primary">R$ ${data.data.price.toFixed(2)}</p>
+                    </div>
+
+                    <div class="bg-dark-700 rounded-lg p-4">
+                        <p class="text-sm text-gray-400 mb-2">Análise IA</p>
+                        <p class="text-gray-300 whitespace-pre-line">${data.analysis}</p>
+                    </div>
+                </div>
+            `;
+            }
+        } catch (error) {
+            document.getElementById('modal-content').innerHTML = '<p class="text-red-500">Erro ao carregar análise</p>';
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('analysis-modal').classList.add('hidden');
+    }
+</script>
 {% endblock %}

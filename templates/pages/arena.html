@@ -8,24 +8,231 @@
 
     <div class="flex-1 flex flex-col overflow-hidden ml-64">
         <header class="bg-dark-800 border-b border-gray-700 px-6 py-4">
-            <h1 class="text-2xl font-bold text-white">⚔️ Arena - Batalha de Ativos</h1>
+            <h1 class="text-2xl font-bold text-white">⚔️ Arena - Batalha de Ativos (Beta)</h1>
         </header>
 
         <main class="flex-1 overflow-y-auto p-6">
-            <div
-                class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-lg p-8 text-center">
-                <h2 class="text-3xl font-bold text-white mb-4">🚧 Em Desenvolvimento</h2>
-                <p class="text-gray-300 text-lg">
-                    A Arena permitirá comparar dois ativos lado a lado:
+            <!-- Info Banner -->
+            <div class="bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/50 rounded-lg p-6 mb-6">
+                <h2 class="text-xl font-bold text-white mb-2">⚔️ Batalha de Ativos</h2>
+                <p class="text-gray-300">
+                    Compare dois ativos lado a lado e descubra qual tem fundamentos superiores.
+                    A IA analisa métricas financeiras e declara o vencedor!
                 </p>
-                <ul class="list-disc list-inside text-gray-300 mt-4 space-y-2">
-                    <li>⚔️ Comparação direta</li>
-                    <li>📊 Análise de fundamentos</li>
-                    <li>🏆 Declaração de vencedor</li>
-                    <li>🎙️ Narração com IA</li>
-                </ul>
+            </div>
+
+            <!-- Battle Form -->
+            <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-bold text-white mb-4">Selecione os Competidores</h3>
+                <div class="grid grid-cols-2 gap-6 mb-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">🔵 Ativo 1</label>
+                        <input type="text" id="ticker1" placeholder="Ex: PETR4, VALE3"
+                            class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">🔴 Ativo 2</label>
+                        <input type="text" id="ticker2" placeholder="Ex: ITUB4, BBDC4"
+                            class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 uppercase">
+                    </div>
+                </div>
+                <button onclick="startBattle()" id="battle-btn"
+                    class="w-full px-6 py-4 bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold rounded-lg hover:shadow-lg hover:shadow-red-500/50 transition-all text-lg">
+                    ⚔️ INICIAR BATALHA!
+                </button>
+                <p class="text-sm text-gray-400 mt-2 text-center">
+                    * Certifique-se de ter escaneado os ativos primeiro (Ações, FIIs ou ETFs)
+                </p>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="hidden text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+                <p class="text-gray-400 mt-4">Analisando batalha...</p>
+            </div>
+
+            <!-- Battle Result -->
+            <div id="battle-result" class="hidden">
+                <!-- Winner Banner -->
+                <div id="winner-banner"
+                    class="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 rounded-lg p-6 mb-6 text-center">
+                    <h2 class="text-3xl font-bold text-yellow-500 mb-2">🏆 VENCEDOR</h2>
+                    <p id="winner-ticker" class="text-5xl font-black text-white"></p>
+                </div>
+
+                <!-- Comparison Cards -->
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div id="card1" class="bg-dark-800 rounded-lg p-6 border-2 border-blue-500">
+                        <h3 class="text-xl font-bold text-blue-500 mb-4">🔵 <span id="ticker1-display"></span></h3>
+                        <div id="data1" class="space-y-2 text-gray-300">
+                            <!-- Data will be inserted here -->
+                        </div>
+                    </div>
+                    <div id="card2" class="bg-dark-800 rounded-lg p-6 border-2 border-red-500">
+                        <h3 class="text-xl font-bold text-red-500 mb-4">🔴 <span id="ticker2-display"></span></h3>
+                        <div id="data2" class="space-y-2 text-gray-300">
+                            <!-- Data will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Analysis -->
+                <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                    <h3 class="text-lg font-bold text-white mb-4">🤖 Análise da Batalha</h3>
+                    <div id="analysis-text" class="text-gray-300 whitespace-pre-line mb-4">
+                        <!-- Analysis will be inserted here -->
+                    </div>
+                    <div id="audio-player" class="hidden">
+                        <audio id="battle-audio" controls class="w-full">
+                            <source id="audio-source" type="audio/mpeg">
+                            Seu navegador não suporta áudio.
+                        </audio>
+                    </div>
+                </div>
+
+                <!-- New Battle Button -->
+                <button onclick="resetBattle()"
+                    class="w-full px-6 py-3 bg-dark-700 text-gray-300 rounded-lg hover:bg-dark-600 font-semibold">
+                    🔄 Nova Batalha
+                </button>
             </div>
         </main>
     </div>
 </div>
+
+<script>
+    async function startBattle() {
+        const ticker1 = document.getElementById('ticker1').value.trim().toUpperCase();
+        const ticker2 = document.getElementById('ticker2').value.trim().toUpperCase();
+
+        if (!ticker1 || !ticker2) {
+            showToast('Digite os dois tickers', 'error');
+            return;
+        }
+
+        if (ticker1 === ticker2) {
+            showToast('Os tickers devem ser diferentes', 'error');
+            return;
+        }
+
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('battle-result').classList.add('hidden');
+        document.getElementById('battle-btn').disabled = true;
+
+        try {
+            const response = await fetch('/arena/api/battle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticker1, ticker2 })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                displayBattleResult(data);
+                showToast('Batalha concluída!', 'success');
+            } else {
+                showToast(data.detail || 'Erro na batalha. Verifique se os ativos foram escaneados.', 'error');
+            }
+        } catch (error) {
+            showToast('Erro ao processar batalha', 'error');
+        } finally {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('battle-btn').disabled = false;
+        }
+    }
+
+    function displayBattleResult(data) {
+        // Extract winner from analysis
+        const winnerMatch = data.analysis.match(/E QUEM GANHOOOOU ESSA BATALHA FOI O ATIVO ([A-Z0-9]+)/);
+        const winner = winnerMatch ? winnerMatch[1] : data.ticker1;
+
+        // Display winner
+        document.getElementById('winner-ticker').textContent = winner;
+
+        // Display tickers
+        document.getElementById('ticker1-display').textContent = data.ticker1;
+        document.getElementById('ticker2-display').textContent = data.ticker2;
+
+        // Highlight winner card
+        const card1 = document.getElementById('card1');
+        const card2 = document.getElementById('card2');
+
+        if (winner === data.ticker1) {
+            card1.classList.add('ring-4', 'ring-yellow-500');
+            card2.classList.remove('ring-4', 'ring-yellow-500');
+        } else {
+            card2.classList.add('ring-4', 'ring-yellow-500');
+            card1.classList.remove('ring-4', 'ring-yellow-500');
+        }
+
+        // Display data
+        document.getElementById('data1').innerHTML = formatAssetData(data.data1);
+        document.getElementById('data2').innerHTML = formatAssetData(data.data2);
+
+        // Display analysis
+        document.getElementById('analysis-text').textContent = data.analysis;
+
+        // Audio player
+        if (data.audio_available && data.audio_path) {
+            document.getElementById('audio-source').src = data.audio_path;
+            document.getElementById('battle-audio').load();
+            document.getElementById('audio-player').classList.remove('hidden');
+        } else {
+            document.getElementById('audio-player').classList.add('hidden');
+        }
+
+        document.getElementById('battle-result').classList.remove('hidden');
+    }
+
+    function formatAssetData(data) {
+        let html = '';
+
+        if (data.price !== undefined) {
+            html += `<p><strong>Preço:</strong> R$ ${data.price.toFixed(2)}</p>`;
+        }
+        if (data.lpa !== undefined) {
+            html += `<p><strong>LPA:</strong> R$ ${data.lpa.toFixed(2)}</p>`;
+        }
+        if (data.vpa !== undefined) {
+            html += `<p><strong>VPA:</strong> R$ ${data.vpa.toFixed(2)}</p>`;
+        }
+        if (data.pl !== undefined) {
+            html += `<p><strong>P/L:</strong> ${data.pl.toFixed(2)}</p>`;
+        }
+        if (data.pvp !== undefined) {
+            html += `<p><strong>P/VP:</strong> ${data.pvp.toFixed(2)}</p>`;
+        }
+        if (data.roic !== undefined) {
+            html += `<p><strong>ROIC:</strong> ${(data.roic * 100).toFixed(1)}%</p>`;
+        }
+        if (data.ev_ebit !== undefined) {
+            html += `<p><strong>EV/EBIT:</strong> ${data.ev_ebit.toFixed(2)}</p>`;
+        }
+        if (data.dy !== undefined) {
+            html += `<p><strong>DY:</strong> ${(data.dy * 100).toFixed(2)}%</p>`;
+        }
+        if (data.Margem !== undefined) {
+            html += `<p><strong>Margem Graham:</strong> ${(data.Margem * 100).toFixed(1)}%</p>`;
+        }
+
+        return html || '<p>Dados não disponíveis</p>';
+    }
+
+    function resetBattle() {
+        document.getElementById('ticker1').value = '';
+        document.getElementById('ticker2').value = '';
+        document.getElementById('battle-result').classList.add('hidden');
+        document.getElementById('ticker1').focus();
+    }
+
+    // Enter key support
+    document.getElementById('ticker1').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') document.getElementById('ticker2').focus();
+    });
+
+    document.getElementById('ticker2').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') startBattle();
+    });
+</script>
 {% endblock %}
