@@ -5,9 +5,16 @@ from routes.auth import get_optional_user
 import sys
 import os
 
-# Add parent directory to path to import utils
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import utils
+# Import data utilities
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import from utils.py file (not utils/ package)
+import importlib.util
+spec = importlib.util.spec_from_file_location("data_utils", 
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils.py"))
+data_utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(data_utils)
 import pandas as pd
 
 router = APIRouter()
@@ -33,7 +40,7 @@ async def scan_acoes(request: Request):
         selected_markets = data.get('markets', ["🇧🇷 Brasil (B3)"])
         
         # Load data using pipeline
-        df_acoes = utils.load_data_acoes_pipeline(selected_markets)
+        df_acoes = data_utils.load_data_acoes_pipeline(selected_markets)
         
         if df_acoes is not None and not df_acoes.empty:
             # Store in session (use session ID from cookie in production)
@@ -74,7 +81,7 @@ async def get_acoes_data(min_liq: float = 200000, filter_units: bool = False):
         
         # Get Graham selection (top 10)
         df_graham = df_filtered[(df_filtered['lpa']>0) & (df_filtered['vpa']>0)].sort_values('Margem', ascending=False)
-        df_graham = utils.filter_risky_stocks(df_graham).head(10)
+        df_graham = data_utils.filter_risky_stocks(df_graham).head(10)
         
         # Get Magic selection (top 10)
         df_magic = df_filtered.dropna(subset=['MagicRank']).sort_values('MagicRank', ascending=True)

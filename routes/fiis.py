@@ -5,8 +5,12 @@ from routes.auth import get_optional_user
 import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import utils
+# Import data utilities
+import importlib.util
+spec = importlib.util.spec_from_file_location("data_utils", 
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils.py"))
+data_utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(data_utils)
 import pandas as pd
 
 router = APIRouter()

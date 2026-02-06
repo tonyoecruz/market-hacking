@@ -5,8 +5,12 @@ from routes.auth import get_optional_user
 import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import utils
+# Import data utilities
+import importlib.util
+spec = importlib.util.spec_from_file_location("data_utils", 
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils.py"))
+data_utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(data_utils)
 import pandas as pd
 
 router = APIRouter()
@@ -31,7 +35,7 @@ async def scan_etfs(request: Request):
         data = await request.json()
         selected_markets = data.get('markets', ["🇧🇷 Brasil (B3)"])
         
-        df_etfs = utils.load_data_etfs_pipeline(selected_markets)
+        df_etfs = data_utils.load_data_etfs_pipeline(selected_markets)
         
         if df_etfs is not None and not df_etfs.empty:
             session_id = "default"
@@ -91,7 +95,7 @@ async def decode_etf(ticker: str):
             raise HTTPException(status_code=404, detail='Ticker não encontrado')
         
         row = row.iloc[0]
-        details = utils.get_stock_details(ticker)
+        details = data_utils.get_stock_details(ticker)
         
         prompt = f"""
         ANÁLISE DE ETF: {ticker}
@@ -111,7 +115,7 @@ async def decode_etf(ticker: str):
         - RODAPÉ: "Fontes: Prospecto do ETF e Regulamentação CVM."
         """
         
-        analysis = utils.get_ai_generic_analysis(prompt)
+        analysis = data_utils.get_ai_generic_analysis(prompt)
         
         return JSONResponse({
             'status': 'success',
@@ -130,7 +134,7 @@ async def decode_etf(ticker: str):
 async def get_chart(ticker: str):
     """API para obter dados do gráfico"""
     try:
-        fig = utils.get_candle_chart(ticker)
+        fig = data_utils.get_candle_chart(ticker)
         if fig:
             return JSONResponse({'status': 'success', 'chart': fig.to_json()})
         else:
