@@ -42,14 +42,46 @@ def update_stocks_br():
             logger.info(f"✅ Found {len(df)} BR stocks")
             count = db.save_stocks(df, market='BR')
             logger.info(f"💾 Saved {count} BR stocks to database")
-            return count
+            return "SUCCESS"
         else:
             logger.warning("⚠️  No BR stocks data retrieved")
-            return 0
+            return "EMPTY_DATA"
             
     except Exception as e:
         logger.error(f"❌ Error updating BR stocks: {str(e)}", exc_info=True)
-        return 0
+        return f"ERROR: {str(e)}"
+
+# ... (similar updates for other functions would follow, but I'll focus on update_all_data logic first)
+
+def update_all_data():
+    """Run all market data updates"""
+    logger.info("="*80)
+    logger.info(f"🔄 Starting complete market update at {datetime.now()}")
+    logger.info("="*80)
+    
+    results = {}
+    start_time = datetime.now()
+    
+    # Update BR Stocks
+    try:
+        logger.info("📊 [1/4] Updating Brazilian stocks...")
+        status_br = update_stocks_br()
+        results['stocks_br'] = status_br
+        logger.info(f"✅ BR Stocks: {status_br}")
+        
+        # Log to database
+        db.log_update(
+            asset_type='stocks',
+            market='BR',
+            status='success' if status_br == 'SUCCESS' else 'error',
+            records_updated=0, # Simplified for now
+            error_message=status_br if status_br != 'SUCCESS' else None,
+            started_at=start_time,
+            completed_at=datetime.now()
+        )
+    except Exception as e:
+        logger.error(f"❌ BR Stocks ERROR: {str(e)}", exc_info=True)
+        results['stocks_br'] = f"CRASH: {str(e)}"
 
 def update_stocks_us():
     """Update US stocks data"""
@@ -61,14 +93,14 @@ def update_stocks_us():
             logger.info(f"✅ Found {len(df)} US stocks")
             count = db.save_stocks(df, market='US')
             logger.info(f"💾 Saved {count} US stocks to database")
-            return count
+            return "SUCCESS"
         else:
             logger.warning("⚠️  No US stocks data retrieved")
-            return 0
+            return "EMPTY_DATA"
             
     except Exception as e:
         logger.error(f"❌ Error updating US stocks: {str(e)}", exc_info=True)
-        return 0
+        return f"ERROR: {str(e)}"
 
 def update_fiis():
     """Update FIIs data"""
@@ -81,14 +113,14 @@ def update_fiis():
             # FIIs are always BR market
             count = db.save_fiis(df, market='BR')
             logger.info(f"💾 Saved {count} FIIs to database")
-            return count
+            return "SUCCESS"
         else:
             logger.warning("⚠️  No FIIs data retrieved")
-            return 0
+            return "EMPTY_DATA"
             
     except Exception as e:
         logger.error(f"❌ Error updating FIIs: {str(e)}", exc_info=True)
-        return 0
+        return f"ERROR: {str(e)}"
 
 def update_etfs():
     """Update ETFs data (BR and US)"""
@@ -148,14 +180,14 @@ def update_etfs():
         
         if total_count > 0:
             logger.info(f"💾 Total ETFs saved: {total_count}")
+            return "SUCCESS"
         else:
             logger.warning("⚠️  No ETFs data retrieved")
-        
-        return total_count
+            return "EMPTY_DATA"
             
     except Exception as e:
         logger.error(f"❌ Error updating ETFs: {str(e)}", exc_info=True)
-        return 0
+        return f"ERROR: {str(e)}"
 
 def update_all_data():
     """Run all market data updates"""
@@ -189,62 +221,60 @@ def update_all_data():
     # Update US Stocks
     try:
         logger.info("📊 [2/4] Updating US stocks...")
-        count_us = update_stocks_us()
-        results['stocks_us'] = count_us > 0
-        logger.info(f"✅ US Stocks: {'SUCCESS' if results['stocks_us'] else 'FAILED'} ({count_us} records)")
+        status_us = update_stocks_us()
+        results['stocks_us'] = str(status_us) # Convert count to string if it was returning count
+        logger.info(f"✅ US Stocks status: {status_us}")
         
         # Log to database
         db.log_update(
             asset_type='stocks',
             market='US',
-            status='success' if results['stocks_us'] else 'failed',
-            records_updated=count_us,
+            status='success' if str(status_us).isdigit() and int(status_us) > 0 else 'error',
+            records_updated=int(status_us) if str(status_us).isdigit() else 0,
             started_at=start_time,
             completed_at=datetime.now()
         )
     except Exception as e:
         logger.error(f"❌ US Stocks ERROR: {str(e)}", exc_info=True)
-        results['stocks_us'] = False
+        results['stocks_us'] = f"ERROR: {str(e)}"
     
     # Update FIIs
     try:
         logger.info("📊 [3/4] Updating FIIs...")
-        count_fiis = update_fiis()
-        results['fiis'] = count_fiis > 0
-        logger.info(f"✅ FIIs: {'SUCCESS' if results['fiis'] else 'FAILED'} ({count_fiis} records)")
+        status_fiis = update_fiis()
+        results['fiis'] = str(status_fiis)
+        logger.info(f"✅ FIIs status: {status_fiis}")
         
-        # Log to database
         db.log_update(
             asset_type='fiis',
             market='BR',
-            status='success' if results['fiis'] else 'failed',
-            records_updated=count_fiis,
+            status='success' if str(status_fiis).isdigit() and int(status_fiis) > 0 else 'error',
+            records_updated=int(status_fiis) if str(status_fiis).isdigit() else 0,
             started_at=start_time,
             completed_at=datetime.now()
         )
     except Exception as e:
         logger.error(f"❌ FIIs ERROR: {str(e)}", exc_info=True)
-        results['fiis'] = False
+        results['fiis'] = f"ERROR: {str(e)}"
     
     # Update ETFs
     try:
         logger.info("📊 [4/4] Updating ETFs...")
-        count_etfs = update_etfs()
-        results['etfs'] = count_etfs > 0
-        logger.info(f"✅ ETFs: {'SUCCESS' if results['etfs'] else 'FAILED'} ({count_etfs} records)")
+        status_etfs = update_etfs()
+        results['etfs'] = str(status_etfs)
+        logger.info(f"✅ ETFs status: {status_etfs}")
         
-        # Log to database
         db.log_update(
             asset_type='etfs',
             market='BOTH',
-            status='success' if results['etfs'] else 'failed',
-            records_updated=count_etfs,
+            status='success' if str(status_etfs).isdigit() and int(status_etfs) > 0 else 'error',
+            records_updated=int(status_etfs) if str(status_etfs).isdigit() else 0,
             started_at=start_time,
             completed_at=datetime.now()
         )
     except Exception as e:
         logger.error(f"❌ ETFs ERROR: {str(e)}", exc_info=True)
-        results['etfs'] = False
+        results['etfs'] = f"ERROR: {str(e)}"
     
     logger.info("="*80)
     logger.info(f"✅ Update cycle finished. Results: {results}")

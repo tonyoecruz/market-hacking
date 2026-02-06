@@ -570,7 +570,15 @@
             const data = await response.json();
 
             if (response.ok) {
-                alert('SUCCESS: ' + data.message);
+                // Format the results for better readability
+                let resultMsg = 'UPDATE COMPLETED!\n\n';
+                const results = data.details || {};
+
+                for (const [key, value] of Object.entries(results)) {
+                    resultMsg += `${key.toUpperCase()}: ${value}\n`;
+                }
+
+                alert(resultMsg);
                 loadLogs();
             } else {
                 alert('FAILED: ' + (data.detail || 'Unknown error'));
