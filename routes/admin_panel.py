@@ -247,6 +247,12 @@ async def delete_user(
         except Exception as e:
             logger.warning(f"No session data to delete for user {user_id}: {e}")
         
+        # Delete user transactions if exists
+        try:
+            supabase.table('transactions').delete().eq('user_id', user_id).execute()
+        except Exception as e:
+            logger.warning(f"No transaction data to delete for user {user_id}: {e}")
+        
         # Now delete the user
         supabase.table('users').delete().eq('id', user_id).execute()
         
