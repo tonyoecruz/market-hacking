@@ -204,33 +204,48 @@ async def delete_user(
     user_id: int,
     session: dict = Depends(verify_admin_session)
 ):
-    """Delete a user"""
+    """Delete a user and all related data"""
     try:
         # Get Supabase client
         supabase = get_supabase_client()
         
-        # Check if user exists
+        # Get user info first
         user_response = supabase.table('users').select('*').eq('id', user_id).execute()
         
         if not user_response.data:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Prevent deleting admin user (you can adjust this logic)
         user = user_response.data[0]
+        
+        # Prevent deleting admin user
         if user.get('username') == 'admin':
             raise HTTPException(status_code=403, detail="Cannot delete admin user")
         
-        # Delete user
+        # Delete related data first (cascade delete)
+        # Delete portfolio entries
+        try:
+            supabase.table('portfolio').delete().eq('user_id', user_id).execute()
+        except Exception as e:
+            logger.warning(f"No portfolio data to delete for user {user_id}: {e}")
+        
+        # Delete user sessions if exists
+        try:
+            supabase.table('sessions').delete().eq('user_id', user_id).execute()
+        except Exception as e:
+            logger.warning(f"No session data to delete for user {user_id}: {e}")
+        
+        # Now delete the user
         supabase.table('users').delete().eq('id', user_id).execute()
         
         return JSONResponse({
             "status": "success",
-            "message": f"User {user.get('username')} deleted successfully"
+            "message": f"User {user.get('username')} and all related data deleted successfully"
         })
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error deleting user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
 
 
 @router.post("/api/users/{user_id}/reset-password")
