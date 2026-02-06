@@ -18,16 +18,20 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 
 @router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
+async def login_page(request: Request, error: str = None):
     """Render login page"""
     return templates.TemplateResponse(
         "auth/login.html",
-        {"request": request}
+        {
+            "request": request,
+            "error": error
+        }
     )
 
 
 @router.post("/login")
 async def login(
+    request: Request,
     response: Response,
     username: str = Form(...),
     password: str = Form(...)
@@ -44,9 +48,13 @@ async def login(
     user = UserQueries.verify_user(username, password)
     
     if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Credenciais inválidas"
+        return templates.TemplateResponse(
+            "auth/login.html",
+            {
+                "request": request,
+                "error": "Credenciais inválidas. Verifique seu usuário e senha.",
+                "username": username
+            }
         )
     
     # Create access token
