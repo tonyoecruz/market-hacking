@@ -249,6 +249,8 @@ def update_all_data():
     logger.info("="*80)
     logger.info(f"✅ Update cycle finished. Results: {results}")
     logger.info("="*80)
+    
+    return results
 
 def cleanup_old_logs():
     """Remove old update logs"""

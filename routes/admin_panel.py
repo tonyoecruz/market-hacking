@@ -339,10 +339,11 @@ async def trigger_manual_update(
             logger.info("⚡ TRIGGERING SYNCHRONOUS UPDATE (DEBUG MODE)")
             try:
                 # Run directly and capture output
-                update_all_data()
+                results = update_all_data()
                 return JSONResponse({
                     "status": "success",
-                    "message": "Update completed synchronously. Check logs for details."
+                    "message": f"Update completed. Results: {results}",
+                    "details": results
                 })
             except Exception as e:
                 logger.error(f"❌ COMPLETED WITH ERROR: {str(e)}")
