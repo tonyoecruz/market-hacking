@@ -56,13 +56,14 @@ class Wallet(WalletBase):
 
 class AssetBase(BaseModel):
     """Base asset model"""
-    ticker: str = Field(..., min_length=1, max_length=20)
-    quantity: Decimal = Field(..., gt=0)
-    avg_price: Decimal = Field(..., gt=0)
-    
+    ticker: str
+    quantity: Decimal
+    avg_price: Decimal
+    asset_type: str  # stock_br, stock_us, fii, etf
+
     @field_validator('ticker')
     @classmethod
-    def ticker_uppercase(cls, v: str) -> str:
+    def ticker_uppercase(cls, v):
         return v.upper().strip()
 
 
@@ -93,7 +94,7 @@ class TransactionBase(BaseModel):
     ticker: str
     quantity: Decimal
     price: Decimal
-    # CORREÇÃO: 'regex' substituído por 'pattern' para compatibilidade com Pydantic v2
+    # CORREÇÃO: Usando pattern em vez de regex para compatibilidade com Pydantic v2
     transaction_type: str = Field(..., pattern="^(buy|sell)$")
 
 
@@ -122,10 +123,6 @@ class TokenData(BaseModel):
 class StockAnalysis(BaseModel):
     """Stock analysis response model"""
     ticker: str
-    price: Decimal
-    graham_value: Optional[Decimal] = None
-    margin: Optional[Decimal] = None
-    magic_score: Optional[int] = None
-    roic: Optional[Decimal] = None
-    ev_ebit: Optional[Decimal] = None
-    ai_analysis: Optional[str] = None
+    analysis: str
+    recommendation: str
+    updated_at: datetime
