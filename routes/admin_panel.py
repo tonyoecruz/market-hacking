@@ -11,9 +11,12 @@ from database.connection import get_supabase_client
 from datetime import datetime, timedelta
 from typing import Dict, List
 import os
+import logging
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+
+logger = logging.getLogger(__name__)
 
 
 def get_data_source_status() -> Dict:
@@ -145,9 +148,13 @@ async def get_system_stats(session: dict = Depends(verify_admin_session)):
 async def get_user_stats(session: dict = Depends(verify_admin_session)):
     """API endpoint for user statistics"""
     try:
+        # Get users from Supabase
         supabase = get_supabase_client()
-        response = supabase.table('users').select('*').execute()
-        users = response.data
+        if supabase:
+            response = supabase.table('users').select('*').execute()
+            users = response.data if response.data else []
+        else:
+            users = []  # Fallback for local development without Supabase
         
         total_users = len(users)
         now = datetime.now()
@@ -174,14 +181,16 @@ async def get_user_stats(session: dict = Depends(verify_admin_session)):
 async def get_users(session: dict = Depends(verify_admin_session)):
     """API endpoint to list all users"""
     try:
-        # Get Supabase client
+        # Get users from Supabase
         supabase = get_supabase_client()
-        
-        # Query users table
-        response = supabase.table('users').select('*').order('created_at', desc=True).execute()
+        if supabase:
+            response = supabase.table('users').select('*').order('created_at', desc=True).execute()
+            response_data = response.data if response.data else []
+        else:
+            response_data = []  # Fallback for local development without Supabase
         
         users = []
-        for user in response.data:
+        for user in response_data:
             users.append({
                 "id": user.get('id'),
                 "username": user.get('username'),

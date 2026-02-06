@@ -3,6 +3,7 @@ Database Manager for Market Data
 Handles all database operations for stocks, ETFs, FIIs
 """
 import os
+import logging
 from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +12,8 @@ from typing import List, Optional, Dict
 import pandas as pd
 
 from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB
+
+logger = logging.getLogger(__name__)
 
 
 # Database URL - SQLite for local, PostgreSQL for production
@@ -57,40 +60,70 @@ class DatabaseManager:
     
     def save_stocks(self, df: pd.DataFrame, market: str) -> int:
         """
-        Save or update stocks from DataFrame
+        Save or update stocks from DataFrame using upsert pattern
         Returns: number of records saved
         """
         db = self.SessionLocal()
         try:
+            # Remove duplicate tickers to avoid UNIQUE constraint errors
+            df = df.drop_duplicates(subset=['ticker'], keep='first')
+            
+            # Valid columns for StockDB model
+            valid_columns = [
+                'ticker', 'market', 'empresa', 'setor', 'price', 'lpa', 'vpa',
+                'pl', 'pvp', 'roic', 'ev_ebit', 'liquidezmediadiaria',
+                'valor_justo', 'margem', 'magic_rank', 'ValorJusto', 'Margem', 'MagicRank'
+            ]
+            
             count = 0
             for _, row in df.iterrows():
-                stock = db.query(StockDB).filter(
-                    and_(StockDB.ticker == row['ticker'], StockDB.market == market)
+                ticker = str(row['ticker']).strip().upper()
+                
+                # Filter to only valid columns
+                stock_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
+                
+                # Handle column name mappings
+                if 'MagicRank' in stock_data:
+                    stock_data['magic_rank'] = stock_data.pop('MagicRank')
+                if 'ValorJusto' in stock_data:
+                    stock_data['valor_justo'] = stock_data.pop('ValorJusto')
+                if 'Margem' in stock_data:
+                    stock_data['margem'] = stock_data.pop('Margem')
+                
+                stock_data['ticker'] = ticker
+                stock_data['market'] = market
+                stock_data['updated_at'] = datetime.now()
+                
+                # Try to find existing
+                existing = db.query(StockDB).filter(
+                    StockDB.ticker == ticker,
+                    StockDB.market == market
                 ).first()
                 
-                if stock:
+                if existing:
                     # Update existing
-                    for key, value in row.items():
-                        if key == 'MagicRank':
-                            setattr(stock, 'magic_rank', value)
-                        elif hasattr(stock, key):
-                            setattr(stock, key, value)
-                    stock.updated_at = datetime.now()
+                    for key, value in stock_data.items():
+                        if hasattr(existing, key):
+                            setattr(existing, key, value)
                 else:
                     # Create new
-                    stock_data = row.to_dict()
-                    if 'MagicRank' in stock_data:
-                        stock_data['magic_rank'] = stock_data.pop('MagicRank')
-                    stock_data['market'] = market
-                    stock = StockDB(**stock_data)
-                    db.add(stock)
+                    new_stock = StockDB(**stock_data)
+                    db.add(new_stock)
                 
                 count += 1
+                
+                # Commit every 100 records
+                if count % 100 == 0:
+                    db.commit()
             
+            # Final commit
             db.commit()
+            logger.info(f"Successfully saved {count} {market} stocks")
             return count
+            
         except Exception as e:
             db.rollback()
+            logger.error(f"Error in save_stocks ({market}): {str(e)}", exc_info=True)
             raise e
         finally:
             db.close()
@@ -129,19 +162,22 @@ class DatabaseManager:
         """Save or update ETFs from DataFrame"""
         db = self.SessionLocal()
         try:
+            # Valid columns for ETFDB model
+            valid_columns = ['ticker', 'market', 'empresa', 'price', 'liquidezmediadiaria']
+            
             count = 0
             for _, row in df.iterrows():
                 etf = db.query(ETFDB).filter(ETFDB.ticker == row['ticker']).first()
                 
                 if etf:
-                    # Update existing
+                    # Update existing - only valid columns
                     for key, value in row.items():
-                        if hasattr(etf, key):
+                        if key in valid_columns and hasattr(etf, key):
                             setattr(etf, key, value)
                     etf.updated_at = datetime.now()
                 else:
-                    # Create new
-                    etf_data = row.to_dict()
+                    # Create new - filter to only valid columns
+                    etf_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
                     etf_data['market'] = market
                     etf = ETFDB(**etf_data)
                     db.add(etf)
@@ -176,19 +212,22 @@ class DatabaseManager:
         """Save or update FIIs from DataFrame"""
         db = self.SessionLocal()
         try:
+            # Valid columns for FIIDB model
+            valid_columns = ['ticker', 'market', 'price', 'dy', 'pvp', 'liquidezmediadiaria']
+            
             count = 0
             for _, row in df.iterrows():
                 fii = db.query(FIIDB).filter(FIIDB.ticker == row['ticker']).first()
                 
                 if fii:
-                    # Update existing
+                    # Update existing - only valid columns
                     for key, value in row.items():
-                        if hasattr(fii, key):
+                        if key in valid_columns and hasattr(fii, key):
                             setattr(fii, key, value)
                     fii.updated_at = datetime.now()
                 else:
-                    # Create new
-                    fii_data = row.to_dict()
+                    # Create new - filter to only valid columns
+                    fii_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
                     fii_data['market'] = market
                     fii = FIIDB(**fii_data)
                     db.add(fii)
