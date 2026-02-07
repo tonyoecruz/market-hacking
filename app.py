@@ -32,6 +32,7 @@ import json
 from modules.config import KNOWN_ETFS, RISKY_TICKERS
 from modules.market_calculators import is_likely_etf, check_risk, filter_risky_stocks
 from modules.data_fetcher import load_data_acoes_pipeline, load_data_fiis_pipeline, load_data_etfs_pipeline, get_candle_chart
+from modules.house_flipping_page import render_house_flipping_page
 
 if not os.path.exists("client_secret.json"):
     if "GOOGLE_JSON" in st.secrets:
@@ -1634,8 +1635,8 @@ with st.sidebar:
     # NEW TECHNOLOGY: Option Menu
     selected_nav = option_menu(
         menu_title=None,
-        options=["Dashboard", "Ações", "ETFs", "Elite Mix", "FIIs", "Arena (Beta)"],
-        icons=["house", "bar-chart", "globe", "trophy", "building", "shield"],
+        options=["Dashboard", "Ações", "ETFs", "Elite Mix", "FIIs", "Arena (Beta)", "House Flipping!"],
+        icons=["house", "bar-chart", "globe", "trophy", "building", "shield", "house-gear"],
         menu_icon="cast",
         default_index=0,
         styles={
@@ -1664,7 +1665,8 @@ nav_map = {
     "ETFs": "ETFs",
     "Elite Mix": "ELITE MIX",
     "FIIs": "FIIs",
-    "Arena (Beta)": "ARENA"
+    "Arena (Beta)": "ARENA",
+    "House Flipping!": "FLIPPING"
 }
 
 current_tab = nav_map.get(selected_nav, "CARTEIRA")
@@ -3292,6 +3294,13 @@ if current_tab == "ARENA":
                  if st.button(f"⬆️ ADICIONAR {t2}", key=f"add_arena_{t2}"): add_wallet_dialog(t2, d2['price'])
     else:
         st.warning("⚠️ Carregue a base de AÇÕES primeiro na aba principal.")
+
+
+# ------------------------------------------------------------------------------
+# PÁGINA 5: HOUSE FLIPPING (REAL ESTATE)
+# ------------------------------------------------------------------------------
+if current_tab == "FLIPPING":
+    render_house_flipping_page()
 
 st.markdown('<div class="disclaimer">&#9888; AVISO LEGAL: ESTA FERRAMENTA &Eacute; APENAS PARA FINS EDUCACIONAIS E DE C&Aacute;LCULO AUTOMATIZADO. OS DADOS S&Atilde;O OBTIDOS DE FONTES P&Uacute;BLICAS E PODEM CONTER ATRASOS. ISTO N&Atilde;O &Eacute; UMA RECOMENDA&Ccedil;&Atilde;O DE COMPRA OU VENDA DE ATIVOS. O INVESTIDOR &Eacute; RESPONS&Aacute;VEL POR SUAS PR&Oacute;PRIAS DECIS&Otilde;ES.</div>', unsafe_allow_html=True)
 
