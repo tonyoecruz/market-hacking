@@ -201,28 +201,30 @@ def update_all_data():
     # Update BR Stocks
     try:
         logger.info("📊 [1/4] Updating Brazilian stocks...")
-        count_br = update_stocks_br()
-        results['stocks_br'] = count_br > 0
-        logger.info(f"✅ BR Stocks: {'SUCCESS' if results['stocks_br'] else 'FAILED'} ({count_br} records)")
+        status_br = update_stocks_br()
+        # Parse status to see if it's success (it returns "SUCCESS" string)
+        is_success = status_br == "SUCCESS"
+        results['stocks_br'] = status_br
+        logger.info(f"✅ BR Stocks: {status_br}")
         
         # Log to database
         db.log_update(
             asset_type='stocks',
             market='BR',
-            status='success' if results['stocks_br'] else 'failed',
-            records_updated=count_br,
+            status='success' if is_success else 'error',
+            records_updated=0, # update_stocks_br currently doesn't return count, handled inside
+            error_message=None if is_success else str(status_br),
             started_at=start_time,
             completed_at=datetime.now()
         )
     except Exception as e:
         logger.error(f"❌ BR Stocks ERROR: {str(e)}", exc_info=True)
-        results['stocks_br'] = False
+        results['stocks_br'] = f"CRASH: {str(e)}"
     
-    # Update US Stocks (Temporarily Disabled for Debugging/Load Reduction)
+    # Update US Stocks (Re-enabled with batch processing)
     try:
-        logger.info("📊 [2/4] Updating US stocks (SKIPPED FOR DEBUG)...")
-        # status_us = update_stocks_us()
-        status_us = "SKIPPED"
+        logger.info("📊 [2/4] Updating US stocks...")
+        status_us = update_stocks_us()
         results['stocks_us'] = str(status_us)
         logger.info(f"✅ US Stocks status: {status_us}")
         
@@ -230,9 +232,9 @@ def update_all_data():
         db.log_update(
             asset_type='stocks',
             market='US',
-            status='success',
-            records_updated=0,
-            error_message="Skipped for debugging",
+            status='success' if status_us == "SUCCESS" else 'error',
+            records_updated=0, 
+            error_message=None if status_us == "SUCCESS" else str(status_us),
             started_at=start_time,
             completed_at=datetime.now()
         )

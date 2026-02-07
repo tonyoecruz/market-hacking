@@ -25,12 +25,23 @@ async def get_fiis_data(min_dy: float = 0.0, min_liq: float = 100000):
     try:
         fiis = db.get_fiis(min_dy=min_dy)
         if not fiis:
-            return JSONResponse({'status': 'info', 'message': 'Aguardando atualização de dados.'})
+            return JSONResponse({'status': 'info', 'message': 'Aguardando atualização de dados.', 'top_dy': []})
             
         df = pd.DataFrame(fiis)
+        
+        # Coerce numeric
+        numeric_cols = ['liquidezmediadiaria', 'dy', 'price', 'pvp']
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        
         df_filtered = df[df['liquidezmediadiaria'] >= min_liq].copy()
         top_dy = df_filtered.sort_values('dy', ascending=False).head(10)
         
+        # Replace NaN for JSON
+        top_dy = top_dy.replace({float('nan'): None})
+        
         return JSONResponse({'status': 'success', 'top_dy': top_dy.to_dict('records')})
     except Exception as e:
+        print(f"ERRO API FIIS: {e}")
         raise HTTPException(status_code=500, detail=str(e))

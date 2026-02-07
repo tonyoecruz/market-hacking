@@ -31,18 +31,43 @@ async def get_acoes_data(market: str = None, min_liq: float = 200000, filter_uni
     try:
         stocks = db.get_stocks(market=market, min_liq=min_liq)
         if not stocks:
-            raise HTTPException(status_code=404, detail='Nenhum dado no banco. Aguarde a atualização automática.')
+            # Return empty structure instead of 404 to avoid frontend error
+            return JSONResponse({
+                'status': 'success',
+                'total_count': 0,
+                'graham': [],
+                'magic': []
+            })
         
         df = pd.DataFrame(stocks)
+        
+        # Converte colunas numéricas forçadamente (coercing errors to NaN)
+        numeric_cols = ['liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank', 'price', 'valor_justo', 'roic', 'ev_ebit']
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        
+        # Garante que min_liq é respeitado
         df_filtered = df[df['liquidezmediadiaria'] > min_liq].copy()
         
         if filter_units:
             df_filtered = df_filtered[df_filtered['ticker'].str.endswith('11')]
         
-        # Filtros Graham e Magic Rank
-        df_graham = df_filtered[(df_filtered['lpa']>0) & (df_filtered['vpa']>0)].sort_values('margem', ascending=False).head(10)
-        df_magic = df_filtered.dropna(subset=['magic_rank']).sort_values('magic_rank', ascending=True).head(10)
+        # Filtros Graham: LPA > 0, VPA > 0
+        df_graham = df_filtered[
+            (df_filtered['lpa'] > 0) & 
+            (df_filtered['vpa'] > 0)
+        ].sort_values('margem', ascending=False).head(10)
         
+        # Filtros Magic: Magic Rank > 0 (supondo que 0 é inválido/preenchido)
+        # Na verdade, Magic Rank deve ser menor melhor, mas aqui estamos ordenando ascending
+        # Vamos filtrar magic_rank > 0 para ignorar os que eram None e viraram 0
+        df_magic = df_filtered[df_filtered['magic_rank'] > 0].sort_values('magic_rank', ascending=True).head(10)
+        
+        # Replace NaN with None/0 for JSON serialization safety
+        df_graham = df_graham.replace({float('nan'): None})
+        df_magic = df_magic.replace({float('nan'): None})
+
         return JSONResponse({
             'status': 'success',
             'total_count': len(df),
@@ -50,6 +75,7 @@ async def get_acoes_data(market: str = None, min_liq: float = 200000, filter_uni
             'magic': df_magic.to_dict('records')
         })
     except Exception as e:
+        print(f"ERRO API ACOES: {e}") # Log no stdout do Render
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/decode/{ticker}")
