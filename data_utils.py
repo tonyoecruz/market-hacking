@@ -411,89 +411,29 @@ def get_stock_details(ticker):
     except:
         return {'Empresa': ticker}
 
-def get_data_acoes():
-    """Busca dados de ações brasileiras do Fundamentus"""
-    # Removed try/except to allow bubbling up to data_updater
-    url = 'https://www.fundamentus.com.br/resultado.php'
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1'
-    }
-    r = requests.get(url, headers=headers, timeout=10)
-    r.raise_for_status()
-    
-    # Check if content is valid HTML table
-    if '<table' not in r.text.lower():
-        raise ValueError("Fundamentus returned valid response but NO TABLE found. Possible block/CAPTCHA.")
+from modules.statusinvest_extractor import get_br_stocks_statusinvest, get_br_fiis_statusinvest
 
-    df = pd.read_html(io.StringIO(r.text), decimal=',', thousands='.')[0]
-    
-    rename = {
-        'Papel': 'ticker',
-        'Cotação': 'price',
-        'P/L': 'pl',
-        'P/VP': 'pvp',
-        'EV/EBIT': 'ev_ebit',
-        'ROIC': 'roic',
-        'Liq.2meses': 'liquidezmediadiaria',
-        'Dív.Brut/ Patrim.': 'div_pat'
-    }
-    df.rename(columns=rename, inplace=True)
-    for c in df.columns:
-        if df[c].dtype == object and c != 'ticker':
-            df[c] = df[c].str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.replace('%', '', regex=False)
-            df[c] = pd.to_numeric(df[c], errors='coerce')
-    df['roic'] /= 100
-    # Safe division
-    df['lpa'] = df.apply(lambda x: x['price']/x['pl'] if x['pl']!=0 and not pd.isna(x['pl']) else 0, axis=1)
-    df['vpa'] = df.apply(lambda x: x['price']/x['pvp'] if x['pvp']!=0 and not pd.isna(x['pvp']) else 0, axis=1)
-    return df
+def get_data_acoes():
+    """
+    Busca dados de ações brasileiras do Status Invest
+    Substitui a antiga implementação do Fundamentus
+    """
+    try:
+        return get_br_stocks_statusinvest()
+    except Exception as e:
+        print(f"Error in get_data_acoes: {e}")
+        return pd.DataFrame()
 
 def get_data_fiis():
-    """Busca dados de FIIs brasileiros do Fundamentus"""
-    # Removed try/except to allow bubbling up to data_updater
-    url = 'https://www.fundamentus.com.br/fii_resultado.php'
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1'
-    }
-    r = requests.get(url, headers=headers, timeout=10)
-    r.raise_for_status()
-    
-    # Check if content is valid HTML table
-    if '<table' not in r.text.lower():
-        raise ValueError("Fundamentus returned valid response but NO TABLE found. Possible block/CAPTCHA.")
-
-    df = pd.read_html(io.StringIO(r.text), decimal=',', thousands='.')[0]
-    rename = {
-        'Papel': 'ticker',
-        'Cotação': 'price',
-        'Dividend Yield': 'dy',
-        'P/VP': 'pvp',
-        'Liquidez': 'liquidezmediadiaria',
-        'Segmento': 'segmento'
-    }
-    df.rename(columns=rename, inplace=True)
-    for c in df.columns:
-        if df[c].dtype == object and c not in ['ticker', 'segmento']:
-            df[c] = df[c].str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.replace('%', '', regex=False)
-            df[c] = pd.to_numeric(df[c], errors='coerce')
-    df['dy'] /= 100
-    return df
+    """
+    Busca dados de FIIs brasileiros do Status Invest
+    Substitui a antiga implementação do Fundamentus
+    """
+    try:
+        return get_br_fiis_statusinvest()
+    except Exception as e:
+        print(f"Error in get_data_fiis: {e}")
+        return pd.DataFrame()
 
 def get_data_usa():
     """Busca dados de ações americanas via TradingView Scanner API"""
