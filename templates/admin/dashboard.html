@@ -562,39 +562,40 @@
     }
 
     async function debugUpdate() {
-        if (!confirm('This will run the update SYNCHRONOUSLY. It will freeze this page for 1-2 minutes until finished. If it fails, you will see the error here. Continue?')) return;
+        if (!confirm('This will trigger a BACKGROUND update to prevent site crashes. The process runs on the server and logs will appear here live. Continue?')) return;
 
         try {
-            const btn = event.target;
+            const btn = event.target || document.getElementById('debug-btn');
             const originalText = btn.innerText;
-            btn.innerText = '⏳ Running...';
+            btn.innerText = '🚀 Starting...';
             btn.disabled = true;
 
-            const response = await fetch('/admin/api/trigger-update?sync=true', {
+            const response = await fetch('/admin/api/trigger-update?sync=false', {
                 method: 'POST'
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                // Format the results for better readability
-                let resultMsg = 'UPDATE COMPLETED!\n\n';
-                const results = data.details || {};
+                showTab('logs');
+                alert('Update started in background! Logs will refresh automatically.');
 
-                for (const [key, value] of Object.entries(results)) {
-                    resultMsg += `${key.toUpperCase()}: ${value}\n`;
-                }
-
-                alert(resultMsg);
+                // Start aggressive polling
+                if (refreshInterval) clearInterval(refreshInterval);
                 loadLogs();
+                refreshInterval = setInterval(loadLogs, 3000);
+
+                btn.innerText = 'Run Background Update';
+                btn.disabled = false;
             } else {
                 alert('FAILED: ' + (data.detail || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerText = originalText;
             }
         } catch (error) {
-            console.error('Error triggering debug update:', error);
+            console.error('Error triggering update:', error);
             alert('CRITICAL ERROR: ' + error.message);
-        } finally {
-            // Reload page to reset button state easily
+            // Reload page to reset state
             window.location.reload();
         }
     }
