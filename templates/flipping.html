@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}House Flipping - SCOPE3{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-dark-900">
+    <!-- Main Content -->
+    <div class="flex-1 overflow-y-auto">
+        <header class="bg-dark-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                🏠 House Flipping <span class="text-primary text-sm bg-primary/10 px-2 py-1 rounded">Beta</span>
+            </h2>
+            <a href="/dashboard" class="text-gray-400 hover:text-white transition-colors">
+                &larr; Voltar ao Dashboard
+            </a>
+        </header>
+
+        <main class="p-6 max-w-7xl mx-auto">
+            <!-- Search Section -->
+            <!-- Search Section -->
+            <div class="bg-dark-800 rounded-xl p-8 border border-gray-700 shadow-lg mb-8">
+                <h3 class="text-xl font-bold text-white mb-4">🔍 Varredura de Oportunidades</h3>
+                <p class="text-gray-400 mb-6">
+                    O sistema busca imóveis em grandes portais (OLX), identifica imobiliárias locais e compara o preço
+                    do m² com a média da região para encontrar arbitragens.
+                </p>
+
+                <form id="scanForm" class="flex gap-4 items-end" onsubmit="handleScan(event)">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Cidade Alvo</label>
+                        <input type="text" name="city" id="cityInput"
+                            class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                            placeholder="Ex: Sorocaba, Campinas..." required value="Sorocaba">
+                    </div>
+                    <button type="submit" id="scanBtn"
+                        class="bg-primary hover:bg-green-400 text-dark-900 font-bold py-3 px-8 rounded-lg transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,157,0.3)]">
+                        🚀 Iniciar Varredura
+                    </button>
+                </form>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="hidden text-center py-12">
+                <div
+                    class="inline-block w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4">
+                </div>
+                <h3 class="text-xl font-bold text-white">Analisando o Mercado...</h3>
+                <p class="text-gray-400 mt-2">Isso pode levar alguns segundos. Estamos minerando dados.</p>
+            </div>
+
+            <!-- Results Container -->
+            <div id="resultsContainer">
+                <!-- Results will be injected here -->
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function handleScan(e) {
+        e.preventDefault();
+
+        const city = document.getElementById('cityInput').value;
+        const btn = document.getElementById('scanBtn');
+        const container = document.getElementById('resultsContainer');
+        const loader = document.getElementById('loadingState');
+
+        // UI State: Loading
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        loader.classList.remove('hidden');
+        container.innerHTML = ''; // Clear previous
+
+        // Create FormData
+        const formData = new FormData();
+        formData.append('city', city);
+
+        try {
+            const response = await fetch('/flipping/scan', {
+                method: 'POST',
+                body: formData
+            });
+
+            const html = await response.text();
+
+            // UI State: Success
+            container.innerHTML = html;
+
+        } catch (error) {
+            console.error(error);
+            container.innerHTML = `<div class="p-4 bg-red-500/20 text-red-200 rounded-lg border border-red-500/50">Erro ao realizar varredura: ${error.message}</div>`;
+        } finally {
+            // UI State: Reset
+            loader.classList.add('hidden');
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+</script>
+{% endblock %}

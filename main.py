@@ -61,6 +61,10 @@ app.include_router(admin_auth.router, prefix="/admin", tags=["Admin Auth"])
 app.include_router(admin_panel.router, prefix="/admin", tags=["Admin Panel"])
 app.include_router(admin_logs.router, prefix="/admin", tags=["Admin Logs"])
 
+# House Flipping Module
+from routes import flipping
+app.include_router(flipping.router, prefix="/flipping", tags=["House Flipping"])
+
 
 
 @app.on_event("startup")
