@@ -57,12 +57,15 @@ def load_data_acoes_pipeline():
                 if 'roic' not in df_br.columns: df_br['roic'] = 0
                 
                 df_list.append(df_br)
-                status_text.text(f"Sucesso BR: {len(df_br)} ativos.")
+                status_text.success(f"Sucesso BR (Status Invest): {len(df_br)} ativos baixados.")
+                time.sleep(1)
             else:
-                status_text.error("Falha ao buscar dados BR.")
+                status_text.error("Status Invest retornou dados vazios.")
+                time.sleep(2)
         except Exception as e:
             print(f"Erro BR Pipeline: {e}")
-            status_text.error(f"Erro BR: {e}")
+            status_text.error(f"Erro ao conectar com Status Invest: {e}")
+            time.sleep(2)
 
     # --- USA: YFINANCE LOOP (Targeted List) ---
     if use_us:
@@ -149,12 +152,15 @@ def load_data_fiis_pipeline():
                 if 'segmento' not in df_br.columns: df_br['segmento'] = 'FII'
                 
                 df_list.append(df_br)
-                status_text.text(f"Sucesso FIIs: {len(df_br)} fundos.")
+                status_text.success(f"Sucesso FIIs (Status Invest): {len(df_br)} fundos baixados.")
+                time.sleep(1)
             else:
-                status_text.error("Falha ao buscar FIIs BR.")
+                status_text.error("Falha ao buscar FIIs BR (Dados Vazios).")
+                time.sleep(2)
         except Exception as e:
             print(f"Erro FII Pipeline: {e}")
-            status_text.error(f"Erro FII: {e}")
+            status_text.error(f"Erro FII ao conectar com Status Invest: {e}")
+            time.sleep(2)
 
     # --- REITS USA (Placeholder/Future) ---
     # Currently no list provided in config for bulk REITs, 

@@ -27,14 +27,21 @@ def get_br_stocks_statusinvest():
     }
     
     try:
+        print(f"StatusInvest: Requesting URL {url}...")
         response = requests.get(url, params=params, headers=HEADERS, timeout=15)
+        print(f"StatusInvest: Response Code {response.status_code}")
         response.raise_for_status()
         
         data = response.json()
-        if not data or not isinstance(data, list):
+        if not data:
+            print("StatusInvest: JSON data is empty or None.")
+        
+        if not isinstance(data, list):
+            print(f"StatusInvest: Unexpected data format: {type(data)}")
             logger.error("Status Invest API returned empty list or invalid format.")
             return pd.DataFrame()
 
+        print(f"StatusInvest: Received {len(data)} items.")
         df = pd.DataFrame(data)
         
         # MAPPING STATUS INVEST TO APP SCHEMA
