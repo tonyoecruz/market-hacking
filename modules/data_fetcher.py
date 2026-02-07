@@ -8,88 +8,101 @@ import time
 from .config import ACOES_BR_BASE, ACOES_US_BASE, FIIS_BR_BASE, KNOWN_ETFS
 from .market_calculators import calcular_margem_graham, calcular_dy_anualizado, is_likely_etf
 from .yf_extractor import extrair_dados_yfinance
+from .statusinvest_extractor import get_br_stocks_statusinvest, get_br_fiis_statusinvest
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def load_data_acoes_pipeline():
     """
     Pipeline completo de coleta de dados de AÇÕES (BR + US)
     """
-    all_tickers = []
-    
-    selected_markets = st.session_state.get('selected_markets', ['BR']) # Check key match with app.py (selected_markets or selected_markets_acoes?)
-    # App.py uses 'selected_markets' for Ações (line 2086)
-    
-    if not isinstance(selected_markets, list):
-        selected_markets = ['BR']
+    selected_markets = st.session_state.get('selected_markets', ['BR']) 
+    if not isinstance(selected_markets, list): selected_markets = ['BR']
 
-    # Logic to map "🇧🇷 Brasil (B3)" to "BR" etc if needed
-    # App.py uses: if any("Brasil" in s for s in selected)
     use_br = any("Brasil" in s for s in selected_markets) or 'BR' in selected_markets
     use_us = any("Estados Unidos" in s for s in selected_markets) or 'US' in selected_markets
 
+    df_list = []
+    
+    # --- BRASIL: STATUS INVEST BULK ---
     if use_br:
-        all_tickers.extend(ACOES_BR_BASE)
-    if use_us:
-        all_tickers.extend(ACOES_US_BASE)
-    
-    dados_finais = []
-    total_tickers = len(all_tickers)
-    
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    for i, ticker in enumerate(all_tickers):
-        # Filter ETFs from Stock Pipeline
-        if is_likely_etf(ticker): 
-            continue
-
-        status_text.text(f"Processando {ticker} ({i+1}/{total_tickers})...")
-        progress_bar.progress((i + 1) / total_tickers)
+        status_text = st.empty()
+        status_text.text("Baixando Ações BR (Status Invest)...")
+        time.sleep(0.5)
         
         try:
-            dados = extrair_dados_yfinance(ticker)
-            
-            if dados:
-                dados['Region'] = 'BR' if '.SA' in ticker else 'US'
-                dados['Margem'] = calcular_margem_graham(dados['price'], dados['lpa'], dados['vpa'])
+            df_br = get_br_stocks_statusinvest()
+            if not df_br.empty:
+                df_br['Region'] = 'BR'
                 
-                # Magic Formula pre-calc fields already in extractor?
-                # Extractor has: ev_ebit, roic.
-                # We need to calculate MagicRank later on the full DF.
+                # Filter ETFs (if any slipped through)
+                if 'ticker' in df_br.columns:
+                     mask_etf = df_br['ticker'].apply(is_likely_etf)
+                     df_br = df_br[~mask_etf].copy()
                 
-                # App.py calculates 'graham_term' and 'ValorJusto' explicitly.
-                # Extractor returns 'margem_liquida' but not 'ValorJusto' directly, just inputs.
-                # calculate_margem_graham returns final margin.
-                # App.py uses:
-                # df_acoes['graham_term'] = (22.5 * df_acoes['lpa'] * df_acoes['vpa']).apply(...)
-                # df_acoes['ValorJusto'] = np.sqrt(df_acoes['graham_term'])
+                # Calculate Indicators
+                # Graham Margin
+                df_br['Margem'] = calcular_margem_graham(df_br['price'], df_br['lpa'], df_br['vpa'])
                 
-                # We should add ValorJusto to the dict for compatibility
-                lpa = dados.get('lpa', 0)
-                vpa = dados.get('vpa', 0)
-                if lpa > 0 and vpa > 0:
-                     dados['ValorJusto'] = (22.5 * lpa * vpa) ** 0.5
-                else:
-                     dados['ValorJusto'] = 0.0
-
-                dados_finais.append(dados)
-            
-            time.sleep(0.5) 
-            
+                # Fair Value
+                # Ensure non-negative for sqrt
+                graham_term = (22.5 * df_br['lpa'] * df_br['vpa'])
+                # Handle Series apply
+                def safe_sqrt(x):
+                    return x**0.5 if x > 0 else 0
+                
+                df_br['ValorJusto'] = graham_term.apply(safe_sqrt)
+                
+                # Ensure other cols exist
+                if 'ev_ebit' not in df_br.columns: df_br['ev_ebit'] = 0
+                if 'roic' not in df_br.columns: df_br['roic'] = 0
+                
+                df_list.append(df_br)
+                status_text.text(f"Sucesso BR: {len(df_br)} ativos.")
+            else:
+                status_text.error("Falha ao buscar dados BR.")
         except Exception as e:
-            # print(f"Erro pipeline {ticker}: {e}")
-            continue
+            print(f"Erro BR Pipeline: {e}")
+            status_text.error(f"Erro BR: {e}")
+
+    # --- USA: YFINANCE LOOP (Targeted List) ---
+    if use_us:
+        us_tickers = ACOES_US_BASE
+        us_data = []
+        
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        total_us = len(us_tickers)
+        
+        for i, ticker in enumerate(us_tickers):
+            status_text.text(f"US: Processando {ticker}...")
+            progress_bar.progress((i+1)/total_us)
             
-    progress_bar.empty()
-    status_text.empty()
-    
-    if not dados_finais:
+            try:
+                d = extrair_dados_yfinance(ticker)
+                if d:
+                    d['Region'] = 'US'
+                    d['Margem'] = calcular_margem_graham(d['price'], d['lpa'], d['vpa'])
+                    lpa = d.get('lpa', 0)
+                    vpa = d.get('vpa', 0)
+                    d['ValorJusto'] = (22.5 * lpa * vpa)**0.5 if (lpa>0 and vpa>0) else 0
+                    us_data.append(d)
+                time.sleep(0.2)
+            except: pass
+            
+        progress_bar.empty()
+        status_text.empty()
+        
+        if us_data:
+            df_list.append(pd.DataFrame(us_data))
+
+    if not df_list:
         return False
 
-    df = pd.DataFrame(dados_finais)
+    df = pd.concat(df_list, ignore_index=True)
     
-    # MAGIC FORMULA CALCULATION (In-Memory)
+    # MAGIC FORMULA CALCULATION (Global)
     try:
+        # Pre-filter for ranking
         df_magic = df[(df['ev_ebit'] > 0) & (df['roic'] > 0)].copy()
         
         if not df_magic.empty:
@@ -98,9 +111,13 @@ def load_data_acoes_pipeline():
             df_magic['Score'] = df_magic['R_EV'] + df_magic['R_ROIC']
             df_magic['MagicRank'] = df_magic['Score'].rank(ascending=True)
             
+            # Merge logic - drop old columns if exist to avoid suffix
+            cols = ['Score', 'MagicRank', 'R_EV', 'R_ROIC']
+            df = df.drop(columns=[c for c in cols if c in df.columns], errors='ignore')
+            
             df = df.merge(df_magic[['ticker', 'Score', 'MagicRank', 'R_EV', 'R_ROIC']], on='ticker', how='left')
     except Exception as e:
-        print(f"Erro ao calcular Magic Formula: {e}")
+        print(f"Erro Magic Formula: {e}")
 
     st.session_state['market_data'] = df
     return True # Return Generic Success boolean as per app.py expectation
@@ -110,64 +127,44 @@ def load_data_fiis_pipeline():
     """
     Pipeline de FIIs brasileiros e REITs americanos
     """
-    all_tickers = []
     selected_markets = st.session_state.get('selected_markets_fiis', ['BR']) # App uses specific key
-    
-    if not isinstance(selected_markets, list):
-        selected_markets = ['BR']
+    if not isinstance(selected_markets, list): selected_markets = ['BR']
 
     use_br = any("Brasil" in s for s in selected_markets) or 'BR' in selected_markets
     use_us = any("Estados Unidos" in s for s in selected_markets) or 'US' in selected_markets
 
+    df_list = []
+    
+    # --- FIIs BRASIL: STATUS INVEST BULK ---
     if use_br:
-        all_tickers.extend(FIIS_BR_BASE)
-    
-    # REITs logic... placeholder if needed
-    
-    dados_finais = []
-    total_tickers = len(all_tickers)
-    
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    for i, ticker in enumerate(all_tickers):
-        status_text.text(f"Processando FII {ticker} ({i+1}/{total_tickers})...")
-        progress_bar.progress((i + 1) / total_tickers)
+        status_text = st.empty()
+        status_text.text("Baixando FIIs BR (Status Invest)...")
+        time.sleep(0.5)
         
         try:
-            tk_obj = yf.Ticker(ticker)
-            info = tk_obj.info
-            
-            price = info.get('currentPrice') or info.get('regularMarketPrice', 0)
-            if not price:
-                continue
+            df_br = get_br_fiis_statusinvest()
+            if not df_br.empty:
+                df_br['Region'] = 'BR'
+                # Ensure minimal columns
+                if 'segmento' not in df_br.columns: df_br['segmento'] = 'FII'
                 
-            dy = calcular_dy_anualizado(tk_obj)
-            pvp = info.get('priceToBook', 0)
-            
-            dados_finais.append({
-                'ticker': ticker,
-                'price': price,
-                'dy': dy,
-                'pvp': pvp,
-                'liquidezmediadiaria': info.get('averageVolume', 0) * price,
-                'segmento': info.get('sector', 'FII/REIT'), 
-                'Region': 'BR' if '.SA' in ticker else 'US'
-            })
-            
-            time.sleep(0.5)
-            
+                df_list.append(df_br)
+                status_text.text(f"Sucesso FIIs: {len(df_br)} fundos.")
+            else:
+                status_text.error("Falha ao buscar FIIs BR.")
         except Exception as e:
-            # print(f"Erro FII {ticker}: {e}")
-            continue
-            
-    progress_bar.empty()
-    status_text.empty()
+            print(f"Erro FII Pipeline: {e}")
+            status_text.error(f"Erro FII: {e}")
+
+    # --- REITS USA (Placeholder/Future) ---
+    # Currently no list provided in config for bulk REITs, 
+    # and previous logic was empty or relied on dynamic fetching.
+    # If a list existed, we would iterate here like Ações US.
     
-    if not dados_finais:
+    if not df_list:
         return False
 
-    df = pd.DataFrame(dados_finais)
+    df = pd.concat(df_list, ignore_index=True)
     st.session_state['fiis_data'] = df
     return True
 
