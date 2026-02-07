@@ -415,8 +415,22 @@ def get_data_acoes():
     """Busca dados de ações brasileiras do Fundamentus"""
     try:
         url = 'https://www.fundamentus.com.br/resultado.php'
-        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1'
+        }
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()
+        
         df = pd.read_html(io.StringIO(r.text), decimal=',', thousands='.')[0]
+        
         rename = {
             'Papel': 'ticker',
             'Cotação': 'price',
@@ -433,17 +447,34 @@ def get_data_acoes():
                 df[c] = df[c].str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.replace('%', '', regex=False)
                 df[c] = pd.to_numeric(df[c], errors='coerce')
         df['roic'] /= 100
-        df['lpa'] = df.apply(lambda x: x['price']/x['pl'] if x['pl']!=0 else 0, axis=1)
-        df['vpa'] = df.apply(lambda x: x['price']/x['pvp'] if x['pvp']!=0 else 0, axis=1)
+        # Safe division
+        df['lpa'] = df.apply(lambda x: x['price']/x['pl'] if x['pl']!=0 and not pd.isna(x['pl']) else 0, axis=1)
+        df['vpa'] = df.apply(lambda x: x['price']/x['pvp'] if x['pvp']!=0 and not pd.isna(x['pvp']) else 0, axis=1)
         return df
-    except:
+    except Exception as e:
+        print(f"❌ ERRO SCRAPER ACOES: {str(e)}")
+        if 'r' in locals():
+            print(f"Status Code: {r.status_code}")
         return pd.DataFrame()
 
 def get_data_fiis():
     """Busca dados de FIIs brasileiros do Fundamentus"""
     try:
         url = 'https://www.fundamentus.com.br/fii_resultado.php'
-        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1'
+        }
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()
+        
         df = pd.read_html(io.StringIO(r.text), decimal=',', thousands='.')[0]
         rename = {
             'Papel': 'ticker',
@@ -460,7 +491,10 @@ def get_data_fiis():
                 df[c] = pd.to_numeric(df[c], errors='coerce')
         df['dy'] /= 100
         return df
-    except:
+    except Exception as e:
+        print(f"❌ ERRO SCRAPER FIIS: {str(e)}")
+        if 'r' in locals():
+            print(f"Status Code: {r.status_code}")
         return pd.DataFrame()
 
 def get_data_usa():
