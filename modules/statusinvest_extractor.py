@@ -79,8 +79,12 @@ def get_br_stocks_statusinvest():
         # Status Invest 'roic' usually implies Percentage (e.g. 15.0).
         # Same for DY.
         
-        if 'dy' in df.columns: df['dy'] = df['dy'] / 100.0
-        if 'roic' in df.columns: df['roic'] = df['roic'] / 100.0
+        if 'dy' in df.columns:
+            df['dy'] = pd.to_numeric(df['dy'], errors='coerce').fillna(0)
+            df['dy'] = df['dy'] / 100.0
+        if 'roic' in df.columns:
+            df['roic'] = pd.to_numeric(df['roic'], errors='coerce').fillna(0)
+            df['roic'] = df['roic'] / 100.0
         
         # Ensure Ticker has .SA suffix for consistency across app?
         # App uses straight tickers often, but yfinance extractor added .SA?
@@ -139,7 +143,14 @@ def get_br_fiis_statusinvest():
                  df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
         # Normalize percentages
-        if 'dy' in df.columns: df['dy'] = df['dy'] / 100.0
+        if 'dy' in df.columns:
+            # DEBUG
+            # print(f"DEBUG FIIs dy type before: {df['dy'].dtype}")
+            # print(f"DEBUG FIIs dy sample: {df['dy'].head()}")
+            
+            # Ensure numeric first
+            df['dy'] = pd.to_numeric(df['dy'], errors='coerce').fillna(0)
+            df['dy'] = df['dy'] / 100.0
         
         return df
 
