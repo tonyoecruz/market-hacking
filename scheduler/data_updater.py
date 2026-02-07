@@ -218,19 +218,21 @@ def update_all_data():
         logger.error(f"❌ BR Stocks ERROR: {str(e)}", exc_info=True)
         results['stocks_br'] = False
     
-    # Update US Stocks
+    # Update US Stocks (Temporarily Disabled for Debugging/Load Reduction)
     try:
-        logger.info("📊 [2/4] Updating US stocks...")
-        status_us = update_stocks_us()
-        results['stocks_us'] = str(status_us) # Convert count to string if it was returning count
+        logger.info("📊 [2/4] Updating US stocks (SKIPPED FOR DEBUG)...")
+        # status_us = update_stocks_us()
+        status_us = "SKIPPED"
+        results['stocks_us'] = str(status_us)
         logger.info(f"✅ US Stocks status: {status_us}")
         
         # Log to database
         db.log_update(
             asset_type='stocks',
             market='US',
-            status='success' if str(status_us).isdigit() and int(status_us) > 0 else 'error',
-            records_updated=int(status_us) if str(status_us).isdigit() else 0,
+            status='success',
+            records_updated=0,
+            error_message="Skipped for debugging",
             started_at=start_time,
             completed_at=datetime.now()
         )

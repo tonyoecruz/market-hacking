@@ -89,65 +89,67 @@ class DatabaseManager:
     
     def save_stocks(self, df: pd.DataFrame, market: str) -> int:
         """
-        Save or update stocks from DataFrame using upsert pattern
+        Save or update stocks from DataFrame using optimized batch processing
         Returns: number of records saved
         """
         db = self.SessionLocal()
         try:
-            # Remove duplicate tickers to avoid UNIQUE constraint errors
+            # 1. Sanitize Data (CRITICAL: Replace NaN with None)
+            df = df.replace({pd.NA: None, float('nan'): None, np.nan: None})
+            
+            # Remove duplicate tickers
             df = df.drop_duplicates(subset=['ticker'], keep='first')
             
-            # Valid columns for StockDB model
+            # Valid columns
             valid_columns = [
                 'ticker', 'market', 'empresa', 'setor', 'price', 'lpa', 'vpa',
                 'pl', 'pvp', 'roic', 'ev_ebit', 'liquidezmediadiaria',
                 'valor_justo', 'margem', 'magic_rank', 'ValorJusto', 'Margem', 'MagicRank'
             ]
             
+            # 2. Get existing tickers for this market (Bulk Query)
+            existing_tickers = set(
+                x[0] for x in db.query(StockDB.ticker).filter(StockDB.market == market).all()
+            )
+            
+            new_objects = []
             count = 0
+            
             for _, row in df.iterrows():
                 ticker = str(row['ticker']).strip().upper()
                 
-                # Filter to only valid columns
+                # Filter valid columns
                 stock_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
                 
-                # Handle column name mappings
-                if 'MagicRank' in stock_data:
-                    stock_data['magic_rank'] = stock_data.pop('MagicRank')
-                if 'ValorJusto' in stock_data:
-                    stock_data['valor_justo'] = stock_data.pop('ValorJusto')
-                if 'Margem' in stock_data:
-                    stock_data['margem'] = stock_data.pop('Margem')
+                # Remap columns
+                if 'MagicRank' in stock_data: stock_data['magic_rank'] = stock_data.pop('MagicRank')
+                if 'ValorJusto' in stock_data: stock_data['valor_justo'] = stock_data.pop('ValorJusto')
+                if 'Margem' in stock_data: stock_data['margem'] = stock_data.pop('Margem')
                 
                 stock_data['ticker'] = ticker
                 stock_data['market'] = market
                 stock_data['updated_at'] = datetime.now()
                 
-                # Try to find existing
-                existing = db.query(StockDB).filter(
-                    StockDB.ticker == ticker,
-                    StockDB.market == market
-                ).first()
-                
-                if existing:
-                    # Update existing
-                    for key, value in stock_data.items():
-                        if hasattr(existing, key):
-                            setattr(existing, key, value)
+                if ticker in existing_tickers:
+                    # UPDATE (Use update statement if possible, but ORM update is fine for now)
+                    # For massive updates, bulk_update_mappings is better, but this loop is safer for now
+                    db.query(StockDB).filter(and_(StockDB.ticker == ticker, StockDB.market == market)).update(stock_data)
                 else:
-                    # Create new
-                    new_stock = StockDB(**stock_data)
-                    db.add(new_stock)
+                    # INSERT (Collect for bulk insert)
+                    new_objects.append(StockDB(**stock_data))
                 
                 count += 1
                 
-                # Commit every 100 records
-                if count % 100 == 0:
+                # Commit updates in chunks to avoid timeout
+                if count % 200 == 0:
                     db.commit()
             
-            # Final commit
+            # Bulk Insert New Records
+            if new_objects:
+                db.bulk_save_objects(new_objects)
+            
             db.commit()
-            logger.info(f"Successfully saved {count} {market} stocks")
+            logger.info(f"Successfully saved {count} {market} stocks ({len(new_objects)} new)")
             return count
             
         except Exception as e:
@@ -188,30 +190,38 @@ class DatabaseManager:
     # ==================== ETFs ====================
     
     def save_etfs(self, df: pd.DataFrame, market: str) -> int:
-        """Save or update ETFs from DataFrame"""
+        """Save or update ETFs using optimized batch processing"""
         db = self.SessionLocal()
         try:
-            # Valid columns for ETFDB model
+            # Sanitize Data
+            df = df.replace({pd.NA: None, float('nan'): None, np.nan: None})
+            
             valid_columns = ['ticker', 'market', 'empresa', 'price', 'liquidezmediadiaria']
             
+            # Bulk Query Existing
+            existing_tickers = set(
+                x[0] for x in db.query(ETFDB.ticker).filter(ETFDB.market == market).all()
+            )
+            
+            new_objects = []
             count = 0
+            
             for _, row in df.iterrows():
-                etf = db.query(ETFDB).filter(ETFDB.ticker == row['ticker']).first()
+                ticker = row['ticker']
+                etf_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
+                if 'market' not in etf_data: etf_data['market'] = market
                 
-                if etf:
-                    # Update existing - only valid columns
-                    for key, value in row.items():
-                        if key in valid_columns and hasattr(etf, key):
-                            setattr(etf, key, value)
-                    etf.updated_at = datetime.now()
+                if ticker in existing_tickers:
+                    # Update
+                    etf_data['updated_at'] = datetime.now()
+                    db.query(ETFDB).filter(ETFDB.ticker == ticker).update(etf_data)
                 else:
-                    # Create new - filter to only valid columns
-                    etf_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
-                    etf_data['market'] = market
-                    etf = ETFDB(**etf_data)
-                    db.add(etf)
-                
+                    # Insert
+                    new_objects.append(ETFDB(**etf_data))
                 count += 1
+            
+            if new_objects:
+                db.bulk_save_objects(new_objects)
             
             db.commit()
             return count
@@ -238,30 +248,38 @@ class DatabaseManager:
     # ==================== FIIs ====================
     
     def save_fiis(self, df: pd.DataFrame, market: str) -> int:
-        """Save or update FIIs from DataFrame"""
+        """Save or update FIIs using optimized batch processing"""
         db = self.SessionLocal()
         try:
-            # Valid columns for FIIDB model
+            # Sanitize Data
+            df = df.replace({pd.NA: None, float('nan'): None, np.nan: None})
+            
             valid_columns = ['ticker', 'market', 'price', 'dy', 'pvp', 'liquidezmediadiaria']
             
+            # Bulk Query Existing
+            existing_tickers = set(
+                x[0] for x in db.query(FIIDB.ticker).filter(FIIDB.market == market).all()
+            )
+            
+            new_objects = []
             count = 0
+            
             for _, row in df.iterrows():
-                fii = db.query(FIIDB).filter(FIIDB.ticker == row['ticker']).first()
+                ticker = row['ticker']
+                fii_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
+                if 'market' not in fii_data: fii_data['market'] = market
                 
-                if fii:
-                    # Update existing - only valid columns
-                    for key, value in row.items():
-                        if key in valid_columns and hasattr(fii, key):
-                            setattr(fii, key, value)
-                    fii.updated_at = datetime.now()
+                if ticker in existing_tickers:
+                    # Update
+                    fii_data['updated_at'] = datetime.now()
+                    db.query(FIIDB).filter(FIIDB.ticker == ticker).update(fii_data)
                 else:
-                    # Create new - filter to only valid columns
-                    fii_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
-                    fii_data['market'] = market
-                    fii = FIIDB(**fii_data)
-                    db.add(fii)
-                
+                    # Insert
+                    new_objects.append(FIIDB(**fii_data))
                 count += 1
+            
+            if new_objects:
+                db.bulk_save_objects(new_objects)
             
             db.commit()
             return count
