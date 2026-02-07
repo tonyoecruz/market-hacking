@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict
 import pandas as pd
+import numpy as np
 
 from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB
 
