@@ -246,14 +246,16 @@ def update_all_data():
     try:
         logger.info("📊 [3/4] Updating FIIs...")
         status_fiis = update_fiis()
+        is_success = status_fiis == "SUCCESS"
         results['fiis'] = str(status_fiis)
         logger.info(f"✅ FIIs status: {status_fiis}")
         
         db.log_update(
             asset_type='fiis',
             market='BR',
-            status='success' if str(status_fiis).isdigit() and int(status_fiis) > 0 else 'error',
-            records_updated=int(status_fiis) if str(status_fiis).isdigit() else 0,
+            status='success' if is_success else 'error',
+            records_updated=0,
+            error_message=None if is_success else str(status_fiis),
             started_at=start_time,
             completed_at=datetime.now()
         )
@@ -265,14 +267,16 @@ def update_all_data():
     try:
         logger.info("📊 [4/4] Updating ETFs...")
         status_etfs = update_etfs()
+        is_success = status_etfs == "SUCCESS"
         results['etfs'] = str(status_etfs)
         logger.info(f"✅ ETFs status: {status_etfs}")
         
         db.log_update(
             asset_type='etfs',
             market='BOTH',
-            status='success' if str(status_etfs).isdigit() and int(status_etfs) > 0 else 'error',
-            records_updated=int(status_etfs) if str(status_etfs).isdigit() else 0,
+            status='success' if is_success else 'error',
+            records_updated=0,
+            error_message=None if is_success else str(status_etfs),
             started_at=start_time,
             completed_at=datetime.now()
         )
