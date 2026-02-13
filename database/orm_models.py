@@ -52,7 +52,7 @@ class StockDB(Base):
             'liquidezmediadiaria': self.liquidezmediadiaria,
             'valor_justo': self.valor_justo,
             'margem': self.margem,
-            'MagicRank': self.magic_rank,
+            'magic_rank': self.magic_rank,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 

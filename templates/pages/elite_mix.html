@@ -152,9 +152,9 @@
             </td>
             <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
             <td class="px-4 py-3 text-right text-gray-300">R$ ${stock.price.toFixed(2)}</td>
-            <td class="px-4 py-3 text-right text-green-500 font-semibold">${(stock.Margem * 100).toFixed(1)}%</td>
+            <td class="px-4 py-3 text-right text-green-500 font-semibold">${(stock.margem * 100).toFixed(1)}%</td>
             <td class="px-4 py-3 text-right text-green-500 font-semibold">${(stock.roic * 100).toFixed(1)}%</td>
-            <td class="px-4 py-3 text-right text-primary font-semibold">#${Math.round(stock.MagicRank)}</td>
+            <td class="px-4 py-3 text-right text-primary font-semibold">#${Math.round(stock.magic_rank)}</td>
             <td class="px-4 py-3 text-right">
                 <button onclick="analyzeStock('${stock.ticker}')" 
                     class="px-3 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 text-sm">

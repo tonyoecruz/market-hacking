@@ -195,7 +195,7 @@
                 <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
                 <td class="px-4 py-3 text-right text-green-400">${stock.roic ? (stock.roic * 100).toFixed(1) + '%' : '-'}</td>
                 <td class="px-4 py-3 text-right text-white">${stock.ev_ebit?.toFixed(2) || '-'}</td>
-                <td class="px-4 py-3 text-right text-primary">${stock.MagicRank?.toFixed(0) || '-'}</td>
+                <td class="px-4 py-3 text-right text-primary">${stock.magic_rank?.toFixed(0) || '-'}</td>
                 <td class="px-4 py-3 text-right">
                     <button onclick="analyzeStock('${stock.ticker}')" 
                         class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
