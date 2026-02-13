@@ -5,6 +5,7 @@ VERSÃO CORRIGIDA - Compatible with db_manager signatures
 import logging
 from datetime import datetime
 import pandas as pd
+import numpy as np
 import os
 import sys
 
@@ -28,6 +29,37 @@ logger.addHandler(handler)
 
 db = DatabaseManager()
 
+def _calculate_graham_magic(df):
+    """Calculate Graham (ValorJusto, Margem) and Magic Formula (MagicRank) for a DataFrame"""
+    # Ensure numeric columns
+    for col in ['lpa', 'vpa', 'price', 'ev_ebit', 'roic', 'liquidezmediadiaria']:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    
+    # GRAHAM FORMULA: ValorJusto = sqrt(22.5 * LPA * VPA)
+    graham_term = (22.5 * df['lpa'] * df['vpa'])
+    df['ValorJusto'] = graham_term.apply(lambda x: x**0.5 if x > 0 else 0)
+    df['Margem'] = df.apply(
+        lambda r: (r['ValorJusto'] / r['price']) - 1 if r['price'] > 0 else 0, axis=1
+    )
+    
+    # MAGIC FORMULA: Rank by EV/EBIT (lower=better) + ROIC (higher=better)
+    df_magic = df[(df['ev_ebit'] > 0) & (df['roic'] > 0)].copy()
+    if not df_magic.empty:
+        df_magic['R_EV'] = df_magic['ev_ebit'].rank(ascending=True)
+        df_magic['R_ROIC'] = df_magic['roic'].rank(ascending=False)
+        df_magic['Score'] = df_magic['R_EV'] + df_magic['R_ROIC']
+        df_magic['MagicRank'] = df_magic['Score'].rank(ascending=True)
+        
+        # Merge back
+        cols_to_drop = ['Score', 'MagicRank', 'R_EV', 'R_ROIC']
+        df = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors='ignore')
+        df = df.merge(df_magic[['ticker', 'Score', 'MagicRank', 'R_EV', 'R_ROIC']], on='ticker', how='left')
+        logger.info(f"  📐 Calculated MagicRank for {len(df_magic)} stocks")
+    
+    return df
+
+
 def update_stocks_br():
     """Update Brazilian stocks data"""
     try:
@@ -39,7 +71,10 @@ def update_stocks_br():
             df['IsETF'] = df['ticker'].apply(data_utils.is_likely_etf)
             df = df[~df['IsETF']].copy()
             
-            logger.info(f"✅ Found {len(df)} BR stocks")
+            # Calculate Graham + Magic Formula
+            df = _calculate_graham_magic(df)
+            
+            logger.info(f"✅ Found {len(df)} BR stocks (with Graham+Magic calc)")
             count = db.save_stocks(df, market='BR')
             logger.info(f"💾 Saved {count} BR stocks to database")
             return count
@@ -58,7 +93,10 @@ def update_stocks_us():
         df = data_utils.get_data_usa()
         
         if df is not None and not df.empty:
-            logger.info(f"✅ Found {len(df)} US stocks")
+            # Calculate Graham + Magic Formula
+            df = _calculate_graham_magic(df)
+            
+            logger.info(f"✅ Found {len(df)} US stocks (with Graham+Magic calc)")
             count = db.save_stocks(df, market='US')
             logger.info(f"💾 Saved {count} US stocks to database")
             return count

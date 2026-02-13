@@ -100,7 +100,8 @@ async def startup_event():
         
         # Initialize default settings
         db_manager.init_default_settings()
-        logger.info("✅ Default settings initialized")
+        db_manager.init_default_investors()
+        logger.info("✅ Default settings and investor personas initialized")
             
     except Exception as e:
         logger.error(f"❌ Database initialization error: {e}", exc_info=True)
@@ -167,6 +168,49 @@ async def api_info():
         }
     }
 
+
+# ==================== GLOBAL TTS ENDPOINT ====================
+from fastapi.responses import FileResponse
+import data_utils as _du
+
+@app.post("/api/tts")
+async def text_to_speech(request: Request):
+    """Generate TTS audio from text"""
+    try:
+        body = await request.json()
+        text = body.get("text", "")
+        key = body.get("key", "general")
+        
+        if not text or len(text) < 5:
+            return {"status": "error", "message": "Texto muito curto"}
+        
+        # Truncate very long text
+        if len(text) > 5000:
+            text = text[:5000] + "..."
+        
+        filepath = _du.generate_audio(text, key_suffix=key)
+        
+        if filepath and not str(filepath).startswith("ERROR") and os.path.exists(filepath):
+            return FileResponse(filepath, media_type="audio/mpeg")
+        else:
+            return {"status": "error", "message": "Falha ao gerar áudio"}
+    except Exception as e:
+        logger.error(f"TTS error: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
+# ==================== INVESTOR PERSONA API ====================
+@app.get("/api/investors")
+async def get_investors():
+    """Get all available investor personas"""
+    try:
+        investors = db_manager.get_investors()
+        return {"status": "success", "investors": investors}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+import os
 
 if __name__ == "__main__":
     uvicorn.run(

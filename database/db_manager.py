@@ -12,7 +12,7 @@ from typing import List, Optional, Dict
 import pandas as pd
 import numpy as np
 
-from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB, SystemSettingsDB, FlippingCityDB
+from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB, SystemSettingsDB, FlippingCityDB, InvestorPersonaDB
 
 logger = logging.getLogger(__name__)
 
@@ -551,6 +551,98 @@ class DatabaseManager:
             raise e
         finally:
             db.close()
+    
+    # ==================== INVESTOR PERSONAS ====================
+    
+    def get_investors(self) -> List[Dict]:
+        """Get all active investor personas"""
+        db = self.SessionLocal()
+        try:
+            personas = db.query(InvestorPersonaDB).filter(
+                InvestorPersonaDB.active == 1
+            ).order_by(InvestorPersonaDB.name).all()
+            return [p.to_dict() for p in personas]
+        finally:
+            db.close()
+    
+    def add_investor(self, name: str, description: str = None, style_prompt: str = None) -> Dict:
+        """Add an investor persona"""
+        db = self.SessionLocal()
+        try:
+            existing = db.query(InvestorPersonaDB).filter(
+                InvestorPersonaDB.name == name
+            ).first()
+            
+            if existing:
+                if not existing.active:
+                    existing.active = 1
+                    db.commit()
+                return existing.to_dict()
+            
+            new_investor = InvestorPersonaDB(
+                name=name,
+                description=description,
+                style_prompt=style_prompt,
+                active=1,
+                added_at=datetime.now()
+            )
+            db.add(new_investor)
+            db.commit()
+            db.refresh(new_investor)
+            return new_investor.to_dict()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+    
+    def remove_investor(self, investor_id: int) -> bool:
+        """Remove an investor persona"""
+        db = self.SessionLocal()
+        try:
+            investor = db.query(InvestorPersonaDB).filter(
+                InvestorPersonaDB.id == investor_id
+            ).first()
+            
+            if investor:
+                db.delete(investor)
+                db.commit()
+                return True
+            return False
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+    
+    def init_default_investors(self):
+        """Initialize default investor personas"""
+        defaults = [
+            {
+                'name': 'Warren Buffett',
+                'description': 'O Oraculo de Omaha - Value Investing de longo prazo',
+                'style_prompt': 'Atue como Warren Buffett, o mais famoso investidor de valor do mundo. Use sua metodologia: busque empresas com vantagens competitivas duraveis (moats), gestao excelente, e precos abaixo do valor intrinseco. Fale com sabedoria e use suas frases celebres. Priorize o longo prazo e a margem de seguranca. Mencione conceitos como "circulo de competencia", "moat economico" e "compre medo, venda ganancia".'
+            },
+            {
+                'name': 'Luiz Barsi Filho',
+                'description': 'O maior investidor individual da B3 - Foco em dividendos',
+                'style_prompt': 'Atue como Luiz Barsi Filho, o maior investidor individual da bolsa brasileira. Use sua metodologia: foco absoluto em empresas pagadoras de dividendos consistentes, setores perenes (energia, bancos, saneamento). Fale de forma direta e pratica, como um investidor brasileiro experiente. Use conceitos como "carteira previdenciaria", "projeto de vida", "renda passiva" e "acoes de primeira linha". Alerte sobre especulacao e day-trade.'
+            }
+        ]
+        
+        for inv in defaults:
+            db = self.SessionLocal()
+            try:
+                existing = db.query(InvestorPersonaDB).filter(
+                    InvestorPersonaDB.name == inv['name']
+                ).first()
+                if not existing:
+                    db.add(InvestorPersonaDB(**inv, active=1, added_at=datetime.now()))
+                    db.commit()
+            except:
+                db.rollback()
+            finally:
+                db.close()
 
 
 # Global instance

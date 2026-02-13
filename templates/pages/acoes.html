@@ -24,9 +24,41 @@
             <!-- Info Banner -->
             <div class="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-6">
                 <p class="text-primary text-sm">
-                    💡 <strong>Dados atualizados automaticamente a cada hora.</strong> Clique em "Atualizar" para
-                    carregar os dados mais recentes.
+                    💡 <strong>Dados atualizados automaticamente a cada hora.</strong> Use os filtros abaixo para
+                    refinar sua busca.
                 </p>
+            </div>
+
+            <!-- Filters Row -->
+            <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Country Selector -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">🌍 País / Mercado</label>
+                        <select id="market-selector" onchange="loadData()"
+                            class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="">Todos</option>
+                            <option value="BR" selected>🇧🇷 Brasil (B3)</option>
+                            <option value="US">🇺🇸 Estados Unidos</option>
+                        </select>
+                    </div>
+
+                    <!-- Search Field -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">🔍 Buscar Ação</label>
+                        <input type="text" id="search-input" placeholder="Ex: PETR4, VALE3, AAPL..."
+                            oninput="filterTable()"
+                            class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary uppercase">
+                    </div>
+
+                    <!-- Results Count -->
+                    <div class="flex items-end">
+                        <div class="w-full px-4 py-3 bg-dark-700/50 rounded-lg text-center">
+                            <span class="text-gray-400 text-sm">Ativos encontrados: </span>
+                            <span id="stock-count" class="text-primary font-bold text-lg">0</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Methodologies Info -->
@@ -55,6 +87,10 @@
                         class="px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600">
                         ✨ Magic Formula (Top 10)
                     </button>
+                    <button onclick="showTab('all')" id="tab-all"
+                        class="px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600">
+                        📋 Todas as Ações
+                    </button>
                 </div>
 
                 <!-- Graham Table -->
@@ -73,13 +109,13 @@
                                         Justo</th>
                                     <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
                                         Margem</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">
+                                        Valuation</th>
                                     <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody id="graham-tbody" class="divide-y divide-gray-700">
-                                <!-- Data will be inserted here -->
-                            </tbody>
+                            <tbody id="graham-tbody" class="divide-y divide-gray-700"></tbody>
                         </table>
                     </div>
                 </div>
@@ -104,28 +140,35 @@
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody id="magic-tbody" class="divide-y divide-gray-700">
-                                <!-- Data will be inserted here -->
-                            </tbody>
+                            <tbody id="magic-tbody" class="divide-y divide-gray-700"></tbody>
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <!-- Analysis Modal -->
-            <div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                <div class="bg-dark-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-2xl font-bold text-white" id="modal-ticker"></h3>
-                            <button onclick="closeModal()" class="text-gray-400 hover:text-white">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="modal-content" class="text-gray-300 whitespace-pre-wrap"></div>
+                <!-- All Stocks Table -->
+                <div id="content-all" class="hidden bg-dark-800 rounded-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-dark-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Ticker
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
+                                        Empresa</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Preço
+                                    </th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">P/L
+                                    </th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">ROIC
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">
+                                        Valuation</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="all-tbody" class="divide-y divide-gray-700"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -133,8 +176,81 @@
     </div>
 </div>
 
+<!-- Analysis Modal -->
+<div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+    <div class="bg-dark-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+        <div class="p-6">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-white" id="modal-ticker"></h3>
+                    <p class="text-gray-400 text-sm" id="modal-empresa"></p>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Valuation Card -->
+            <div id="valuation-card" class="mb-6 rounded-xl p-5 border-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">Valuation Graham</p>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="text-lg font-bold" id="modal-price"></span>
+                            <span class="text-gray-400">→</span>
+                            <span class="text-lg font-bold text-primary" id="modal-fair-value"></span>
+                        </div>
+                    </div>
+                    <div id="valuation-badge" class="px-4 py-2 rounded-full font-bold text-sm"></div>
+                </div>
+                <div class="mt-3">
+                    <div class="w-full bg-dark-700 rounded-full h-2">
+                        <div id="valuation-bar" class="h-2 rounded-full transition-all duration-500"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1" id="valuation-detail"></p>
+                </div>
+            </div>
+
+            <!-- Data Grid -->
+            <div id="modal-data-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
+
+            <!-- AI Analysis -->
+            <div class="bg-dark-700 rounded-xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <span>🤖</span>
+                        <span>Análise IA</span>
+                    </h4>
+                    <button onclick="speakAnalysis()" id="tts-btn"
+                        class="flex items-center space-x-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z">
+                            </path>
+                        </svg>
+                        <span>Ouvir</span>
+                    </button>
+                </div>
+                <div id="modal-analysis" class="text-gray-300 whitespace-pre-line leading-relaxed">
+                    <div class="text-center py-8">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <p class="text-gray-400 mt-2">Gerando análise IA...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     let currentTab = 'graham';
+    let allStocksData = [];
+    let currentAnalysisText = '';
+    let currentAudio = null;
 
     // Auto-load data on page load
     window.addEventListener('DOMContentLoaded', () => {
@@ -146,13 +262,20 @@
         document.getElementById('results').classList.add('hidden');
         document.getElementById('refresh-btn').disabled = true;
 
+        const market = document.getElementById('market-selector').value;
+        let url = '/acoes/api/data';
+        if (market) url += `?market=${market}`;
+
         try {
-            const response = await fetch('/acoes/api/data');
+            const response = await fetch(url);
             const data = await response.json();
 
             if (data.status === 'success') {
+                allStocksData = data.all_stocks || [];
                 renderGrahamTable(data.graham);
                 renderMagicTable(data.magic);
+                renderAllTable(allStocksData);
+                document.getElementById('stock-count').textContent = data.total_count;
                 document.getElementById('results').classList.remove('hidden');
                 showToast(`Carregados ${data.total_count} ativos`, 'success');
             } else {
@@ -166,10 +289,32 @@
         }
     }
 
+    function getValuationBadge(price, fairValue) {
+        if (!price || !fairValue || fairValue <= 0) return { text: 'N/A', class: 'bg-gray-600 text-gray-300', color: 'gray' };
+        const margin = ((fairValue / price) - 1) * 100;
+        if (margin > 30) return { text: '💰 MUITO BARATA', class: 'bg-green-500/20 text-green-400 border border-green-500/50', color: 'green' };
+        if (margin > 10) return { text: '✅ BARATA', class: 'bg-green-500/10 text-green-400 border border-green-500/30', color: 'green' };
+        if (margin > -10) return { text: '⚖️ JUSTA', class: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30', color: 'yellow' };
+        if (margin > -30) return { text: '⚠️ CARA', class: 'bg-orange-500/10 text-orange-400 border border-orange-500/30', color: 'orange' };
+        return { text: '🔴 MUITO CARA', class: 'bg-red-500/10 text-red-400 border border-red-500/30', color: 'red' };
+    }
+
+    function getValuationBadgeSmall(price, fairValue) {
+        if (!price || !fairValue || fairValue <= 0) return '<span class="text-gray-500 text-xs">N/A</span>';
+        const margin = ((fairValue / price) - 1) * 100;
+        if (margin > 10) return '<span class="px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">Barata</span>';
+        if (margin > -10) return '<span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">Justa</span>';
+        return '<span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">Cara</span>';
+    }
+
     function renderGrahamTable(stocks) {
         const tbody = document.getElementById('graham-tbody');
+        if (!stocks || stocks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nenhuma ação encontrada com critérios Graham (LPA > 0 e VPA > 0)</td></tr>';
+            return;
+        }
         tbody.innerHTML = stocks.map(stock => `
-            <tr class="hover:bg-dark-700">
+            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeStock('${stock.ticker}')">
                 <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
                 <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
                 <td class="px-4 py-3 text-right text-white">R$ ${stock.price?.toFixed(2) || '-'}</td>
@@ -177,8 +322,9 @@
                 <td class="px-4 py-3 text-right ${stock.margem > 0 ? 'text-green-400' : 'text-red-400'}">
                     ${stock.margem ? (stock.margem * 100).toFixed(1) + '%' : '-'}
                 </td>
+                <td class="px-4 py-3 text-center">${getValuationBadgeSmall(stock.price, stock.valor_justo)}</td>
                 <td class="px-4 py-3 text-right">
-                    <button onclick="analyzeStock('${stock.ticker}')" 
+                    <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')" 
                         class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
                         Analisar
                     </button>
@@ -189,15 +335,19 @@
 
     function renderMagicTable(stocks) {
         const tbody = document.getElementById('magic-tbody');
+        if (!stocks || stocks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Aguardando cálculo Magic Formula (necessita EV/EBIT > 0 e ROIC > 0)</td></tr>';
+            return;
+        }
         tbody.innerHTML = stocks.map(stock => `
-            <tr class="hover:bg-dark-700">
+            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeStock('${stock.ticker}')">
                 <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
                 <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
                 <td class="px-4 py-3 text-right text-green-400">${stock.roic ? (stock.roic * 100).toFixed(1) + '%' : '-'}</td>
                 <td class="px-4 py-3 text-right text-white">${stock.ev_ebit?.toFixed(2) || '-'}</td>
-                <td class="px-4 py-3 text-right text-primary">${stock.magic_rank?.toFixed(0) || '-'}</td>
+                <td class="px-4 py-3 text-right text-primary font-bold">#${stock.magic_rank?.toFixed(0) || '-'}</td>
                 <td class="px-4 py-3 text-right">
-                    <button onclick="analyzeStock('${stock.ticker}')" 
+                    <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')" 
                         class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
                         Analisar
                     </button>
@@ -206,49 +356,170 @@
         `).join('');
     }
 
+    function renderAllTable(stocks) {
+        const tbody = document.getElementById('all-tbody');
+        if (!stocks || stocks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nenhuma ação encontrada</td></tr>';
+            return;
+        }
+        tbody.innerHTML = stocks.slice(0, 50).map(stock => `
+            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeStock('${stock.ticker}')">
+                <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
+                <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
+                <td class="px-4 py-3 text-right text-white">R$ ${stock.price?.toFixed(2) || '-'}</td>
+                <td class="px-4 py-3 text-right text-gray-300">${stock.pl?.toFixed(2) || '-'}</td>
+                <td class="px-4 py-3 text-right text-green-400">${stock.roic ? (stock.roic * 100).toFixed(1) + '%' : '-'}</td>
+                <td class="px-4 py-3 text-center">${getValuationBadgeSmall(stock.price, stock.valor_justo)}</td>
+                <td class="px-4 py-3 text-right">
+                    <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')" 
+                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
+                        Analisar
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function filterTable() {
+        const search = document.getElementById('search-input').value.toUpperCase().trim();
+        if (!search) {
+            // Re-render with original data
+            if (currentTab === 'all') renderAllTable(allStocksData);
+            return;
+        }
+
+        const filtered = allStocksData.filter(s =>
+            s.ticker?.toUpperCase().includes(search) ||
+            (s.empresa || '').toUpperCase().includes(search)
+        );
+
+        // Show all tab with filtered results
+        if (currentTab !== 'all') showTab('all');
+        renderAllTable(filtered);
+    }
+
     function showTab(tab) {
         currentTab = tab;
-
-        // Update tab buttons
-        document.getElementById('tab-graham').className = tab === 'graham'
-            ? 'px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary'
-            : 'px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600';
-
-        document.getElementById('tab-magic').className = tab === 'magic'
-            ? 'px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary'
-            : 'px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600';
-
-        // Show/hide content
-        document.getElementById('content-graham').classList.toggle('hidden', tab !== 'graham');
-        document.getElementById('content-magic').classList.toggle('hidden', tab !== 'magic');
+        ['graham', 'magic', 'all'].forEach(t => {
+            document.getElementById(`tab-${t}`).className = tab === t
+                ? 'px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary'
+                : 'px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600';
+            document.getElementById(`content-${t}`).classList.toggle('hidden', tab !== t);
+        });
     }
 
     async function analyzeStock(ticker) {
+        document.getElementById('modal-ticker').textContent = ticker;
+        document.getElementById('modal-empresa').textContent = 'Carregando...';
+        document.getElementById('modal-analysis').innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div><p class="text-gray-400 mt-2">Gerando análise IA...</p></div>';
+        document.getElementById('valuation-card').className = 'mb-6 rounded-xl p-5 border-2 border-gray-700 bg-dark-700';
+        document.getElementById('modal-data-grid').innerHTML = '';
+        document.getElementById('analysis-modal').classList.remove('hidden');
+        currentAnalysisText = '';
+
         try {
-            const response = await fetch(`/acoes/api/decode/${ticker}`);
+            const market = document.getElementById('market-selector').value || 'BR';
+            const response = await fetch(`/acoes/api/decode/${ticker}?market=${market}`);
             const data = await response.json();
 
             if (data.status === 'success') {
-                document.getElementById('modal-ticker').textContent = ticker;
-                document.getElementById('modal-content').textContent = data.analysis || 'Análise não disponível';
-                document.getElementById('analysis-modal').classList.remove('hidden');
+                const stock = data.data || {};
+                const analysis = data.analysis || 'Análise não disponível';
+                currentAnalysisText = analysis;
+
+                // Header
+                document.getElementById('modal-empresa').textContent = stock.empresa || ticker;
+
+                // Valuation Card
+                const price = stock.price || 0;
+                const fairValue = stock.valor_justo || 0;
+                const margin = fairValue > 0 && price > 0 ? ((fairValue / price) - 1) : 0;
+                const val = getValuationBadge(price, fairValue);
+
+                document.getElementById('modal-price').textContent = `R$ ${price.toFixed(2)}`;
+                document.getElementById('modal-fair-value').textContent = `R$ ${fairValue.toFixed(2)}`;
+                document.getElementById('valuation-badge').textContent = val.text;
+                document.getElementById('valuation-badge').className = `px-4 py-2 rounded-full font-bold text-sm ${val.class}`;
+
+                const barWidth = Math.min(Math.max((margin + 1) * 50, 5), 100);
+                const barColor = val.color === 'green' ? 'bg-green-500' : val.color === 'yellow' ? 'bg-yellow-500' : val.color === 'orange' ? 'bg-orange-500' : 'bg-red-500';
+                document.getElementById('valuation-bar').style.width = barWidth + '%';
+                document.getElementById('valuation-bar').className = `h-2 rounded-full transition-all duration-500 ${barColor}`;
+                document.getElementById('valuation-detail').textContent = `Margem de segurança: ${(margin * 100).toFixed(1)}%`;
+
+                const borderColor = val.color === 'green' ? 'border-green-500/50' : val.color === 'yellow' ? 'border-yellow-500/50' : 'border-red-500/50';
+                document.getElementById('valuation-card').className = `mb-6 rounded-xl p-5 border-2 ${borderColor} bg-dark-700`;
+
+                // Data Grid
+                const metrics = [
+                    { label: 'P/L', value: stock.pl?.toFixed(2) },
+                    { label: 'P/VP', value: stock.pvp?.toFixed(2) },
+                    { label: 'ROIC', value: stock.roic ? (stock.roic * 100).toFixed(1) + '%' : null },
+                    { label: 'EV/EBIT', value: stock.ev_ebit?.toFixed(2) },
+                    { label: 'LPA', value: stock.lpa ? 'R$ ' + stock.lpa.toFixed(2) : null },
+                    { label: 'VPA', value: stock.vpa ? 'R$ ' + stock.vpa.toFixed(2) : null },
+                    { label: 'DY', value: stock.dy ? (stock.dy * 100).toFixed(2) + '%' : null },
+                    { label: 'Liquidez', value: stock.liquidezmediadiaria ? 'R$ ' + (stock.liquidezmediadiaria / 1000000).toFixed(1) + 'M' : null },
+                ];
+                document.getElementById('modal-data-grid').innerHTML = metrics
+                    .filter(m => m.value)
+                    .map(m => `
+                        <div class="bg-dark-600 rounded-lg p-3">
+                            <p class="text-xs text-gray-400">${m.label}</p>
+                            <p class="text-white font-semibold">${m.value}</p>
+                        </div>
+                    `).join('');
+
+                // Analysis
+                document.getElementById('modal-analysis').textContent = analysis;
             } else {
-                showToast('Erro ao carregar análise', 'error');
+                document.getElementById('modal-analysis').innerHTML = '<p class="text-red-400">Erro ao carregar análise. Tente novamente.</p>';
             }
         } catch (error) {
-            showToast('Erro ao carregar análise', 'error');
+            document.getElementById('modal-analysis').innerHTML = '<p class="text-red-400">Erro de conexão. Tente novamente.</p>';
+        }
+    }
+
+    async function speakAnalysis() {
+        if (!currentAnalysisText) return;
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+
+        const btn = document.getElementById('tts-btn');
+        btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div><span>Gerando...</span>';
+
+        try {
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: currentAnalysisText })
+            });
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                currentAudio = new Audio(url);
+                currentAudio.play();
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg><span>Parar</span>';
+                currentAudio.onended = () => {
+                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
+                };
+            } else {
+                showToast('TTS não disponível', 'error');
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
+            }
+        } catch (e) {
+            showToast('Erro ao gerar áudio', 'error');
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
         }
     }
 
     function closeModal() {
         document.getElementById('analysis-modal').classList.add('hidden');
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     }
 
     function showToast(message, type = 'info') {
-        // Simple toast notification
         const toast = document.createElement('div');
-        toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-            }`;
+        toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`;
         toast.textContent = message;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);

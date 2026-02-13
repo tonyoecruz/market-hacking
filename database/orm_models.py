@@ -177,3 +177,27 @@ class FlippingCityDB(Base):
             'added_at': self.added_at.isoformat() if self.added_at else None,
             'last_scraped_at': self.last_scraped_at.isoformat() if self.last_scraped_at else None
         }
+
+
+class InvestorPersonaDB(Base):
+    """SQLAlchemy model for investor personas (e.g. Warren Buffett, Luiz Barsi)"""
+    __tablename__ = 'investor_personas'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(200), nullable=False, unique=True)
+    description = Column(String(500))
+    style_prompt = Column(Text)  # AI prompt prefix describing the investor's style
+    active = Column(Integer, default=1)
+    added_at = Column(DateTime, default=func.now())
+    
+    def to_dict(self):
+        """Convert to dictionary for API responses"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'style_prompt': self.style_prompt,
+            'active': bool(self.active),
+            'added_at': self.added_at.isoformat() if self.added_at else None
+        }
+

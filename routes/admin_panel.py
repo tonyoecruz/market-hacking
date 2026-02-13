@@ -552,3 +552,56 @@ async def remove_flipping_city(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== INVESTOR PERSONAS API ====================
+
+@router.get("/api/investors")
+async def get_investors_admin(session: dict = Depends(verify_admin_session)):
+    """Get all investor personas"""
+    try:
+        investors = db_manager.get_investors()
+        return JSONResponse({"status": "success", "investors": investors})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/investors")
+async def add_investor(
+    request: Request,
+    session: dict = Depends(verify_admin_session)
+):
+    """Add an investor persona"""
+    try:
+        data = await request.json()
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        style_prompt = data.get('style_prompt', '').strip()
+        
+        if not name:
+            raise HTTPException(status_code=400, detail="Nome obrigatório")
+        
+        investor = db_manager.add_investor(name, description, style_prompt)
+        return JSONResponse({"status": "success", "investor": investor})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/api/investors/{investor_id}")
+async def remove_investor(
+    investor_id: int,
+    session: dict = Depends(verify_admin_session)
+):
+    """Remove an investor persona"""
+    try:
+        success = db_manager.remove_investor(investor_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Investidor não encontrado")
+        return JSONResponse({"status": "success", "message": "Investidor removido"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

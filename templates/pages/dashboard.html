@@ -18,6 +18,27 @@
 
         <!-- Content -->
         <div class="p-6">
+            <!-- Investor Persona Selector -->
+            <div class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-xl p-6 mb-6">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                            <span>🎯</span>
+                            <span>Investidor-Guia</span>
+                        </h3>
+                        <p class="text-gray-400 text-sm mt-1">Escolha um mentor para personalizar as análises de IA</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <select id="investor-selector" onchange="saveInvestorPreference()"
+                            class="px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary min-w-[220px]">
+                            <option value="">🤖 IA Padrão</option>
+                        </select>
+                        <div id="investor-info" class="hidden bg-dark-700 px-3 py-2 rounded-lg">
+                            <p class="text-sm text-gray-300" id="investor-description"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div class="glass rounded-xl p-6">
@@ -116,4 +137,56 @@
         </div>
     </main>
 </div>
+
+<script>
+    let investorData = [];
+
+    // Load investors on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const response = await fetch('/api/investors');
+            const data = await response.json();
+            if (data.status === 'success' && data.investors) {
+                investorData = data.investors;
+                const selector = document.getElementById('investor-selector');
+                data.investors.forEach(inv => {
+                    const option = document.createElement('option');
+                    option.value = inv.name;
+                    option.textContent = `🎯 ${inv.name}`;
+                    selector.appendChild(option);
+                });
+
+                // Restore saved preference
+                const saved = localStorage.getItem('investor_persona');
+                if (saved) {
+                    selector.value = saved;
+                    showInvestorInfo(saved);
+                }
+            }
+        } catch (e) {
+            console.log('Could not load investors:', e);
+        }
+    });
+
+    function saveInvestorPreference() {
+        const value = document.getElementById('investor-selector').value;
+        localStorage.setItem('investor_persona', value);
+        showInvestorInfo(value);
+    }
+
+    function showInvestorInfo(name) {
+        const infoDiv = document.getElementById('investor-info');
+        const descP = document.getElementById('investor-description');
+
+        if (name) {
+            const inv = investorData.find(i => i.name === name);
+            if (inv) {
+                descP.textContent = inv.description;
+                infoDiv.classList.remove('hidden');
+                return;
+            }
+        }
+        infoDiv.classList.add('hidden');
+    }
+</script>
 {% endblock %}
