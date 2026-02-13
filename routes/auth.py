@@ -236,3 +236,167 @@ async def get_optional_user(request: Request):
         return user if user else None
     except:
         return None
+
+
+# ============================================
+# Forgot Password Routes
+# ============================================
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    """Render forgot password page"""
+    return templates.TemplateResponse(
+        "auth/forgot_password.html",
+        {"request": request}
+    )
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    request: Request,
+    email: str = Form(...)
+):
+    """
+    Process forgot password form
+    
+    Note: For now, this is a placeholder that shows a success message.
+    In production, this would send a password reset email.
+    """
+    email = sanitize_input(email, max_length=100)
+    
+    # Always show success message to prevent email enumeration
+    return templates.TemplateResponse(
+        "auth/forgot_password.html",
+        {
+            "request": request,
+            "success": "Se o email estiver cadastrado, você receberá um link para redefinir sua senha."
+        }
+    )
+
+
+# ============================================
+# Google OAuth Routes
+# ============================================
+
+@router.get("/google/login")
+async def google_login(request: Request):
+    """
+    Initiate Google OAuth flow
+    Redirects user to Google's authorization page
+    """
+    import os
+    
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    
+    if not client_id:
+        return templates.TemplateResponse(
+            "auth/login.html",
+            {
+                "request": request,
+                "error": "Login com Google não está configurado. Configure GOOGLE_CLIENT_ID nas variáveis de ambiente."
+            }
+        )
+    
+    # Determine redirect URI based on request
+    base_url = str(request.base_url).rstrip("/")
+    redirect_uri = f"{base_url}/auth/google/callback"
+    
+    # Google OAuth authorization URL
+    google_auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={client_id}&"
+        f"redirect_uri={redirect_uri}&"
+        "response_type=code&"
+        "scope=openid%20email%20profile&"
+        "access_type=offline&"
+        "prompt=consent"
+    )
+    
+    return RedirectResponse(url=google_auth_url)
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request, code: str = None, error: str = None):
+    """
+    Handle Google OAuth callback
+    Exchange authorization code for user info and create/login user
+    """
+    import os
+    import httpx
+    
+    if error or not code:
+        return RedirectResponse(url="/auth/login?error=google_auth_failed")
+    
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    
+    if not client_id or not client_secret:
+        return RedirectResponse(url="/auth/login?error=google_not_configured")
+    
+    base_url = str(request.base_url).rstrip("/")
+    redirect_uri = f"{base_url}/auth/google/callback"
+    
+    try:
+        # Exchange code for tokens
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": redirect_uri,
+                }
+            )
+            
+            if token_response.status_code != 200:
+                return RedirectResponse(url="/auth/login?error=google_token_failed")
+            
+            tokens = token_response.json()
+            
+            # Get user info
+            user_info_response = await client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {tokens['access_token']}"}
+            )
+            
+            if user_info_response.status_code != 200:
+                return RedirectResponse(url="/auth/login?error=google_userinfo_failed")
+            
+            user_info = user_info_response.json()
+        
+        # Login or create user
+        email = user_info.get("email")
+        google_id = user_info.get("id")
+        
+        if not email:
+            return RedirectResponse(url="/auth/login?error=google_no_email")
+        
+        user = UserQueries.login_google_user(email=email, google_id=google_id)
+        
+        if not user:
+            return RedirectResponse(url="/auth/login?error=google_login_failed")
+        
+        # Create JWT token and set cookie
+        access_token = create_access_token(
+            data={"user_id": user["id"], "username": user.get("username", email)},
+            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+        
+        response = RedirectResponse(url="/dashboard", status_code=303)
+        response.set_cookie(
+            key="access_token",
+            value=f"Bearer {access_token}",
+            httponly=True,
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            samesite="lax"
+        )
+        
+        return response
+        
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Google OAuth error: {e}", exc_info=True)
+        return RedirectResponse(url="/auth/login?error=google_auth_error")
+

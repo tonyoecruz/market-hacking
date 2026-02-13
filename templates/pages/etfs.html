@@ -158,7 +158,7 @@
         tbody.innerHTML = etfs.map(etf => `
         <tr class="hover:bg-dark-700">
             <td class="px-4 py-3 text-white font-semibold">${etf.ticker}</td>
-            <td class="px-4 py-3 text-gray-300">${etf.Empresa || etf.ticker}</td>
+            <td class="px-4 py-3 text-gray-300">${etf.empresa || etf.ticker}</td>
             <td class="px-4 py-3 text-right text-gray-300">R$ ${etf.price.toFixed(2)}</td>
             <td class="px-4 py-3 text-right text-primary font-semibold">
                 R$ ${(etf.liquidezmediadiaria / 1000000).toFixed(2)}M

@@ -15,6 +15,10 @@ spec.loader.exec_module(data_utils)
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+@router.get("/", response_class=HTMLResponse)
+async def arena_page(request: Request):
+    return templates.TemplateResponse("pages/arena.html", {"request": request, "title": "Arena"})
+
 @router.post("/api/battle")
 async def battle(request: Request):
     data = await request.json()
