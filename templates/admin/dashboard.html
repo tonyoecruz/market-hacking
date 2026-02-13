@@ -55,6 +55,10 @@
                 class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
                 📝 Update Logs
             </button>
+            <button onclick="showTab('parameters')" id="tab-parameters"
+                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
+                ⚙️ Parameters
+            </button>
         </nav>
 
         <div class="absolute bottom-0 w-64 p-4 border-t border-gray-700">
@@ -259,6 +263,68 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Parameters Tab -->
+            <div id="content-parameters" class="hidden">
+                <!-- Data Collection Settings -->
+                <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                    <h3 class="text-xl font-bold text-white mb-6">⏱️ Intervalos de Coleta</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Coleta de Dados de Mercado
+                                (minutos)</label>
+                            <input type="number" id="setting-market-interval" min="5" max="1440"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                                placeholder="60">
+                            <p class="text-gray-500 text-xs mt-1">Acoes, ETFs, FIIs - Min: 5 min, Max: 1440 min (24h)
+                            </p>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Coleta de Imoveis
+                                (dias)</label>
+                            <input type="number" id="setting-flipping-interval" min="1" max="30"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                                placeholder="1">
+                            <p class="text-gray-500 text-xs mt-1">House Flipping - Min: 1 dia, Max: 30 dias</p>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" id="setting-auto-update"
+                                class="w-5 h-5 text-primary bg-dark-700 border-gray-600 rounded focus:ring-primary">
+                            <span class="text-gray-300 font-semibold">Habilitar coleta automatica</span>
+                        </label>
+                    </div>
+                    <div class="mt-6 flex space-x-3">
+                        <button onclick="saveSettings()"
+                            class="px-6 py-3 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/80 transition-all">
+                            💾 Salvar Configuracoes
+                        </button>
+                        <span id="settings-save-status" class="text-green-400 py-3 hidden">✅ Salvo!</span>
+                    </div>
+                </div>
+
+                <!-- House Flipping Cities -->
+                <div class="bg-dark-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold text-white mb-6">🏠 Cidades para House Flipping</h3>
+                    <div class="flex space-x-3 mb-6">
+                        <input type="text" id="new-city-name"
+                            class="flex-1 bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                            placeholder="Nome da cidade (ex: Sao Paulo)">
+                        <input type="text" id="new-city-state"
+                            class="w-24 bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                            placeholder="UF">
+                        <button onclick="addCity()"
+                            class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all">
+                            + Adicionar
+                        </button>
+                    </div>
+                    <div id="cities-list" class="flex flex-wrap gap-3">
+                        <p class="text-gray-500">Carregando cidades...</p>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 </div>
@@ -274,11 +340,21 @@
         refreshInterval = setInterval(refreshData, 30000);
     });
 
+    // Helper: handle 401 unauthorized responses
+    function handleAuthError(response) {
+        if (response.status === 401) {
+            alert('Sessao expirada. Redirecionando para login...');
+            window.location.href = '/admin/login';
+            return true;
+        }
+        return false;
+    }
+
     function showTab(tab) {
         currentTab = tab;
 
         // Update tab buttons
-        const tabs = ['monitoring', 'users', 'stats', 'logs'];
+        const tabs = ['monitoring', 'users', 'stats', 'logs', 'parameters'];
         tabs.forEach(t => {
             const btn = document.getElementById(`tab-${t}`);
             const content = document.getElementById(`content-${t}`);
@@ -297,7 +373,8 @@
             'monitoring': '📊 Data Monitoring',
             'users': '👥 User Management',
             'stats': '📈 System Stats',
-            'logs': '📝 Update Logs'
+            'logs': '📝 Update Logs',
+            'parameters': '⚙️ Parameters'
         };
         document.getElementById('page-title').textContent = titles[tab];
 
@@ -305,11 +382,13 @@
         if (tab === 'users') loadUsers();
         if (tab === 'stats') loadStats();
         if (tab === 'logs') loadLogs();
+        if (tab === 'parameters') loadSettings();
     }
 
     async function refreshData() {
         try {
             const response = await fetch('/admin/api/data-status');
+            if (handleAuthError(response)) return;
             const data = await response.json();
 
             if (data.status === 'success') {
@@ -550,10 +629,13 @@
                 method: 'POST'
             });
 
+            if (handleAuthError(response)) return;
+
             if (response.ok) {
                 alert('Data update triggered! Check the Update Logs tab in a few minutes to see the results.');
             } else {
-                alert('Error triggering update');
+                const data = await response.json();
+                alert('Error: ' + (data.detail || 'Error triggering update'));
             }
         } catch (error) {
             console.error('Error triggering update:', error);
@@ -573,6 +655,8 @@
             const response = await fetch('/admin/api/trigger-update?sync=false', {
                 method: 'POST'
             });
+
+            if (handleAuthError(response)) return;
 
             const data = await response.json();
 
@@ -595,7 +679,6 @@
         } catch (error) {
             console.error('Error triggering update:', error);
             alert('CRITICAL ERROR: ' + error.message);
-            // Reload page to reset state
             window.location.reload();
         }
     }
@@ -608,5 +691,162 @@
             window.location.href = '/admin/login';
         }
     }
+    // ==================== SETTINGS FUNCTIONS ====================
+
+    async function loadSettings() {
+        try {
+            const response = await fetch('/admin/api/settings');
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                const settings = data.settings;
+                settings.forEach(s => {
+                    if (s.key === 'market_update_interval_minutes') {
+                        document.getElementById('setting-market-interval').value = s.value;
+                    }
+                    if (s.key === 'flipping_update_interval_days') {
+                        document.getElementById('setting-flipping-interval').value = s.value;
+                    }
+                    if (s.key === 'auto_update_enabled') {
+                        document.getElementById('setting-auto-update').checked = s.value === 'true';
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error loading settings:', error);
+        }
+
+        // Also load cities
+        loadCities();
+    }
+
+    async function saveSettings() {
+        const marketInterval = document.getElementById('setting-market-interval').value;
+        const flippingInterval = document.getElementById('setting-flipping-interval').value;
+        const autoUpdate = document.getElementById('setting-auto-update').checked;
+
+        if (marketInterval < 5 || marketInterval > 1440) {
+            alert('Intervalo de mercado deve ser entre 5 e 1440 minutos');
+            return;
+        }
+        if (flippingInterval < 1 || flippingInterval > 30) {
+            alert('Intervalo de imoveis deve ser entre 1 e 30 dias');
+            return;
+        }
+
+        try {
+            const response = await fetch('/admin/api/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    settings: {
+                        market_update_interval_minutes: marketInterval,
+                        flipping_update_interval_days: flippingInterval,
+                        auto_update_enabled: autoUpdate ? 'true' : 'false'
+                    }
+                })
+            });
+
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+
+            if (response.ok) {
+                const status = document.getElementById('settings-save-status');
+                status.classList.remove('hidden');
+                setTimeout(() => status.classList.add('hidden'), 3000);
+            } else {
+                alert('Erro: ' + (data.detail || 'Erro ao salvar'));
+            }
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            alert('Erro ao salvar configuracoes');
+        }
+    }
+
+    // ==================== CITIES FUNCTIONS ====================
+
+    async function loadCities() {
+        try {
+            const response = await fetch('/admin/api/flipping/cities');
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+
+            const container = document.getElementById('cities-list');
+
+            if (data.status === 'success' && data.cities.length > 0) {
+                container.innerHTML = data.cities.map(city => `
+                    <div class="flex items-center space-x-2 bg-dark-700 border border-gray-600 px-4 py-2 rounded-lg">
+                        <span class="text-white font-semibold">${city.city}</span>
+                        ${city.state ? `<span class="text-gray-400 text-sm">(${city.state})</span>` : ''}
+                        <button onclick="removeCity(${city.id})" 
+                            class="text-red-400 hover:text-red-300 ml-2" title="Remover">
+                            ✕
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-gray-500">Nenhuma cidade configurada. Adicione cidades acima.</p>';
+            }
+        } catch (error) {
+            console.error('Error loading cities:', error);
+        }
+    }
+
+    async function addCity() {
+        const cityInput = document.getElementById('new-city-name');
+        const stateInput = document.getElementById('new-city-state');
+        const city = cityInput.value.trim();
+        const state = stateInput.value.trim();
+
+        if (!city) {
+            alert('Digite o nome da cidade');
+            return;
+        }
+
+        try {
+            const response = await fetch('/admin/api/flipping/cities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ city, state })
+            });
+
+            if (handleAuthError(response)) return;
+
+            if (response.ok) {
+                cityInput.value = '';
+                stateInput.value = '';
+                loadCities();
+            } else {
+                const data = await response.json();
+                alert('Erro: ' + (data.detail || 'Erro ao adicionar'));
+            }
+        } catch (error) {
+            console.error('Error adding city:', error);
+            alert('Erro ao adicionar cidade');
+        }
+    }
+
+    async function removeCity(cityId) {
+        if (!confirm('Remover esta cidade?')) return;
+
+        try {
+            const response = await fetch(`/admin/api/flipping/cities/${cityId}`, {
+                method: 'DELETE'
+            });
+
+            if (handleAuthError(response)) return;
+
+            if (response.ok) {
+                loadCities();
+            } else {
+                alert('Erro ao remover cidade');
+            }
+        } catch (error) {
+            console.error('Error removing city:', error);
+            alert('Erro ao remover cidade');
+        }
+    }
+
 </script>
 {% endblock %}

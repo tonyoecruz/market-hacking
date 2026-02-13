@@ -29,8 +29,8 @@ ADMIN_CREDENTIALS = {
 # Session storage (in-memory for now, use Redis in production)
 admin_sessions = {}
 
-# Session timeout (30 minutes)
-SESSION_TIMEOUT = timedelta(minutes=30)
+# Session timeout (4 hours - extended to avoid frequent logouts on Render)
+SESSION_TIMEOUT = timedelta(hours=4)
 
 
 def create_session(username: str) -> str:
@@ -116,7 +116,7 @@ async def admin_login(request: Request):
             key="admin_session",
             value=session_id,
             httponly=True,
-            max_age=1800,  # 30 minutes
+            max_age=14400,  # 4 hours
             samesite="lax"
         )
         

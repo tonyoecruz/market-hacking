@@ -445,3 +445,110 @@ async def change_admin_password(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== SETTINGS API ====================
+
+@router.get("/api/settings")
+async def get_settings(session: dict = Depends(verify_admin_session)):
+    """Get all system settings"""
+    try:
+        # Initialize defaults if needed
+        db_manager.init_default_settings()
+        
+        settings = db_manager.get_all_settings()
+        return JSONResponse({
+            "status": "success",
+            "settings": settings
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/api/settings")
+async def update_settings(
+    request: Request,
+    session: dict = Depends(verify_admin_session)
+):
+    """Update system settings and reschedule jobs"""
+    try:
+        data = await request.json()
+        settings = data.get("settings", {})
+        
+        for key, value in settings.items():
+            db_manager.set_setting(key, str(value))
+        
+        # Reschedule scheduler jobs if interval changed
+        from scheduler import reschedule_jobs
+        rescheduled = reschedule_jobs()
+        
+        return JSONResponse({
+            "status": "success",
+            "message": "Configuracoes salvas com sucesso",
+            "rescheduled": rescheduled
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== FLIPPING CITIES API ====================
+
+@router.get("/api/flipping/cities")
+async def get_flipping_cities(session: dict = Depends(verify_admin_session)):
+    """Get all configured House Flipping cities"""
+    try:
+        cities = db_manager.get_flipping_cities()
+        return JSONResponse({
+            "status": "success",
+            "cities": cities
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/flipping/cities")
+async def add_flipping_city(
+    request: Request,
+    session: dict = Depends(verify_admin_session)
+):
+    """Add a city for House Flipping"""
+    try:
+        data = await request.json()
+        city = data.get("city", "").strip()
+        state = data.get("state", "").strip() or None
+        
+        if not city:
+            raise HTTPException(status_code=400, detail="City name is required")
+        
+        result = db_manager.add_flipping_city(city, state)
+        return JSONResponse({
+            "status": "success",
+            "message": f"Cidade '{city}' adicionada",
+            "city": result
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/api/flipping/cities/{city_id}")
+async def remove_flipping_city(
+    city_id: int,
+    session: dict = Depends(verify_admin_session)
+):
+    """Remove a city from House Flipping"""
+    try:
+        success = db_manager.remove_flipping_city(city_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="City not found")
+        
+        return JSONResponse({
+            "status": "success",
+            "message": "Cidade removida"
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

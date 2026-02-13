@@ -97,6 +97,10 @@ async def startup_event():
             logger.info("📊 Scheduler will trigger initial data update...")
         else:
             logger.info("✅ Database contains market data")
+        
+        # Initialize default settings
+        db_manager.init_default_settings()
+        logger.info("✅ Default settings initialized")
             
     except Exception as e:
         logger.error(f"❌ Database initialization error: {e}", exc_info=True)

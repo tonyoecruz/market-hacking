@@ -1,48 +1,68 @@
 """
-Scheduler - APScheduler configuration for automated data updates
-Runs background jobs to keep market data fresh
+Scheduler Manager - Background job scheduling
+Uses APScheduler with database-backed configuration
 """
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
-import logging
 import os
+import logging
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 
-# Importamos a classe para evitar conflitos de nomes
-from database.db_manager import DatabaseManager
+from scheduler.data_updater import update_all_data, cleanup_old_logs
 
-from scheduler.data_updater import (
-    update_stocks_br,
-    update_stocks_us,
-    update_etfs,
-    update_fiis,
-    update_all_data,
-    cleanup_old_logs
-)
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration
-UPDATE_INTERVAL_HOURS = int(os.getenv('UPDATE_INTERVAL_HOURS', '1'))
+# Default values (overridden by database settings)
+UPDATE_INTERVAL_HOURS = float(os.getenv('UPDATE_INTERVAL_HOURS', '1'))
 AUTO_UPDATE_ENABLED = os.getenv('AUTO_UPDATE_ENABLED', 'true').lower() == 'true'
 
-# Create scheduler instance
+# Global scheduler instance
 scheduler = BackgroundScheduler()
+
+
+def _get_update_interval_minutes():
+    """Get update interval from database settings, with env var fallback"""
+    try:
+        from database.db_manager import DatabaseManager
+        db = DatabaseManager()
+        interval = db.get_setting('market_update_interval_minutes')
+        if interval:
+            return int(interval)
+    except Exception as e:
+        logger.warning(f"Could not read interval from DB: {e}")
+    
+    # Fallback to env var (in hours, convert to minutes)
+    return int(UPDATE_INTERVAL_HOURS * 60)
+
+
+def _is_auto_update_enabled():
+    """Check if auto update is enabled from database settings"""
+    try:
+        from database.db_manager import DatabaseManager
+        db = DatabaseManager()
+        enabled = db.get_setting('auto_update_enabled')
+        if enabled is not None:
+            return enabled.lower() == 'true'
+    except Exception as e:
+        logger.warning(f"Could not read auto_update from DB: {e}")
+    
+    return AUTO_UPDATE_ENABLED
+
 
 def start_scheduler():
     """Start the background scheduler"""
-    if not AUTO_UPDATE_ENABLED:
+    if not _is_auto_update_enabled():
         logger.info("⏸️  Auto-update is disabled")
         return
     
     logger.info("🚀 Starting background scheduler...")
     
-    # Schedule hourly updates
+    interval_minutes = _get_update_interval_minutes()
+    
+    # Schedule periodic updates
     scheduler.add_job(
         update_all_data,
-        trigger=IntervalTrigger(hours=UPDATE_INTERVAL_HOURS),
+        trigger=IntervalTrigger(minutes=interval_minutes),
         id='update_all_data',
         name='Update All Market Data',
         replace_existing=True
@@ -60,7 +80,7 @@ def start_scheduler():
     # Start scheduler
     scheduler.start()
     
-    logger.info(f"✅ Scheduler started - Updates every {UPDATE_INTERVAL_HOURS} hour(s)")
+    logger.info(f"✅ Scheduler started - Updates every {interval_minutes} minute(s)")
     
     # Run first update immediately in background
     logger.info("📊 Triggering immediate initial update...")
@@ -81,34 +101,46 @@ def start_scheduler():
 def stop_scheduler():
     """Stop the background scheduler"""
     if scheduler.running:
-        scheduler.shutdown()
-        logger.info("⏹️  Scheduler stopped")
+        scheduler.shutdown(wait=False)
+        logger.info("🛑 Scheduler stopped")
 
 
 def get_scheduler_status():
-    """Get scheduler status and job information"""
-    if not scheduler.running:
-        return {
-            'running': False,
-            'jobs': []
-        }
-    
-    jobs = []
-    for job in scheduler.get_jobs():
-        jobs.append({
-            'id': job.id,
-            'name': job.name,
-            'next_run': job.next_run_time.isoformat() if job.next_run_time else None
-        })
-    
-    return {
-        'running': True,
-        'jobs': jobs,
-        'update_interval_hours': UPDATE_INTERVAL_HOURS
+    """Get scheduler status and job info"""
+    status = {
+        'running': scheduler.running,
+        'auto_update_enabled': _is_auto_update_enabled(),
+        'update_interval_minutes': _get_update_interval_minutes(),
+        'jobs': []
     }
+    
+    if scheduler.running:
+        for job in scheduler.get_jobs():
+            status['jobs'].append({
+                'id': job.id,
+                'name': job.name,
+                'next_run': str(job.next_run_time) if job.next_run_time else None
+            })
+    
+    return status
 
 
-# For standalone execution (útil para testes manuais via terminal na Render)
-if __name__ == "__main__":
-    logger.info("Manual update trigger...")
-    update_all_data()
+def reschedule_jobs():
+    """Reschedule jobs after settings change (called from admin panel)"""
+    if not scheduler.running:
+        logger.warning("⚠️  Scheduler not running, cannot reschedule")
+        return False
+    
+    interval_minutes = _get_update_interval_minutes()
+    
+    try:
+        # Reschedule the main update job
+        scheduler.reschedule_job(
+            'update_all_data',
+            trigger=IntervalTrigger(minutes=interval_minutes)
+        )
+        logger.info(f"✅ Rescheduled updates to every {interval_minutes} minutes")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error rescheduling: {e}")
+        return False

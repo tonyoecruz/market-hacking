@@ -12,7 +12,7 @@ from typing import List, Optional, Dict
 import pandas as pd
 import numpy as np
 
-from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB
+from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB, SystemSettingsDB, FlippingCityDB
 
 logger = logging.getLogger(__name__)
 
@@ -397,6 +397,10 @@ class DatabaseManager:
         finally:
             db.close()
     
+    def cleanup_logs(self, days: int = 7):
+        """Alias for cleanup_old_data - Remove old update logs"""
+        self.cleanup_old_data(days=days)
+    
     def get_stats(self) -> Dict:
         """Get database statistics"""
         db = self.SessionLocal()
@@ -420,6 +424,131 @@ class DatabaseManager:
                 stats['last_update'] = last_log.completed_at.isoformat()
             
             return stats
+        finally:
+            db.close()
+    
+    # ==================== SYSTEM SETTINGS ====================
+    
+    def get_setting(self, key: str, default: str = None) -> Optional[str]:
+        """Get a system setting by key"""
+        db = self.SessionLocal()
+        try:
+            setting = db.query(SystemSettingsDB).filter(
+                SystemSettingsDB.key == key
+            ).first()
+            return setting.value if setting else default
+        finally:
+            db.close()
+    
+    def set_setting(self, key: str, value: str, description: str = None):
+        """Set a system setting (create or update)"""
+        db = self.SessionLocal()
+        try:
+            existing = db.query(SystemSettingsDB).filter(
+                SystemSettingsDB.key == key
+            ).first()
+            
+            if existing:
+                existing.value = value
+                if description:
+                    existing.description = description
+                existing.updated_at = datetime.now()
+            else:
+                setting = SystemSettingsDB(
+                    key=key,
+                    value=value,
+                    description=description or key,
+                    updated_at=datetime.now()
+                )
+                db.add(setting)
+            
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+    
+    def get_all_settings(self) -> List[Dict]:
+        """Get all system settings"""
+        db = self.SessionLocal()
+        try:
+            settings = db.query(SystemSettingsDB).all()
+            return [s.to_dict() for s in settings]
+        finally:
+            db.close()
+    
+    def init_default_settings(self):
+        """Initialize default system settings if they don't exist"""
+        defaults = {
+            'market_update_interval_minutes': ('60', 'Intervalo de coleta de dados de mercado (minutos)'),
+            'flipping_update_interval_days': ('1', 'Intervalo de coleta de dados imobiliarios (dias)'),
+            'auto_update_enabled': ('true', 'Habilitar coleta automatica de dados'),
+        }
+        
+        for key, (value, desc) in defaults.items():
+            if self.get_setting(key) is None:
+                self.set_setting(key, value, desc)
+    
+    # ==================== FLIPPING CITIES ====================
+    
+    def get_flipping_cities(self) -> List[Dict]:
+        """Get all configured House Flipping cities"""
+        db = self.SessionLocal()
+        try:
+            cities = db.query(FlippingCityDB).filter(
+                FlippingCityDB.active == 1
+            ).order_by(FlippingCityDB.city).all()
+            return [c.to_dict() for c in cities]
+        finally:
+            db.close()
+    
+    def add_flipping_city(self, city: str, state: str = None) -> Dict:
+        """Add a city for House Flipping data collection"""
+        db = self.SessionLocal()
+        try:
+            existing = db.query(FlippingCityDB).filter(
+                FlippingCityDB.city == city
+            ).first()
+            
+            if existing:
+                if not existing.active:
+                    existing.active = 1
+                    db.commit()
+                return existing.to_dict()
+            
+            new_city = FlippingCityDB(
+                city=city,
+                state=state,
+                active=1,
+                added_at=datetime.now()
+            )
+            db.add(new_city)
+            db.commit()
+            db.refresh(new_city)
+            return new_city.to_dict()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+    
+    def remove_flipping_city(self, city_id: int) -> bool:
+        """Remove a city from House Flipping"""
+        db = self.SessionLocal()
+        try:
+            city = db.query(FlippingCityDB).filter(
+                FlippingCityDB.id == city_id
+            ).first()
+            
+            if city:
+                db.delete(city)
+                db.commit()
+                return True
+            return False
+        except Exception as e:
+            db.rollback()
+            raise e
         finally:
             db.close()
 

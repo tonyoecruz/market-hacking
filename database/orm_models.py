@@ -1,6 +1,6 @@
 """
 SQLAlchemy ORM Models for Market Data
-Database tables for stocks, ETFs, FIIs, and update tracking
+Database tables for stocks, ETFs, FIIs, update tracking, and system settings
 """
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
@@ -133,4 +133,47 @@ class UpdateLogDB(Base):
             'started_at': self.started_at.isoformat() if self.started_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
             'duration_seconds': self.duration_seconds
+        }
+
+
+class SystemSettingsDB(Base):
+    """SQLAlchemy model for persistent system settings"""
+    __tablename__ = 'system_settings'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key = Column(String(100), nullable=False, unique=True)
+    value = Column(String(500), nullable=False)
+    description = Column(String(500))
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    def to_dict(self):
+        """Convert to dictionary for API responses"""
+        return {
+            'key': self.key,
+            'value': self.value,
+            'description': self.description,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class FlippingCityDB(Base):
+    """SQLAlchemy model for House Flipping city list"""
+    __tablename__ = 'flipping_cities'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    city = Column(String(200), nullable=False, unique=True)
+    state = Column(String(50))
+    active = Column(Integer, default=1)  # 1=active, 0=inactive
+    added_at = Column(DateTime, default=func.now())
+    last_scraped_at = Column(DateTime, nullable=True)
+    
+    def to_dict(self):
+        """Convert to dictionary for API responses"""
+        return {
+            'id': self.id,
+            'city': self.city,
+            'state': self.state,
+            'active': bool(self.active),
+            'added_at': self.added_at.isoformat() if self.added_at else None,
+            'last_scraped_at': self.last_scraped_at.isoformat() if self.last_scraped_at else None
         }
