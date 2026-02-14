@@ -73,3 +73,65 @@ html {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ==================== MOBILE RESPONSIVENESS ==================== */
+
+/* Mobile: add padding for hamburger button on headers */
+@media (max-width: 767px) {
+    /* Page headers need left padding for hamburger */
+    header {
+        padding-left: 3.5rem !important;
+    }
+
+    /* Make grid columns stack on mobile */
+    .grid-cols-2,
+    .grid-cols-3,
+    .grid-cols-4 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Table responsive: horizontal scroll */
+    table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Smaller text on mobile */
+    h1 { font-size: 1.25rem !important; }
+    h2 { font-size: 1.1rem !important; }
+
+    /* Full-width modals on mobile */
+    .fixed.inset-0 > div {
+        margin: 0.5rem !important;
+        max-height: 95vh !important;
+        max-width: 100% !important;
+    }
+
+    /* Arena: stack battle cards */
+    .grid.grid-cols-2.gap-6 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Main content area needs full width */
+    .flex-1.flex.flex-col {
+        width: 100% !important;
+    }
+
+    /* Ensure main flex container handles mobile correctly */
+    .flex.h-screen {
+        flex-direction: column;
+    }
+
+    /* Sidebar should not take space when hidden on mobile */
+    #sidebar.-translate-x-full {
+        display: flex;
+    }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .grid-cols-4 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}

@@ -84,6 +84,28 @@ async def get_acoes_data(market: str = None, min_liq: float = 200000, filter_uni
         logger.error(f"ERRO API ACOES: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/api/search")
+async def search_acoes(q: str = '', limit: int = 15):
+    """Search assets by ticker across all markets"""
+    if len(q) < 1:
+        return JSONResponse({'status': 'success', 'results': []})
+    try:
+        results = db.search_assets(q, limit=limit)
+        # Simplify for autocomplete
+        simplified = []
+        for r in results:
+            simplified.append({
+                'ticker': r.get('ticker', ''),
+                'empresa': r.get('empresa', ''),
+                'price': r.get('price'),
+                'market': r.get('market', ''),
+                'asset_type': r.get('asset_type', 'stock'),
+            })
+        return JSONResponse({'status': 'success', 'results': simplified})
+    except Exception as e:
+        logger.error(f"Erro search: {e}", exc_info=True)
+        return JSONResponse({'status': 'error', 'results': []})
+
 @router.get("/api/decode/{ticker}")
 async def decode_acao(ticker: str, market: str = 'BR'):
     try:

@@ -19,14 +19,35 @@ templates = Jinja2Templates(directory="templates")
 async def arena_page(request: Request):
     return templates.TemplateResponse("pages/arena.html", {"request": request, "title": "Arena"})
 
+@router.get("/api/search")
+async def arena_search(q: str = ''):
+    """Search assets for arena battle autocomplete"""
+    if len(q) < 1:
+        return JSONResponse({'status': 'success', 'results': []})
+    try:
+        results = db_instance.search_assets(q, limit=10)
+        simplified = [{'ticker': r.get('ticker', ''), 'empresa': r.get('empresa', ''), 
+                       'market': r.get('market', ''), 'asset_type': r.get('asset_type', '')} for r in results]
+        return JSONResponse({'status': 'success', 'results': simplified})
+    except:
+        return JSONResponse({'status': 'error', 'results': []})
+
 @router.post("/api/battle")
 async def battle(request: Request):
     data = await request.json()
     t1, t2 = data.get('ticker1', '').upper(), data.get('ticker2', '').upper()
     
-    # Busca em todos os mercados no banco
+    # Search across stocks, then ETFs/FIIs via search_assets
     asset1 = db_instance.get_stock_by_ticker(t1, 'BR') or db_instance.get_stock_by_ticker(t1, 'US')
     asset2 = db_instance.get_stock_by_ticker(t2, 'BR') or db_instance.get_stock_by_ticker(t2, 'US')
+    
+    # Fallback: search in all asset types
+    if not asset1:
+        results = db_instance.search_assets(t1, limit=1)
+        asset1 = results[0] if results else None
+    if not asset2:
+        results = db_instance.search_assets(t2, limit=1)
+        asset2 = results[0] if results else None
     
     if not asset1 or not asset2:
         raise HTTPException(status_code=404, detail="Ativos não encontrados no banco.")

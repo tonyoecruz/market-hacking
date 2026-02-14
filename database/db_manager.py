@@ -188,6 +188,44 @@ class DatabaseManager:
         finally:
             db.close()
     
+    def search_assets(self, query: str, limit: int = 20) -> List[Dict]:
+        """Search stocks, ETFs, and FIIs by ticker across all markets"""
+        db = self.SessionLocal()
+        try:
+            pattern = f"%{query.upper()}%"
+            results = []
+            
+            # Search stocks
+            stocks = db.query(StockDB).filter(
+                StockDB.ticker.ilike(pattern)
+            ).limit(limit).all()
+            for s in stocks:
+                d = s.to_dict()
+                d['asset_type'] = 'stock'
+                results.append(d)
+            
+            # Search ETFs
+            etfs = db.query(ETFDB).filter(
+                ETFDB.ticker.ilike(pattern)
+            ).limit(limit).all()
+            for e in etfs:
+                d = e.to_dict()
+                d['asset_type'] = 'etf'
+                results.append(d)
+            
+            # Search FIIs
+            fiis = db.query(FIIDB).filter(
+                FIIDB.ticker.ilike(pattern)
+            ).limit(limit).all()
+            for f in fiis:
+                d = f.to_dict()
+                d['asset_type'] = 'fii'
+                results.append(d)
+            
+            return results[:limit]
+        finally:
+            db.close()
+    
     # ==================== ETFs ====================
     
     def save_etfs(self, df: pd.DataFrame, market: str) -> int:

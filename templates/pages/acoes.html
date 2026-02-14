@@ -44,11 +44,15 @@
                     </div>
 
                     <!-- Search Field -->
-                    <div>
+                    <div class="relative">
                         <label class="block text-sm font-medium text-gray-400 mb-2">🔍 Buscar Ação</label>
                         <input type="text" id="search-input" placeholder="Ex: PETR4, VALE3, AAPL..."
-                            oninput="filterTable()"
+                            oninput="onSearchInput()"
                             class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary uppercase">
+                        <!-- Autocomplete Dropdown -->
+                        <div id="search-dropdown"
+                            class="hidden absolute z-50 w-full mt-1 bg-dark-700 border border-gray-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                        </div>
                     </div>
 
                     <!-- Results Count -->
@@ -380,23 +384,79 @@
         `).join('');
     }
 
-    function filterTable() {
-        const search = document.getElementById('search-input').value.toUpperCase().trim();
-        if (!search) {
-            // Re-render with original data
+    let searchTimeout = null;
+
+    function onSearchInput() {
+        const q = document.getElementById('search-input').value.trim();
+        clearTimeout(searchTimeout);
+
+        if (q.length < 1) {
+            document.getElementById('search-dropdown').classList.add('hidden');
+            // Also filter local table
             if (currentTab === 'all') renderAllTable(allStocksData);
             return;
         }
 
+        // Also filter local table immediately
         const filtered = allStocksData.filter(s =>
-            s.ticker?.toUpperCase().includes(search) ||
-            (s.empresa || '').toUpperCase().includes(search)
+            s.ticker?.toUpperCase().includes(q.toUpperCase()) ||
+            (s.empresa || '').toUpperCase().includes(q.toUpperCase())
         );
-
-        // Show all tab with filtered results
         if (currentTab !== 'all') showTab('all');
         renderAllTable(filtered);
+
+        // Debounced server search for autocomplete
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/acoes/api/search?q=${encodeURIComponent(q)}`);
+                const data = await response.json();
+                if (data.status === 'success' && data.results.length > 0) {
+                    showSearchDropdown(data.results);
+                } else {
+                    document.getElementById('search-dropdown').classList.add('hidden');
+                }
+            } catch (e) {
+                document.getElementById('search-dropdown').classList.add('hidden');
+            }
+        }, 300);
     }
+
+    function showSearchDropdown(results) {
+        const dropdown = document.getElementById('search-dropdown');
+        const typeEmoji = { 'stock': '📈', 'etf': '🌐', 'fii': '🏢' };
+        const typeLabel = { 'stock': 'Ação', 'etf': 'ETF', 'fii': 'FII' };
+        dropdown.innerHTML = results.map(r => `
+            <div class="flex items-center justify-between px-4 py-3 hover:bg-dark-600 cursor-pointer transition" 
+                 onclick="selectSearchResult('${r.ticker}', '${r.market}')">
+                <div class="flex items-center space-x-3">
+                    <span class="text-xl">${typeEmoji[r.asset_type] || '📊'}</span>
+                    <div>
+                        <p class="text-white font-semibold">${r.ticker}</p>
+                        <p class="text-xs text-gray-400">${r.empresa || ''}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs px-2 py-0.5 rounded bg-dark-600 text-gray-300">${typeLabel[r.asset_type] || ''}</span>
+                    <span class="text-xs text-gray-500 ml-1">${r.market}</span>
+                    ${r.price ? `<p class="text-primary text-sm font-semibold">R$ ${r.price.toFixed(2)}</p>` : ''}
+                </div>
+            </div>
+        `).join('');
+        dropdown.classList.remove('hidden');
+    }
+
+    function selectSearchResult(ticker, market) {
+        document.getElementById('search-dropdown').classList.add('hidden');
+        document.getElementById('search-input').value = ticker;
+        analyzeStock(ticker);
+    }
+
+    // Close dropdown on click outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#search-input') && !e.target.closest('#search-dropdown')) {
+            document.getElementById('search-dropdown').classList.add('hidden');
+        }
+    });
 
     function showTab(tab) {
         currentTab = tab;

@@ -1,5 +1,22 @@
 <!-- Sidebar Navigation Component -->
-<aside class="w-64 bg-dark-800 border-r border-gray-700 flex flex-col">
+<!-- Mobile Hamburger Toggle -->
+<button id="sidebar-toggle" onclick="toggleSidebar()"
+    class="fixed top-4 left-4 z-50 md:hidden p-2 bg-dark-800 border border-gray-700 rounded-lg text-white hover:bg-dark-700 transition">
+    <svg id="hamburger-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+    <svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+    </svg>
+</button>
+
+<!-- Mobile Overlay -->
+<div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/60 z-30 md:hidden" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="w-64 bg-dark-800 border-r border-gray-700 flex flex-col
+    fixed md:relative inset-y-0 left-0 z-40
+    transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
     <!-- Logo -->
     <div class="p-6 border-b border-gray-700">
         <div class="flex items-center space-x-3">
@@ -20,72 +37,75 @@
     <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
         <a href="/dashboard"
             class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.url.path == '/dashboard' %}bg-primary/10 text-primary border-l-4 border-primary{% else %}text-gray-400 hover:bg-dark-700 hover:text-white{% endif %} transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
                 </path>
             </svg>
-            <span {% if request.url.path=='/dashboard' %}class="font-semibold" {% endif %}>Dashboard</span>
+            <span class="sidebar-label {% if request.url.path=='/dashboard' %}font-semibold{% endif %}">Dashboard</span>
         </a>
 
         <a href="/acoes"
             class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if '/acoes' in request.url.path %}bg-primary/10 text-primary border-l-4 border-primary{% else %}text-gray-400 hover:bg-dark-700 hover:text-white{% endif %} transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
                 </path>
             </svg>
-            <span {% if '/acoes' in request.url.path %}class="font-semibold" {% endif %}>Ações</span>
+            <span class="sidebar-label {% if '/acoes' in request.url.path %}font-semibold{% endif %}">Ações</span>
         </a>
 
         <a href="/etfs"
             class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if '/etfs' in request.url.path %}bg-primary/10 text-primary border-l-4 border-primary{% else %}text-gray-400 hover:bg-dark-700 hover:text-white{% endif %} transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
                 </path>
             </svg>
-            <span {% if '/etfs' in request.url.path %}class="font-semibold" {% endif %}>ETFs</span>
+            <span class="sidebar-label {% if '/etfs' in request.url.path %}font-semibold{% endif %}">ETFs</span>
         </a>
 
         <a href="/elite-mix"
             class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if '/elite-mix' in request.url.path %}bg-primary/10 text-primary border-l-4 border-primary{% else %}text-gray-400 hover:bg-dark-700 hover:text-white{% endif %} transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z">
                 </path>
             </svg>
-            <span {% if '/elite-mix' in request.url.path %}class="font-semibold" {% endif %}>Elite Mix</span>
+            <span class="sidebar-label {% if '/elite-mix' in request.url.path %}font-semibold{% endif %}">Elite
+                Mix</span>
         </a>
 
         <a href="/fiis"
             class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if '/fiis' in request.url.path %}bg-primary/10 text-primary border-l-4 border-primary{% else %}text-gray-400 hover:bg-dark-700 hover:text-white{% endif %} transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
                 </path>
             </svg>
-            <span {% if '/fiis' in request.url.path %}class="font-semibold" {% endif %}>FIIs</span>
+            <span class="sidebar-label {% if '/fiis' in request.url.path %}font-semibold{% endif %}">FIIs</span>
         </a>
 
         <a href="/arena"
             class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if '/arena' in request.url.path %}bg-primary/10 text-primary border-l-4 border-primary{% else %}text-gray-400 hover:bg-dark-700 hover:text-white{% endif %} transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
                 </path>
             </svg>
-            <span {% if '/arena' in request.url.path %}class="font-semibold" {% endif %}>Arena (Beta)</span>
+            <span class="sidebar-label {% if '/arena' in request.url.path %}font-semibold{% endif %}">Arena
+                (Beta)</span>
         </a>
 
         <a href="/flipping/"
             class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if '/flipping' in request.url.path %}bg-primary/10 text-primary border-l-4 border-primary{% else %}text-gray-400 hover:bg-dark-700 hover:text-white{% endif %} transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
                 </path>
             </svg>
-            <span {% if '/flipping' in request.url.path %}class="font-semibold" {% endif %}>House Flipping!</span>
+            <span class="sidebar-label {% if '/flipping' in request.url.path %}font-semibold{% endif %}">House
+                Flipping!</span>
         </a>
     </nav>
 
@@ -94,12 +114,12 @@
         {% if user %}
         <div class="flex items-center space-x-3 mb-3">
             <div
-                class="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-dark-900 font-bold">
+                class="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-dark-900 font-bold flex-shrink-0">
                 {{ user.username[0].upper() }}
             </div>
-            <div class="flex-1">
-                <p class="text-sm font-semibold text-white">{{ user.username }}</p>
-                <p class="text-xs text-gray-400">{{ user.email }}</p>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-white truncate">{{ user.username }}</p>
+                <p class="text-xs text-gray-400 truncate">{{ user.email }}</p>
             </div>
         </div>
         <form action="/auth/logout" method="POST">
@@ -122,3 +142,42 @@
         {% endif %}
     </div>
 </aside>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        const hamburger = document.getElementById('hamburger-icon');
+        const closeIcon = document.getElementById('close-icon');
+
+        const isOpen = !sidebar.classList.contains('-translate-x-full');
+
+        if (isOpen) {
+            closeSidebar();
+        } else {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+            hamburger.classList.add('hidden');
+            closeIcon.classList.remove('hidden');
+        }
+    }
+
+    function closeSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        const hamburger = document.getElementById('hamburger-icon');
+        const closeIcon = document.getElementById('close-icon');
+
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+        hamburger.classList.remove('hidden');
+        closeIcon.classList.add('hidden');
+    }
+
+    // Close sidebar when clicking a nav link on mobile
+    document.querySelectorAll('#sidebar nav a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth < 768) closeSidebar();
+        });
+    });
+</script>

@@ -4,27 +4,44 @@
 
 {% block head %}
 <style>
-    @keyframes loadingDots {
-
-        0%,
-        20% {
-            content: '.';
-        }
-
-        40%,
-        60% {
-            content: '..';
-        }
-
-        80%,
-        100% {
-            content: '...';
-        }
+    .loading-dots {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
     }
 
-    .loading-dots::after {
-        content: '.';
-        animation: loadingDots 1.5s infinite;
+    .loading-dots .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4a5568;
+        animation: dotPulse 1.2s infinite;
+    }
+
+    .loading-dots .dot:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .loading-dots .dot:nth-child(2) {
+        animation-delay: 0.3s;
+    }
+
+    .loading-dots .dot:nth-child(3) {
+        animation-delay: 0.6s;
+    }
+
+    @keyframes dotPulse {
+
+        0%,
+        100% {
+            background: #4a5568;
+            transform: scale(1);
+        }
+
+        30% {
+            background: #00FF9D;
+            transform: scale(1.3);
+        }
     }
 </style>
 {% endblock %}
@@ -86,8 +103,8 @@
                             <div id="status-stocks-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-stocks-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-stocks-br" class="text-sm text-gray-400">Loading<span
-                                class="loading-dots"></span></p>
+                        <p id="message-stocks-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
+                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
                         <p id="time-stocks-br" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
 
@@ -97,8 +114,8 @@
                             <div id="status-stocks-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-stocks-us" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-stocks-us" class="text-sm text-gray-400">Loading<span
-                                class="loading-dots"></span></p>
+                        <p id="message-stocks-us" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
+                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
                         <p id="time-stocks-us" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
 
@@ -108,7 +125,8 @@
                             <div id="status-etfs-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-etfs-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-etfs-br" class="text-sm text-gray-400">Loading<span class="loading-dots"></span>
+                        <p id="message-etfs-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
+                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span>
                         </p>
                         <p id="time-etfs-br" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
@@ -119,7 +137,8 @@
                             <div id="status-etfs-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-etfs-us" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-etfs-us" class="text-sm text-gray-400">Loading<span class="loading-dots"></span>
+                        <p id="message-etfs-us" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
+                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span>
                         </p>
                         <p id="time-etfs-us" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
@@ -130,7 +149,8 @@
                             <div id="status-fiis-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
                         </div>
                         <p id="count-fiis-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-fiis-br" class="text-sm text-gray-400">Loading<span class="loading-dots"></span>
+                        <p id="message-fiis-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
+                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span>
                         </p>
                         <p id="time-fiis-br" class="text-xs text-gray-500 mt-2">-</p>
                     </div>
@@ -144,17 +164,9 @@
                                 class="px-4 py-2 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30">
                                 ⚡ Force Update
                             </button>
-                            <button onclick="debugUpdate()"
-                                class="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30">
-                                🐞 Debug Update
-                            </button>
-                            <button onclick="refreshData()"
-                                class="px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30">
-                                🔄 Refresh Now
-                            </button>
                         </div>
                     </div>
-                    <p class="text-gray-400">Data refreshes automatically every 30 seconds</p>
+                    <p class="text-gray-400">Dados atualizados automaticamente a cada 5 minutos</p>
                 </div>
             </div>
 
@@ -336,8 +348,8 @@
     // Load data on page load
     window.addEventListener('DOMContentLoaded', () => {
         refreshData();
-        // Auto-refresh every 30 seconds
-        refreshInterval = setInterval(refreshData, 30000);
+        // Auto-refresh every 5 minutes
+        refreshInterval = setInterval(refreshData, 300000);
     });
 
     // Helper: handle 401 unauthorized responses
