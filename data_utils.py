@@ -146,18 +146,21 @@ def filter_risky_stocks(df):
 # FUNÇÕES DE ANÁLISE IA
 # ==============================================================================
 
-def get_ai_generic_analysis(prompt):
-    """Análise genérica com IA"""
+def get_ai_generic_analysis(prompt, investor_style_prompt=None):
+    """Analise generica com IA, opcionalmente no estilo de um investidor"""
     if not IA_AVAILABLE:
-        return "⚠️ IA INDISPONÍVEL"
+        return "IA INDISPONIVEL"
     try:
-        response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
+        full_prompt = prompt
+        if investor_style_prompt:
+            full_prompt = f"{investor_style_prompt}\n\n---\n\n{prompt}"
+        response = model.generate_content(full_prompt, safety_settings=SAFETY_SETTINGS)
         return response.text
     except Exception as e:
-        return f"⚠️ ERRO DE GERAÇÃO: {str(e)}"
+        return f"ERRO DE GERACAO: {str(e)}"
 
-def get_graham_analysis(ticker, price, fair_value, lpa, vpa):
-    """Análise Graham com IA"""
+def get_graham_analysis(ticker, price, fair_value, lpa, vpa, investor_style_prompt=None):
+    """Analise Graham com IA"""
     margin = (fair_value/price) - 1 if price > 0 else 0
     
     if margin <= 0:
@@ -184,10 +187,10 @@ def get_graham_analysis(ticker, price, fair_value, lpa, vpa):
     - RODAPÉ OBRIGATÓRIO: "Fontes: Análise de Fundamentos, Fatos Relevantes (CVM) e RI da {ticker}."
     - Max 7 linhas.
     """
-    return get_ai_generic_analysis(prompt)
+    return get_ai_generic_analysis(prompt, investor_style_prompt)
 
-def get_magic_analysis(ticker, ev_ebit, roic, score):
-    """Análise Magic Formula com IA"""
+def get_magic_analysis(ticker, ev_ebit, roic, score, investor_style_prompt=None):
+    """Analise Magic Formula com IA"""
     is_good = (roic > 0.15) and (ev_ebit > 0)
     
     if not is_good:
@@ -210,9 +213,9 @@ def get_magic_analysis(ticker, ev_ebit, roic, score):
     - RODAPÉ OBRIGATÓRIO: "Fontes: Dados Financeiros Padronizados e RI da {ticker}."
     - Max 7 linhas.
     """
-    return get_ai_generic_analysis(prompt)
+    return get_ai_generic_analysis(prompt, investor_style_prompt)
 
-def get_mix_analysis(ticker, price, fair_value, ev_ebit, roic):
+def get_mix_analysis(ticker, price, fair_value, ev_ebit, roic, investor_style_prompt=None):
     """Análise Elite Mix com IA"""
     margin = (fair_value/price) - 1 if price > 0 else 0
     prompt = f"""
@@ -232,9 +235,9 @@ def get_mix_analysis(ticker, price, fair_value, ev_ebit, roic):
     - RODAPÉ OBRIGATÓRIO: "Fontes: Demonstrações Financeiras e Relatórios de RI."
     - Max 7 linhas.
     """
-    return get_ai_generic_analysis(prompt)
+    return get_ai_generic_analysis(prompt, investor_style_prompt)
 
-def get_sniper_analysis(ticker, price, fair_value, details, graham_ok, magic_ok):
+def get_sniper_analysis(ticker, price, fair_value, details, graham_ok, magic_ok, investor_style_prompt=None):
     """Análise Sniper (Decode) com IA"""
     method_context = ""
     if not graham_ok:
@@ -264,9 +267,9 @@ def get_sniper_analysis(ticker, price, fair_value, details, graham_ok, magic_ok)
     - RODAPÉ OBRIGATÓRIO: "Fontes: Fatos Relevantes CVM, Processos Judiciais e RI da Cia."
     - Max 7 linhas.
     """
-    return get_ai_generic_analysis(prompt)
+    return get_ai_generic_analysis(prompt, investor_style_prompt)
 
-def get_fii_analysis(ticker, price, pvp, dy, details):
+def get_fii_analysis(ticker, price, pvp, dy, details, investor_style_prompt=None):
     """Análise FII com IA"""
     prompt = f"""
     ANÁLISE IMOBILIÁRIA: {ticker} ({details.get('Segmento', 'N/A')}).
@@ -284,9 +287,9 @@ def get_fii_analysis(ticker, price, pvp, dy, details):
     - RODAPÉ OBRIGATÓRIO: "Fontes: Relatórios Gerencias e Informes Trimestrais."
     - Max 6 linhas.
     """
-    return get_ai_generic_analysis(prompt)
+    return get_ai_generic_analysis(prompt, investor_style_prompt)
 
-def get_battle_analysis(t1, d1, t2, d2):
+def get_battle_analysis(t1, d1, t2, d2, investor_style_prompt=None):
     """Análise de batalha entre dois ativos"""
     prompt = f"""
     COMPARATIVO DE BATALHA:
@@ -306,22 +309,24 @@ def get_battle_analysis(t1, d1, t2, d2):
     
     Seja vibrante mas tecnicamente rigoroso. Max 8 linhas.
     """
-    return get_ai_generic_analysis(prompt)
+    return get_ai_generic_analysis(prompt, investor_style_prompt)
 
 # ==============================================================================
 # FUNÇÕES DE ÁUDIO (TTS)
 # ==============================================================================
 
-def generate_audio(text, key_suffix=""):
-    """Gera áudio TTS usando edge-tts"""
+def generate_audio(text, key_suffix="", voice_override=None):
+    """Gera audio TTS usando edge-tts"""
     import hashlib
     import random
-    
+
     # Customization for Battle Arena
     is_battle = "battle" in key_suffix
-    
-    # 1. Select Voice
-    if is_battle:
+
+    # 1. Select Voice (investor voice takes priority)
+    if voice_override:
+        voice = voice_override
+    elif is_battle:
         voice = "pt-BR-FranciscaNeural"
     else:
         voice = "pt-BR-AntonioNeural"

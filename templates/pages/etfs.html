@@ -170,7 +170,8 @@
         document.getElementById('analysis-modal').classList.remove('hidden');
 
         try {
-            const response = await fetch(`/etfs/api/decode/${ticker}`);
+            const investor = localStorage.getItem('investor_persona') || '';
+            const response = await fetch(`/etfs/api/decode/${ticker}?investor=${encodeURIComponent(investor)}`);
             const data = await response.json();
 
             if (data.status === 'success') {
@@ -213,7 +214,7 @@
             const response = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text })
+                body: JSON.stringify({ text, investor: localStorage.getItem('investor_persona') || '' })
             });
             if (response.ok) {
                 const blob = await response.blob();
@@ -221,7 +222,7 @@
                 currentAudio = new Audio(url);
                 currentAudio.play();
             } else {
-                showToast('TTS não disponível', 'error');
+                showToast('TTS nao disponivel', 'error');
             }
         } catch (e) { showToast('Erro ao gerar áudio', 'error'); }
     }

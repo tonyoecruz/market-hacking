@@ -641,6 +641,15 @@ class DatabaseManager:
         finally:
             db.close()
 
+    def get_etf_by_ticker(self, ticker: str) -> Optional[Dict]:
+        """Get a single ETF by ticker"""
+        db = self.SessionLocal()
+        try:
+            etf = db.query(ETFDB).filter(ETFDB.ticker == ticker).first()
+            return etf.to_dict() if etf else None
+        finally:
+            db.close()
+
     def add_investor(self, name: str, description: str = None, style_prompt: str = None, voice_id: str = 'pt-BR-AntonioNeural') -> Dict:
         """Add an investor persona"""
         db = self.SessionLocal()

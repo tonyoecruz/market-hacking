@@ -74,7 +74,11 @@
             </button>
             <button onclick="showTab('parameters')" id="tab-parameters"
                 class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
-                ⚙️ Parameters
+                Parameters
+            </button>
+            <button onclick="showTab('investors')" id="tab-investors"
+                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
+                Investidores
             </button>
         </nav>
 
@@ -337,6 +341,60 @@
                 </div>
             </div>
 
+            <!-- Investors Tab -->
+            <div id="content-investors" class="hidden">
+                <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                    <h3 class="text-xl font-bold text-white mb-6">Investidores-Guia</h3>
+
+                    <!-- Add Investor Form -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Nome do Investidor</label>
+                            <input type="text" id="inv-name"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                                placeholder="Ex: Peter Lynch">
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Descricao Curta</label>
+                            <input type="text" id="inv-description"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                                placeholder="Ex: Growth at a Reasonable Price">
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Voz TTS</label>
+                            <select id="inv-voice"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary">
+                                <option value="pt-BR-AntonioNeural">Antonio (PT-BR Masculino)</option>
+                                <option value="pt-BR-FranciscaNeural">Francisca (PT-BR Feminino)</option>
+                                <option value="en-US-GuyNeural">Guy (EN-US Masculino)</option>
+                                <option value="en-US-JennyNeural">Jenny (EN-US Feminino)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end space-x-2">
+                            <button onclick="autoGenerateStyle()"
+                                class="px-4 py-3 bg-secondary/20 text-secondary font-semibold rounded-lg hover:bg-secondary/30 transition-all">
+                                Auto-Gerar Estilo (IA)
+                            </button>
+                            <button onclick="addInvestor()"
+                                class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all">
+                                + Adicionar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-300 text-sm font-semibold mb-2">Style Prompt (Instrucao IA)</label>
+                        <textarea id="inv-style-prompt" rows="4"
+                            class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                            placeholder="Atue como [nome do investidor]... descreva seu estilo de investimento..."></textarea>
+                    </div>
+
+                    <!-- Investors List -->
+                    <div id="investors-list">
+                        <p class="text-gray-500">Carregando investidores...</p>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 </div>
@@ -366,7 +424,7 @@
         currentTab = tab;
 
         // Update tab buttons
-        const tabs = ['monitoring', 'users', 'stats', 'logs', 'parameters'];
+        const tabs = ['monitoring', 'users', 'stats', 'logs', 'parameters', 'investors'];
         tabs.forEach(t => {
             const btn = document.getElementById(`tab-${t}`);
             const content = document.getElementById(`content-${t}`);
@@ -386,14 +444,16 @@
             'users': '👥 User Management',
             'stats': '📈 System Stats',
             'logs': '📝 Update Logs',
-            'parameters': '⚙️ Parameters'
+            'parameters': 'Parameters',
+            'investors': 'Investidores'
         };
-        document.getElementById('page-title').textContent = titles[tab];
+        document.getElementById('page-title').textContent = titles[tab] || tab;
 
         // Load tab-specific data
         if (tab === 'users') loadUsers();
         if (tab === 'stats') loadStats();
         if (tab === 'logs') loadLogs();
+        if (tab === 'investors') loadInvestorsList();
         if (tab === 'parameters') loadSettings();
     }
 
@@ -857,6 +917,123 @@
         } catch (error) {
             console.error('Error removing city:', error);
             alert('Erro ao remover cidade');
+        }
+    }
+
+    // ==================== INVESTORS ====================
+
+    async function loadInvestorsList() {
+        try {
+            const response = await fetch('/admin/api/investors', { credentials: 'include' });
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+
+            const container = document.getElementById('investors-list');
+            if (data.investors && data.investors.length > 0) {
+                container.innerHTML = `
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left py-2 px-3 text-gray-400 text-sm">Nome</th>
+                            <th class="text-left py-2 px-3 text-gray-400 text-sm">Descricao</th>
+                            <th class="text-left py-2 px-3 text-gray-400 text-sm">Voz</th>
+                            <th class="text-right py-2 px-3 text-gray-400 text-sm">Acoes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.investors.map(inv => `
+                        <tr class="border-b border-gray-700/50 hover:bg-dark-700">
+                            <td class="py-3 px-3 text-white font-semibold">${inv.name}</td>
+                            <td class="py-3 px-3 text-gray-300 text-sm">${inv.description || '-'}</td>
+                            <td class="py-3 px-3 text-gray-400 text-xs">${inv.voice_id || 'default'}</td>
+                            <td class="py-3 px-3 text-right">
+                                <button onclick="removeInvestor(${inv.id})"
+                                    class="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 text-sm">
+                                    Remover
+                                </button>
+                            </td>
+                        </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`;
+            } else {
+                container.innerHTML = '<p class="text-gray-500">Nenhum investidor cadastrado.</p>';
+            }
+        } catch (e) {
+            console.error('Error loading investors:', e);
+        }
+    }
+
+    async function addInvestor() {
+        const name = document.getElementById('inv-name').value.trim();
+        const description = document.getElementById('inv-description').value.trim();
+        const stylePrompt = document.getElementById('inv-style-prompt').value.trim();
+        const voiceId = document.getElementById('inv-voice').value;
+
+        if (!name) { alert('Nome obrigatorio'); return; }
+
+        try {
+            const response = await fetch('/admin/api/investors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ name, description, style_prompt: stylePrompt, voice_id: voiceId })
+            });
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+            if (data.status === 'success') {
+                document.getElementById('inv-name').value = '';
+                document.getElementById('inv-description').value = '';
+                document.getElementById('inv-style-prompt').value = '';
+                loadInvestorsList();
+            } else {
+                alert(data.message || 'Erro ao adicionar');
+            }
+        } catch (e) {
+            console.error('Error adding investor:', e);
+            alert('Erro ao adicionar investidor');
+        }
+    }
+
+    async function removeInvestor(id) {
+        if (!confirm('Remover este investidor?')) return;
+        try {
+            const response = await fetch(`/admin/api/investors/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (handleAuthError(response)) return;
+            loadInvestorsList();
+        } catch (e) {
+            console.error('Error removing investor:', e);
+            alert('Erro ao remover investidor');
+        }
+    }
+
+    async function autoGenerateStyle() {
+        const name = document.getElementById('inv-name').value.trim();
+        if (!name) { alert('Preencha o nome do investidor primeiro'); return; }
+
+        document.getElementById('inv-style-prompt').value = 'Gerando estilo com IA...';
+
+        try {
+            const response = await fetch('/admin/api/investors/generate-style', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ name })
+            });
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+            if (data.status === 'success') {
+                document.getElementById('inv-style-prompt').value = data.style_prompt;
+            } else {
+                document.getElementById('inv-style-prompt').value = '';
+                alert(data.message || 'Erro ao gerar estilo');
+            }
+        } catch (e) {
+            document.getElementById('inv-style-prompt').value = '';
+            alert('Erro ao gerar estilo');
         }
     }
 

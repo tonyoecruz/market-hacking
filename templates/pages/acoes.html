@@ -55,11 +55,20 @@
                         </div>
                     </div>
 
-                    <!-- Results Count -->
+                    <!-- Risk Filter Toggle -->
                     <div class="flex items-end">
-                        <div class="w-full px-4 py-3 bg-dark-700/50 rounded-lg text-center">
-                            <span class="text-gray-400 text-sm">Ativos encontrados: </span>
-                            <span id="stock-count" class="text-primary font-bold text-lg">0</span>
+                        <div class="w-full px-4 py-3 bg-dark-700/50 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-gray-400 text-sm">Ativos: </span>
+                                    <span id="stock-count" class="text-primary font-bold text-lg">0</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="filter-risky" onchange="loadData()" class="sr-only peer">
+                                    <div class="w-10 h-5 bg-gray-700 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:bg-red-500 transition"></div>
+                                    <span class="ml-2 text-xs text-gray-400">Filtrar Risco</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -267,8 +276,9 @@
         document.getElementById('refresh-btn').disabled = true;
 
         const market = document.getElementById('market-selector').value;
-        let url = '/acoes/api/data';
-        if (market) url += `?market=${market}`;
+        const filterRisky = document.getElementById('filter-risky').checked;
+        let url = `/acoes/api/data?filter_risky=${filterRisky}`;
+        if (market) url += `&market=${market}`;
 
         try {
             const response = await fetch(url);
@@ -479,7 +489,8 @@
 
         try {
             const market = document.getElementById('market-selector').value || 'BR';
-            const response = await fetch(`/acoes/api/decode/${ticker}?market=${market}`);
+            const investor = localStorage.getItem('investor_persona') || '';
+            const response = await fetch(`/acoes/api/decode/${ticker}?market=${market}&investor=${encodeURIComponent(investor)}`);
             const data = await response.json();
 
             if (data.status === 'success') {
@@ -551,7 +562,7 @@
             const response = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: currentAnalysisText })
+                body: JSON.stringify({ text: currentAnalysisText, investor: localStorage.getItem('investor_persona') || '' })
             });
             if (response.ok) {
                 const blob = await response.blob();

@@ -180,15 +180,23 @@ async def text_to_speech(request: Request):
         body = await request.json()
         text = body.get("text", "")
         key = body.get("key", "general")
-        
+        investor_name = body.get("investor", "")
+
         if not text or len(text) < 5:
             return {"status": "error", "message": "Texto muito curto"}
-        
+
         # Truncate very long text
         if len(text) > 5000:
             text = text[:5000] + "..."
-        
-        filepath = _du.generate_audio(text, key_suffix=key)
+
+        # Determine voice from investor persona
+        voice_override = None
+        if investor_name:
+            inv = db_manager.get_investor_by_name(investor_name)
+            if inv and inv.get('voice_id'):
+                voice_override = inv['voice_id']
+
+        filepath = _du.generate_audio(text, key_suffix=key, voice_override=voice_override)
         
         if filepath and not str(filepath).startswith("ERROR") and os.path.exists(filepath):
             return FileResponse(filepath, media_type="audio/mpeg")

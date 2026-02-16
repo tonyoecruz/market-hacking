@@ -191,9 +191,10 @@ class InvestorPersonaDB(Base):
     name = Column(String(200), nullable=False, unique=True)
     description = Column(String(500))
     style_prompt = Column(Text)  # AI prompt prefix describing the investor's style
+    voice_id = Column(String(100), default='pt-BR-AntonioNeural')
     active = Column(Integer, default=1)
     added_at = Column(DateTime, default=func.now())
-    
+
     def to_dict(self):
         """Convert to dictionary for API responses"""
         return {
@@ -201,6 +202,7 @@ class InvestorPersonaDB(Base):
             'name': self.name,
             'description': self.description,
             'style_prompt': self.style_prompt,
+            'voice_id': self.voice_id,
             'active': bool(self.active),
             'added_at': self.added_at.isoformat() if self.added_at else None
         }

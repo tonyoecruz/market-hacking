@@ -59,3 +59,40 @@ async def get_etfs_data():
     except Exception as e:
         print(f"ERRO API ETFS: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/api/decode/{ticker}")
+async def decode_etf(ticker: str, investor: str = ''):
+    """AI analysis for a specific ETF"""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("data_utils",
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_utils.py"))
+        data_utils = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(data_utils)
+
+        etf = db_instance.get_etf_by_ticker(ticker)
+        if not etf:
+            raise HTTPException(status_code=404, detail='ETF nao encontrado')
+
+        investor_style_prompt = None
+        if investor:
+            inv = db_instance.get_investor_by_name(investor)
+            if inv and inv.get('style_prompt'):
+                investor_style_prompt = inv['style_prompt']
+
+        prompt = f"""Analise o ETF {ticker}. Preco: R$ {etf.get('price', 0):.2f}.
+        O que esse ETF replica? Quais os riscos e vantagens? Vale a pena para diversificacao?
+        Max 6 linhas."""
+
+        analysis = data_utils.get_ai_generic_analysis(prompt, investor_style_prompt)
+
+        return JSONResponse({
+            'status': 'success',
+            'analysis': analysis,
+            'data': etf
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro decode ETF {ticker}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -109,6 +109,16 @@
         </a>
     </nav>
 
+    <!-- Investor Persona Selector -->
+    <div class="p-4 border-t border-gray-700">
+        <p class="text-xs text-gray-500 mb-2 uppercase font-semibold tracking-wider">Investidor-Guia</p>
+        <select id="global-investor-selector" onchange="saveGlobalInvestor()"
+            class="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <option value="">IA Padrao</option>
+        </select>
+        <p id="investor-desc" class="text-xs text-gray-500 mt-1 truncate"></p>
+    </div>
+
     <!-- User Section -->
     <div class="p-4 border-t border-gray-700">
         {% if user %}
@@ -180,4 +190,40 @@
             if (window.innerWidth < 768) closeSidebar();
         });
     });
+
+    // Load investor personas into sidebar selector
+    let _investorData = [];
+    (async function loadInvestors() {
+        try {
+            const response = await fetch('/api/investors');
+            const data = await response.json();
+            if (data.status === 'success' && data.investors) {
+                _investorData = data.investors;
+                const selector = document.getElementById('global-investor-selector');
+                data.investors.forEach(inv => {
+                    const option = document.createElement('option');
+                    option.value = inv.name;
+                    option.textContent = inv.name;
+                    selector.appendChild(option);
+                });
+                const saved = localStorage.getItem('investor_persona');
+                if (saved) {
+                    selector.value = saved;
+                    updateInvestorDesc(saved);
+                }
+            }
+        } catch (e) { /* silent */ }
+    })();
+
+    function saveGlobalInvestor() {
+        const value = document.getElementById('global-investor-selector').value;
+        localStorage.setItem('investor_persona', value);
+        updateInvestorDesc(value);
+    }
+
+    function updateInvestorDesc(name) {
+        const desc = document.getElementById('investor-desc');
+        const inv = _investorData.find(i => i.name === name);
+        desc.textContent = inv ? inv.description : '';
+    }
 </script>

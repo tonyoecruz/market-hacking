@@ -50,7 +50,15 @@ async def battle(request: Request):
         asset2 = results[0] if results else None
     
     if not asset1 or not asset2:
-        raise HTTPException(status_code=404, detail="Ativos não encontrados no banco.")
-    
-    analysis = data_utils.get_battle_analysis(t1, str(asset1), t2, str(asset2))
+        raise HTTPException(status_code=404, detail="Ativos nao encontrados no banco.")
+
+    # Fetch investor style_prompt if specified
+    investor_style_prompt = None
+    investor_name = data.get('investor', '')
+    if investor_name:
+        inv = db_instance.get_investor_by_name(investor_name)
+        if inv and inv.get('style_prompt'):
+            investor_style_prompt = inv['style_prompt']
+
+    analysis = data_utils.get_battle_analysis(t1, str(asset1), t2, str(asset2), investor_style_prompt=investor_style_prompt)
     return JSONResponse({'status': 'success', 'analysis': analysis})

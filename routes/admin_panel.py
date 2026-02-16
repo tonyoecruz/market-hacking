@@ -577,11 +577,12 @@ async def add_investor(
         name = data.get('name', '').strip()
         description = data.get('description', '').strip()
         style_prompt = data.get('style_prompt', '').strip()
-        
+        voice_id = data.get('voice_id', 'pt-BR-AntonioNeural').strip()
+
         if not name:
-            raise HTTPException(status_code=400, detail="Nome obrigatório")
-        
-        investor = db_manager.add_investor(name, description, style_prompt)
+            raise HTTPException(status_code=400, detail="Nome obrigatorio")
+
+        investor = db_manager.add_investor(name, description, style_prompt, voice_id=voice_id)
         return JSONResponse({"status": "success", "investor": investor})
     except HTTPException:
         raise
@@ -598,8 +599,42 @@ async def remove_investor(
     try:
         success = db_manager.remove_investor(investor_id)
         if not success:
-            raise HTTPException(status_code=404, detail="Investidor não encontrado")
+            raise HTTPException(status_code=404, detail="Investidor nao encontrado")
         return JSONResponse({"status": "success", "message": "Investidor removido"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/investors/generate-style")
+async def generate_investor_style(
+    request: Request,
+    session: dict = Depends(verify_admin_session)
+):
+    """Use AI to auto-generate a style_prompt for an investor"""
+    try:
+        data = await request.json()
+        name = data.get('name', '').strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Nome obrigatorio")
+
+        import data_utils as _du
+        prompt = f"""Gere uma instrucao de sistema detalhada (style_prompt) para uma IA que deve atuar como o investidor "{name}".
+
+Inclua:
+- Metodologia de investimento dele (value investing, growth, dividendos, etc.)
+- Metricas e indicadores que ele prioriza
+- Setores e tipos de empresa preferidos
+- Nivel de tolerancia a risco
+- Frases celebres e estilo de comunicacao
+- Conceitos-chave que ele usa
+
+Escreva em portugues brasileiro. A instrucao deve comecar com "Atue como {name}..." e ter no maximo 300 palavras.
+Seja especifico e baseado em fatos reais sobre este investidor."""
+
+        style = _du.get_ai_generic_analysis(prompt)
+        return JSONResponse({"status": "success", "style_prompt": style})
     except HTTPException:
         raise
     except Exception as e:

@@ -190,7 +190,7 @@
             const response = await fetch('/arena/api/battle', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticker1, ticker2 })
+                body: JSON.stringify({ ticker1, ticker2, investor: localStorage.getItem('investor_persona') || '' })
             });
 
             const data = await response.json();

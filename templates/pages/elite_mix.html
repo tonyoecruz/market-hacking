@@ -124,7 +124,8 @@
         document.getElementById('load-btn').disabled = true;
 
         try {
-            const response = await fetch('/elite-mix/api/data');
+            const filterRisky = localStorage.getItem('filter_risky') === 'true';
+            const response = await fetch(`/elite-mix/api/data?filter_risky=${filterRisky}`);
             const data = await response.json();
 
             if (data.status === 'success') {
