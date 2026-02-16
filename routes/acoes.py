@@ -28,7 +28,7 @@ async def acoes_page(request: Request, user: dict = Depends(get_optional_user)):
     })
 
 @router.get("/api/data")
-async def get_acoes_data(market: str = None, min_liq: float = 200000, filter_units: bool = False):
+async def get_acoes_data(market: str = None, min_liq: float = 200000, filter_units: bool = False, filter_risky: bool = False):
     try:
         stocks = db.get_stocks(market=market, min_liq=min_liq)
         if not stocks:
@@ -39,21 +39,25 @@ async def get_acoes_data(market: str = None, min_liq: float = 200000, filter_uni
                 'magic': [],
                 'all_stocks': []
             })
-        
+
         df = pd.DataFrame(stocks)
-        
+
         # Force numeric columns
-        numeric_cols = ['liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank', 
+        numeric_cols = ['liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank',
                         'price', 'valor_justo', 'roic', 'ev_ebit', 'pl', 'pvp', 'dy']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
-        
+
         # Liquidity filter
         df_filtered = df[df['liquidezmediadiaria'].fillna(0) > min_liq].copy()
-        
+
         if filter_units:
             df_filtered = df_filtered[df_filtered['ticker'].str.endswith('11')]
+
+        # Risk filter (judicial recovery, massive debt, etc.)
+        if filter_risky:
+            df_filtered = data_utils.filter_risky_stocks(df_filtered)
         
         # Graham: LPA > 0, VPA > 0 (sorted by margin descending - biggest bargain first)
         df_graham = df_filtered[
@@ -107,39 +111,47 @@ async def search_acoes(q: str = '', limit: int = 15):
         return JSONResponse({'status': 'error', 'results': []})
 
 @router.get("/api/decode/{ticker}")
-async def decode_acao(ticker: str, market: str = 'BR'):
+async def decode_acao(ticker: str, market: str = 'BR', investor: str = ''):
     try:
         stock = db.get_stock_by_ticker(ticker, market)
         if not stock:
             # Try the other market
             other = 'US' if market == 'BR' else 'BR'
             stock = db.get_stock_by_ticker(ticker, other)
-        
-        if not stock: 
-            raise HTTPException(status_code=404, detail='Ticker não encontrado')
-        
+
+        if not stock:
+            raise HTTPException(status_code=404, detail='Ticker nao encontrado')
+
         # Get additional details from Fundamentus
         details = data_utils.get_stock_details(ticker)
-        
+
         # Determine Graham/Magic pass status for AI analysis
         price = stock.get('price', 0) or 0
         valor_justo = stock.get('valor_justo', 0) or 0
         graham_ok = valor_justo > price if price > 0 else False
         magic_rank = stock.get('magic_rank')
         magic_ok = magic_rank is not None and magic_rank > 0 and magic_rank <= 50
-        
+
         # Merge empresa from details if not in stock
         if details.get('Empresa') and not stock.get('empresa'):
             stock['empresa'] = details.get('Empresa')
-        
+
+        # Fetch investor style_prompt if specified
+        investor_style_prompt = None
+        if investor:
+            inv = db.get_investor_by_name(investor)
+            if inv and inv.get('style_prompt'):
+                investor_style_prompt = inv['style_prompt']
+
         # AI Analysis with Graham/Magic context
         analysis = data_utils.get_sniper_analysis(
-            ticker, 
-            price, 
-            valor_justo, 
+            ticker,
+            price,
+            valor_justo,
             details,
             graham_ok=graham_ok,
-            magic_ok=magic_ok
+            magic_ok=magic_ok,
+            investor_style_prompt=investor_style_prompt
         )
         
         return JSONResponse({

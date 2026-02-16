@@ -4,7 +4,7 @@ Handles all database operations for stocks, ETFs, FIIs
 """
 import os
 import logging
-from sqlalchemy import create_engine, and_
+from sqlalchemy import create_engine, and_, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
@@ -65,9 +65,26 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_database():
-    """Initialize database tables"""
+    """Initialize database tables and run migrations for new columns"""
     Base.metadata.create_all(bind=engine)
-    print("✅ Database initialized successfully")
+
+    # Migrate existing tables: add columns that may not exist yet
+    _migrate_columns = [
+        ("stocks", "dy", "FLOAT"),
+        ("stocks", "div_pat", "FLOAT"),
+        ("investor_personas", "voice_id", "VARCHAR(100) DEFAULT 'pt-BR-AntonioNeural'"),
+    ]
+    with engine.connect() as conn:
+        for table, column, col_type in _migrate_columns:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+                conn.commit()
+                print(f"  + Added column {table}.{column}")
+            except Exception:
+                # Column already exists
+                pass
+
+    print("Database initialized successfully")
 
 
 def get_db() -> Session:
@@ -104,7 +121,7 @@ class DatabaseManager:
             # Valid columns
             valid_columns = [
                 'ticker', 'market', 'empresa', 'setor', 'price', 'lpa', 'vpa',
-                'pl', 'pvp', 'roic', 'ev_ebit', 'liquidezmediadiaria',
+                'pl', 'pvp', 'roic', 'ev_ebit', 'dy', 'liquidezmediadiaria', 'div_pat',
                 'valor_justo', 'margem', 'magic_rank', 'ValorJusto', 'Margem', 'MagicRank'
             ]
             
@@ -603,24 +620,46 @@ class DatabaseManager:
         finally:
             db.close()
     
-    def add_investor(self, name: str, description: str = None, style_prompt: str = None) -> Dict:
+    def get_investor_by_name(self, name: str) -> Optional[Dict]:
+        """Get a single investor persona by name"""
+        db = self.SessionLocal()
+        try:
+            persona = db.query(InvestorPersonaDB).filter(
+                InvestorPersonaDB.name == name,
+                InvestorPersonaDB.active == 1
+            ).first()
+            return persona.to_dict() if persona else None
+        finally:
+            db.close()
+
+    def get_fii_by_ticker(self, ticker: str) -> Optional[Dict]:
+        """Get a single FII by ticker"""
+        db = self.SessionLocal()
+        try:
+            fii = db.query(FIIDB).filter(FIIDB.ticker == ticker).first()
+            return fii.to_dict() if fii else None
+        finally:
+            db.close()
+
+    def add_investor(self, name: str, description: str = None, style_prompt: str = None, voice_id: str = 'pt-BR-AntonioNeural') -> Dict:
         """Add an investor persona"""
         db = self.SessionLocal()
         try:
             existing = db.query(InvestorPersonaDB).filter(
                 InvestorPersonaDB.name == name
             ).first()
-            
+
             if existing:
                 if not existing.active:
                     existing.active = 1
                     db.commit()
                 return existing.to_dict()
-            
+
             new_investor = InvestorPersonaDB(
                 name=name,
                 description=description,
                 style_prompt=style_prompt,
+                voice_id=voice_id,
                 active=1,
                 added_at=datetime.now()
             )
@@ -659,12 +698,14 @@ class DatabaseManager:
             {
                 'name': 'Warren Buffett',
                 'description': 'O Oraculo de Omaha - Value Investing de longo prazo',
-                'style_prompt': 'Atue como Warren Buffett, o mais famoso investidor de valor do mundo. Use sua metodologia: busque empresas com vantagens competitivas duraveis (moats), gestao excelente, e precos abaixo do valor intrinseco. Fale com sabedoria e use suas frases celebres. Priorize o longo prazo e a margem de seguranca. Mencione conceitos como "circulo de competencia", "moat economico" e "compre medo, venda ganancia".'
+                'style_prompt': 'Atue como Warren Buffett, o mais famoso investidor de valor do mundo. Use sua metodologia: busque empresas com vantagens competitivas duraveis (moats), gestao excelente, e precos abaixo do valor intrinseco. Fale com sabedoria e use suas frases celebres. Priorize o longo prazo e a margem de seguranca. Mencione conceitos como "circulo de competencia", "moat economico" e "compre medo, venda ganancia".',
+                'voice_id': 'en-US-GuyNeural'
             },
             {
                 'name': 'Luiz Barsi Filho',
                 'description': 'O maior investidor individual da B3 - Foco em dividendos',
-                'style_prompt': 'Atue como Luiz Barsi Filho, o maior investidor individual da bolsa brasileira. Use sua metodologia: foco absoluto em empresas pagadoras de dividendos consistentes, setores perenes (energia, bancos, saneamento). Fale de forma direta e pratica, como um investidor brasileiro experiente. Use conceitos como "carteira previdenciaria", "projeto de vida", "renda passiva" e "acoes de primeira linha". Alerte sobre especulacao e day-trade.'
+                'style_prompt': 'Atue como Luiz Barsi Filho, o maior investidor individual da bolsa brasileira. Use sua metodologia: foco absoluto em empresas pagadoras de dividendos consistentes, setores perenes (energia, bancos, saneamento). Fale de forma direta e pratica, como um investidor brasileiro experiente. Use conceitos como "carteira previdenciaria", "projeto de vida", "renda passiva" e "acoes de primeira linha". Alerte sobre especulacao e day-trade.',
+                'voice_id': 'pt-BR-AntonioNeural'
             }
         ]
         

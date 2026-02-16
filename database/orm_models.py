@@ -25,7 +25,9 @@ class StockDB(Base):
     pvp = Column(Float)
     roic = Column(Float)
     ev_ebit = Column(Float)
+    dy = Column(Float)
     liquidezmediadiaria = Column(Float)
+    div_pat = Column(Float)
     valor_justo = Column(Float)
     margem = Column(Float)
     magic_rank = Column(Float)
@@ -49,7 +51,9 @@ class StockDB(Base):
             'pvp': self.pvp,
             'roic': self.roic,
             'ev_ebit': self.ev_ebit,
+            'dy': self.dy,
             'liquidezmediadiaria': self.liquidezmediadiaria,
+            'div_pat': self.div_pat,
             'valor_justo': self.valor_justo,
             'margem': self.margem,
             'magic_rank': self.magic_rank,

@@ -14,21 +14,26 @@ async def elite_mix_page(request: Request, user: dict = Depends(get_optional_use
     return templates.TemplateResponse("pages/elite_mix.html", {"request": request, "title": "Elite Mix", "user": user})
 
 @router.get("/api/data")
-async def get_elite_mix_data(min_liq: float = 200000):
+async def get_elite_mix_data(min_liq: float = 200000, filter_risky: bool = False):
     try:
         stocks = db_instance.get_stocks(min_liq=min_liq)
-        
+
         if not stocks:
             return JSONResponse({'status': 'success', 'elite': [], 'count': 0})
-        
+
         df = pd.DataFrame(stocks)
-        
+
         # Coerce numeric columns
         numeric_cols = ['margem', 'roic', 'magic_rank', 'price']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-        
+
+        # Risk filter
+        if filter_risky:
+            import data_utils as _du
+            df = _du.filter_risky_stocks(df)
+
         # Elite Mix: Filtros combinados
         df_elite = df[(df['margem'] > 0) & (df['roic'] > 0.10) & (df['magic_rank'] > 0)].sort_values('magic_rank').head(10)
         

@@ -41,27 +41,72 @@ async def scan_fiis(request: Request):
         }, status_code=500)
 
 @router.get("/api/data")
-async def get_fiis_data(min_dy: float = 0.0, min_liq: float = 100000):
+async def get_fiis_data(min_dy: float = 0.0, min_liq: float = 100000, max_pvp: float = 999.0, filter_risky: bool = False):
     try:
         fiis = db.get_fiis(min_dy=min_dy)
         if not fiis:
-            return JSONResponse({'status': 'success', 'message': 'Aguardando atualização de dados.', 'top_dy': []})
-            
+            return JSONResponse({'status': 'success', 'message': 'Aguardando atualizacao de dados.', 'top_dy': []})
+
         df = pd.DataFrame(fiis)
-        
+
         # Coerce numeric
         numeric_cols = ['liquidezmediadiaria', 'dy', 'price', 'pvp']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-        
+
         df_filtered = df[df['liquidezmediadiaria'] >= min_liq].copy()
-        top_dy = df_filtered.sort_values('dy', ascending=False).head(10)
-        
+
+        # P/VP filter
+        if max_pvp < 999:
+            df_filtered = df_filtered[df_filtered['pvp'] <= max_pvp]
+
+        # Risk filter: remove FIIs with very low liquidity
+        if filter_risky:
+            df_filtered = df_filtered[df_filtered['liquidezmediadiaria'] >= 50000]
+
+        top_dy = df_filtered.sort_values('dy', ascending=False).head(20)
+
         # Replace NaN for JSON
         top_dy = top_dy.replace({float('nan'): None})
-        
+
         return JSONResponse({'status': 'success', 'top_dy': top_dy.to_dict('records')})
     except Exception as e:
         print(f"ERRO API FIIS: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/api/decode/{ticker}")
+async def decode_fii(ticker: str, investor: str = ''):
+    """AI analysis for a specific FII"""
+    try:
+        fii = db.get_fii_by_ticker(ticker)
+        if not fii:
+            raise HTTPException(status_code=404, detail='FII nao encontrado')
+
+        price = fii.get('price', 0) or 0
+        pvp = fii.get('pvp', 0) or 0
+        dy = fii.get('dy', 0) or 0
+
+        # Fetch investor style_prompt if specified
+        investor_style_prompt = None
+        if investor:
+            inv = db.get_investor_by_name(investor)
+            if inv and inv.get('style_prompt'):
+                investor_style_prompt = inv['style_prompt']
+
+        analysis = data_utils.get_fii_analysis(
+            ticker, price, pvp, dy,
+            details={},
+            investor_style_prompt=investor_style_prompt
+        )
+
+        return JSONResponse({
+            'status': 'success',
+            'analysis': analysis,
+            'data': fii
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro decode FII {ticker}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
