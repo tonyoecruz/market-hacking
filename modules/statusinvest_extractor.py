@@ -54,7 +54,7 @@ SEARCH_FILTER_STOCKS = json.dumps({
 SEARCH_FILTER_FIIS = json.dumps({
     "Segment": "",
     "gestao": "",
-    "my_range": "0;20",
+    "my_range": "-20;100",
     "dy": {"Item1": None, "Item2": None},
     "p_VP": {"Item1": None, "Item2": None},
     "percentualcaixa": {"Item1": None, "Item2": None},

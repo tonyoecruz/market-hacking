@@ -124,6 +124,7 @@ async def add_to_wallet_json(
     quantity = float(body.get("quantity", 1))
     price = float(body.get("price", 0))
     wallet_id = int(body.get("wallet_id", 1))
+    purchase_date = body.get("date", "")  # Future use: purchase date
 
     if not ticker or price <= 0:
         raise HTTPException(status_code=400, detail="Ticker e preço são obrigatórios")

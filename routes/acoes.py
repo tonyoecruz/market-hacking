@@ -2,17 +2,10 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from routes.auth import get_optional_user
-import sys
-import os
 import pandas as pd
 import logging
-import importlib.util
 
-# Import data utilities
-spec = importlib.util.spec_from_file_location("data_utils", 
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_utils.py"))
-data_utils = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(data_utils)
+import data_utils
 
 from database.db_manager import DatabaseManager
 db = DatabaseManager()

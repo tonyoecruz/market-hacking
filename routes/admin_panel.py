@@ -21,65 +21,91 @@ logger = logging.getLogger(__name__)
 
 def get_data_source_status() -> Dict:
     """Get status of all data sources with color indicators"""
-    
-    def check_source_health(asset_type: str, market: str = None) -> Dict:
-        """Check if a data source is healthy"""
-        last_update = db_manager.get_last_update(asset_type, market)
-        
-        if not last_update:
+
+    def check_source_health(asset_type: str, market: str = None, log_market: str = None) -> Dict:
+        """Check if a data source is healthy.
+        log_market: market value used in update logs (may differ from DB market)
+        """
+        try:
+            # Use log_market for querying update logs (ETFs log as 'BOTH')
+            last_update = db_manager.get_last_update(asset_type, log_market or market)
+
+            # Get record count from DB
+            try:
+                if asset_type == 'stocks':
+                    count = len(db_manager.get_stocks(market=market))
+                elif asset_type == 'etfs':
+                    count = len(db_manager.get_etfs(market=market))
+                elif asset_type == 'fiis':
+                    count = len(db_manager.get_fiis(market=market))
+                else:
+                    count = 0
+            except Exception:
+                count = 0
+
+            if not last_update:
+                return {
+                    "status": "warning" if count > 0 else "error",
+                    "color": "yellow" if count > 0 else "red",
+                    "last_update": None,
+                    "record_count": count,
+                    "message": f"{count} registros" if count > 0 else "Nunca atualizado"
+                }
+
+            # Parse datetime safely
+            completed_at = last_update.get('completed_at')
+            if completed_at:
+                if isinstance(completed_at, str):
+                    last_update_time = datetime.fromisoformat(completed_at.replace('Z', '+00:00').replace('+00:00', ''))
+                else:
+                    last_update_time = completed_at
+                time_diff = datetime.now() - last_update_time
+            else:
+                time_diff = timedelta(hours=99)
+                last_update_time = None
+
+            # Determine status
+            if last_update.get('status') == 'error':
+                status = "error"
+                color = "red"
+                message = last_update.get('error_message', 'Falha na atualização')[:80]
+            elif time_diff > timedelta(hours=2):
+                hours = int(time_diff.total_seconds() // 3600)
+                status = "stale"
+                color = "yellow"
+                message = f"Última atualização: {hours}h atrás"
+            elif count == 0:
+                status = "empty"
+                color = "red"
+                message = "Sem dados"
+            else:
+                mins = int(time_diff.total_seconds() // 60)
+                status = "healthy"
+                color = "green"
+                message = f"Atualizado há {mins}min"
+
+            return {
+                "status": status,
+                "color": color,
+                "last_update": last_update_time.strftime("%Y-%m-%d %H:%M") if last_update_time else None,
+                "record_count": count,
+                "message": message
+            }
+        except Exception as e:
+            logger.error(f"Error checking {asset_type}/{market}: {e}")
             return {
                 "status": "error",
                 "color": "red",
                 "last_update": None,
                 "record_count": 0,
-                "message": "Never updated"
+                "message": f"Erro: {str(e)[:50]}"
             }
-        
-        # Check if update was recent (< 2 hours)
-        last_update_time = datetime.fromisoformat(last_update['completed_at'])
-        time_diff = datetime.now() - last_update_time
-        
-        # Get record count
-        if asset_type == 'stocks':
-            count = len(db_manager.get_stocks(market=market))
-        elif asset_type == 'etfs':
-            count = len(db_manager.get_etfs(market=market))
-        elif asset_type == 'fiis':
-            count = len(db_manager.get_fiis(market=market))
-        else:
-            count = 0
-        
-        # Determine status
-        if last_update['status'] == 'error':
-            status = "error"
-            color = "red"
-            message = last_update.get('error_message', 'Update failed')
-        elif time_diff > timedelta(hours=2):
-            status = "stale"
-            color = "yellow"
-            message = f"Last update: {time_diff.seconds // 3600}h ago"
-        elif count == 0:
-            status = "empty"
-            color = "red"
-            message = "No data"
-        else:
-            status = "healthy"
-            color = "green"
-            message = f"Updated {time_diff.seconds // 60}min ago"
-        
-        return {
-            "status": status,
-            "color": color,
-            "last_update": last_update_time.strftime("%Y-%m-%d %H:%M"),
-            "record_count": count,
-            "message": message
-        }
-    
+
     return {
         "stocks_br": check_source_health('stocks', 'BR'),
         "stocks_us": check_source_health('stocks', 'US'),
-        "etfs_br": check_source_health('etfs', 'BR'),
-        "etfs_us": check_source_health('etfs', 'US'),
+        "etfs_br": check_source_health('etfs', 'BR', log_market='BOTH'),
+        "etfs_us": check_source_health('etfs', 'US', log_market='BOTH'),
         "fiis_br": check_source_health('fiis', 'BR')
     }
 

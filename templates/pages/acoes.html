@@ -262,19 +262,14 @@
                     <span>💼</span>
                     <span>Adicionar à Carteira</span>
                 </h4>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <!-- Wallet selector or new wallet name -->
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <!-- Wallet: combo input (select existing or type new name) -->
                     <div>
                         <label class="block text-xs text-gray-400 mb-1">Carteira</label>
-                        <select id="wallet-select" onchange="onWalletSelectChange()"
+                        <input type="text" id="wallet-input" list="wallet-options" placeholder="Principal"
                             style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
                             class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                            <option value="1">Principal</option>
-                            <option value="__new__">+ Nova Carteira...</option>
-                        </select>
-                        <input type="text" id="new-wallet-name" placeholder="Nome da nova carteira"
-                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
-                            class="hidden w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary mt-1">
+                        <datalist id="wallet-options"></datalist>
                     </div>
                     <!-- Quantity -->
                     <div>
@@ -283,10 +278,17 @@
                             style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
                             class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                     </div>
-                    <!-- Price override -->
+                    <!-- Price -->
                     <div>
-                        <label class="block text-xs text-gray-400 mb-1">Preco (R$)</label>
+                        <label class="block text-xs text-gray-400 mb-1">Preço (R$)</label>
                         <input type="number" id="wallet-price" value="0" min="0.01" step="0.01"
+                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
+                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    <!-- Date -->
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Data Compra</label>
+                        <input type="date" id="wallet-date"
                             style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
                             class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                     </div>
@@ -651,66 +653,60 @@
         setTimeout(() => toast.remove(), 3000);
     }
 
-    function onWalletSelectChange() {
-        const select = document.getElementById('wallet-select');
-        const newNameInput = document.getElementById('new-wallet-name');
-        if (select.value === '__new__') {
-            newNameInput.classList.remove('hidden');
-            newNameInput.focus();
-        } else {
-            newNameInput.classList.add('hidden');
-        }
-    }
+    // Wallet data cache: {name: id, ...}
+    let walletMap = {};
 
     async function loadWallets() {
-        // Also set the price field to the current stock price
+        // Set price to current stock price
         if (currentModalPrice > 0) {
             document.getElementById('wallet-price').value = currentModalPrice.toFixed(2);
         }
+        // Set date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('wallet-date').value = today;
+
         try {
             const response = await fetch('/dashboard/api/wallets');
             if (response.ok) {
                 const data = await response.json();
-                const select = document.getElementById('wallet-select');
+                const datalist = document.getElementById('wallet-options');
+                const input = document.getElementById('wallet-input');
+                walletMap = {};
+
                 if (data.wallets && data.wallets.length > 0) {
-                    select.innerHTML = data.wallets.map(w =>
-                        `<option value="${w.id}">${w.name}</option>`
-                    ).join('') + '<option value="__new__">+ Nova Carteira...</option>';
+                    datalist.innerHTML = data.wallets.map(w => {
+                        walletMap[w.name] = w.id;
+                        return `<option value="${w.name}">`;
+                    }).join('');
+                    // Default to first wallet
+                    input.value = data.wallets[0].name;
                 } else {
-                    select.innerHTML = '<option value="__new__">+ Criar Carteira</option>';
-                    document.getElementById('new-wallet-name').classList.remove('hidden');
+                    datalist.innerHTML = '';
+                    input.value = 'Principal';
                 }
             }
         } catch (e) {
-            // User may not be logged in - keep default option
+            // User may not be logged in
+            document.getElementById('wallet-input').value = 'Principal';
         }
-    }
-
-    async function createWallet(name) {
-        try {
-            const response = await fetch('/dashboard/api/wallet/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name })
-            });
-            if (response.ok) {
-                const data = await response.json();
-                return data.wallet_id || null;
-            }
-        } catch (e) {}
-        return null;
     }
 
     async function addToPortfolio() {
         const btn = document.getElementById('add-portfolio-btn');
         const msg = document.getElementById('portfolio-msg');
-        const selectEl = document.getElementById('wallet-select');
-        let walletId = selectEl.value;
+        const walletName = document.getElementById('wallet-input').value.trim();
         const qty = parseFloat(document.getElementById('wallet-qty').value) || 1;
         const price = parseFloat(document.getElementById('wallet-price').value) || currentModalPrice;
+        const date = document.getElementById('wallet-date').value;
 
         if (!currentModalTicker || price <= 0) {
             msg.textContent = 'Dados do ativo não disponíveis';
+            msg.className = 'text-xs text-red-400 mt-2';
+            msg.classList.remove('hidden');
+            return;
+        }
+        if (!walletName) {
+            msg.textContent = 'Digite o nome da carteira';
             msg.className = 'text-xs text-red-400 mt-2';
             msg.classList.remove('hidden');
             return;
@@ -720,21 +716,21 @@
         btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>';
 
         try {
-            // Create new wallet if selected
-            if (walletId === '__new__') {
-                const newName = document.getElementById('new-wallet-name').value.trim();
-                if (!newName) {
-                    msg.textContent = 'Digite o nome da nova carteira';
-                    msg.className = 'text-xs text-red-400 mt-2';
-                    msg.classList.remove('hidden');
-                    btn.disabled = false;
-                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg><span>Adicionar</span>';
-                    return;
+            let walletId = walletMap[walletName];
+
+            // If wallet doesn't exist, create it
+            if (!walletId) {
+                const createResp = await fetch('/dashboard/api/wallet/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: walletName })
+                });
+                if (createResp.ok) {
+                    const createData = await createResp.json();
+                    walletId = createData.wallet_id;
+                    if (walletId) walletMap[walletName] = walletId;
                 }
-                const newId = await createWallet(newName);
-                if (newId) {
-                    walletId = newId;
-                } else {
+                if (!walletId) {
                     msg.textContent = 'Erro ao criar carteira. Faça login primeiro.';
                     msg.className = 'text-xs text-red-400 mt-2';
                     msg.classList.remove('hidden');
@@ -751,17 +747,17 @@
                     ticker: currentModalTicker,
                     quantity: qty,
                     price: price,
-                    wallet_id: parseInt(walletId)
+                    wallet_id: parseInt(walletId),
+                    date: date
                 })
             });
 
             const data = await response.json();
 
             if (response.ok && data.success) {
-                msg.textContent = `${currentModalTicker} adicionado à carteira!`;
+                msg.textContent = `${currentModalTicker} adicionado à carteira "${walletName}"!`;
                 msg.className = 'text-xs text-green-400 mt-2';
                 showToast(`${currentModalTicker} adicionado à carteira!`, 'success');
-                // Reload wallets to include the new one
                 loadWallets();
             } else {
                 msg.textContent = data.detail || data.message || 'Erro ao adicionar';

@@ -4,14 +4,9 @@ from fastapi.templating import Jinja2Templates
 from routes.auth import get_optional_user
 from database.db_manager import DatabaseManager
 import pandas as pd
-import os
 import logging
-import importlib.util
 
-spec = importlib.util.spec_from_file_location("data_utils", 
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_utils.py"))
-data_utils = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(data_utils)
+import data_utils
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +36,7 @@ async def scan_fiis(request: Request):
         }, status_code=500)
 
 @router.get("/api/data")
-async def get_fiis_data(min_dy: float = 0.0, min_liq: float = 100000, max_pvp: float = 999.0, filter_risky: bool = False):
+async def get_fiis_data(min_dy: float = 0.0, min_liq: float = 0, max_pvp: float = 999.0, filter_risky: bool = False):
     try:
         fiis = db.get_fiis(min_dy=min_dy)
         if not fiis:
@@ -55,7 +50,10 @@ async def get_fiis_data(min_dy: float = 0.0, min_liq: float = 100000, max_pvp: f
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        df_filtered = df[df['liquidezmediadiaria'] >= min_liq].copy()
+        if min_liq > 0:
+            df_filtered = df[df['liquidezmediadiaria'].fillna(0) >= min_liq].copy()
+        else:
+            df_filtered = df[df['price'].fillna(0) > 0].copy()
 
         # P/VP filter
         if max_pvp < 999:
