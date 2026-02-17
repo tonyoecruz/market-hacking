@@ -190,6 +190,21 @@ def get_ai_generic_analysis(prompt, investor_style_prompt=None):
     if not IA_AVAILABLE or model is None:
         # Try to reinitialize if key exists but init failed at startup
         key = os.getenv("GEMINI_KEY", "")
+        
+        # [NEW] Fallback to st.secrets (Useful for local dev or Streamlit Cloud)
+        if not key:
+            try:
+                import streamlit as st
+                if "GEMINI_KEY" in st.secrets:
+                   key = st.secrets["GEMINI_KEY"]
+            except:
+                pass
+        
+        # [CRITICAL] Render Deployment Check
+        if not key:
+            logger.error("GEMINI_KEY not found in os.environ or st.secrets")
+            return "IA INDISPONIVEL - CONFIGURAR ENV VAR 'GEMINI_KEY' NO RENDER"
+
         if key:
             try:
                 genai.configure(api_key=key)
@@ -201,7 +216,7 @@ def get_ai_generic_analysis(prompt, investor_style_prompt=None):
                 logger.error(f"[GEMINI] Reinicialização falhou: {e}")
                 return f"IA INDISPONIVEL - Erro: {e}"
         else:
-            return "IA INDISPONIVEL - GEMINI_KEY não configurada"
+             return "IA INDISPONIVEL - GEMINI_KEY não configurada"
 
     try:
         full_prompt = prompt

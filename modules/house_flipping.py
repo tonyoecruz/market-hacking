@@ -57,73 +57,82 @@ class OLXScraper(RealEstateScraper):
         if not soup:
             return []
 
-        # Find listings container
-        # Layouts change, tried to use common classes or list items
-        # Heuristic: Look for elements with 'data-lurker-detail="list_id"'
-        
-        items = soup.find_all('li', {'class': lambda x: x and 'sc-' in x}) # OLX uses styled components often :sweat_smile:
-        
-        # Robust Fallback: Look for standard listing structure
-        # data-ds-component="DS-AdCard"
-        items = soup.find_all(attrs={"data-ds-component": "DS-AdCard"})
+        # Find listings container using new selectors
+        # New OLX Layout uses section.olx-adcard
+        items = soup.find_all('section', {'class': lambda x: x and 'olx-adcard' in x})
         
         if not items:
-            # Fallback 2: General list items check
+            # Fallback to old selectors just in case
+            items = soup.find_all(attrs={"data-ds-component": "DS-AdCard"})
+        
+        if not items:
              items = soup.select('ul#ad-list > li')
 
         for item in items:
             try:
                 # Extract Link
-                link_tag = item.find('a', href=True)
+                link_tag = item.find('a', {'class': lambda x: x and 'olx-adcard__link' in x})
+                if not link_tag: 
+                    link_tag = item.find('a', href=True) # Fallback
+                
                 if not link_tag: continue
                 link = link_tag['href']
                 
-                # Extract Title (often contains Type)
-                title_tag = item.find('h2')
+                # Extract Title
+                title_tag = item.find('h2', {'class': lambda x: x and 'olx-adcard__title' in x})
+                if not title_tag: title_tag = item.find('h2')
                 title = title_tag.text.strip() if title_tag else "Imóvel Sem Título"
                 
                 # Extract Price
-                price_tag = item.find(string=lambda x: x and "R$" in x)
+                price_tag = item.find('h3', {'class': lambda x: x and 'olx-adcard__price' in x})
+                if not price_tag: price_tag = item.find(string=lambda x: x and "R$" in x)
+                
                 price = 0.0
                 if price_tag:
-                    price_str = price_tag.strip().replace('R$', '').replace('.', '').strip()
+                    price_text = price_tag.text if hasattr(price_tag, 'text') else price_tag
+                    price_str = price_text.strip().replace('R$', '').replace('.', '').strip()
                     if price_str.isdigit():
                          price = float(price_str)
                 
                 # Extract Area (m²)
-                # Often in a span or list details
-                # Look for text ending in m²
-                area_text = item.find(string=lambda x: x and "m²" in x)
                 area = 0.0
-                if area_text:
-                    area_str = area_text.replace('m²', '').strip()
-                    if area_str.isdigit():
-                        area = float(area_str)
+                # Look for details class
+                details = item.find_all(class_=lambda x: x and 'olx-adcard__detail' in x)
+                for detail in details:
+                    text = detail.text.strip()
+                    if "m²" in text:
+                         area_str = text.replace('m²', '').strip()
+                         if area_str.isdigit():
+                             area = float(area_str)
+                             break
                 
-                # Extract Location (Bairro/City)
-                # Usually stripped from a div with location class or just bottom text
-                location_tag = item.find(attrs={"aria-label": lambda x: x and "Localização" in str(x)})
-                location = location_tag.text if location_tag else "N/A"
-                if not location or location == "N/A":
-                    # Try finding span details
-                    spans = item.find_all('span')
-                    for s in spans:
-                        if city in s.text:
-                            location = s.text; break
+                # Fallback Area
+                if area == 0:
+                     area_text = item.find(string=lambda x: x and "m²" in x)
+                     if area_text:
+                        area_str = area_text.replace('m²', '').strip()
+                        if area_str.isdigit():
+                            area = float(area_str)
 
+                # Extract Location (Bairro/City)
+                location_tag = item.find('p', {'class': lambda x: x and 'olx-adcard__location' in x})
+                location = location_tag.text if location_tag else "N/A"
+                
                 # Heuristic Type deduction
                 itype = "Outro"
-                if "casa" in title.lower(): itype = "Casa"
-                elif "apartamento" in title.lower(): itype = "Apartamento"
-                elif "terreno" in title.lower() or "lote" in title.lower(): itype = "Terreno"
+                title_lower = title.lower()
+                if "casa" in title_lower: itype = "Casa"
+                elif "apartamento" in title_lower or "apto" in title_lower: itype = "Apartamento"
+                elif "terreno" in title_lower or "lote" in title_lower: itype = "Terreno"
+                elif "chácara" in title_lower or "sítio" in title_lower: itype = "Sítio/Chácara"
 
                 if price > 0 and area > 0:
                      listings.append({
                          'Cidade': city,
-                         'Imobiliária': 'OLX Aggregator', # Placeholder
-                         'Bairro': location.split('-')[0].strip(), # Simple split
+                         'Imobiliária': 'OLX Aggregator',
+                         'Bairro': location.split('-')[0].strip(),
                          'Tipo': itype,
-                         'Referência': link.split('-')[-1], # ID from URL
+                         'Referência': link.split('-')[-1],
                          'Área (m²)': area,
                          'Valor Total': price,
                          'Link': link
