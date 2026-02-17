@@ -18,6 +18,16 @@ import tempfile
 import hashlib
 import random
 import threading
+import logging
+
+# Ensure .env is loaded (safety - may already be loaded by main.py)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+logger = logging.getLogger(__name__)
 
 # ==============================================================================
 # CONFIGURAÇÃO DA IA
@@ -35,37 +45,62 @@ if not API_KEY:
 
 ACTIVE_MODEL_NAME = None
 IA_AVAILABLE = False
+model = None
+
+logger.info(f"[GEMINI] API_KEY presente: {bool(API_KEY)} (len={len(API_KEY)})")
 
 if API_KEY:
     try:
         genai.configure(api_key=API_KEY)
+        logger.info("[GEMINI] API configurada com sucesso")
+
+        # Try to list available models
         available_models = []
         try:
             for m in genai.list_models():
                 if 'generateContent' in m.supported_generation_methods:
                     available_models.append(m.name)
-        except:
-            pass
+            logger.info(f"[GEMINI] Modelos disponíveis: {available_models[:5]}")
+        except Exception as e:
+            logger.warning(f"[GEMINI] Erro ao listar modelos (ignorando): {e}")
 
+        # Select best model (prefer newer, faster models)
         if available_models:
-            # PRIORIDADE: GEMINI 1.5 PRO
-            if 'models/gemini-1.5-pro' in available_models:
-                ACTIVE_MODEL_NAME = 'gemini-1.5-pro'
-            elif 'models/gemini-1.5-flash' in available_models:
-                ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
-            elif 'models/gemini-pro' in available_models:
-                ACTIVE_MODEL_NAME = 'gemini-pro'
-            else:
+            preferred = [
+                'models/gemini-2.5-flash',
+                'models/gemini-2.5-pro',
+                'models/gemini-2.0-flash',
+                'models/gemini-1.5-pro',
+                'models/gemini-1.5-flash',
+                'models/gemini-pro',
+            ]
+            ACTIVE_MODEL_NAME = None
+            for pref in preferred:
+                if pref in available_models:
+                    ACTIVE_MODEL_NAME = pref.replace('models/', '')
+                    break
+            if not ACTIVE_MODEL_NAME:
                 ACTIVE_MODEL_NAME = available_models[0].replace('models/', '')
-            
-            model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
-            IA_AVAILABLE = True
         else:
-            ACTIVE_MODEL_NAME = 'gemini-1.5-flash'
+            ACTIVE_MODEL_NAME = 'gemini-2.0-flash'
+
+        model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
+        IA_AVAILABLE = True
+        logger.info(f"[GEMINI] IA ATIVA! Modelo: {ACTIVE_MODEL_NAME}")
+
+    except Exception as e:
+        logger.error(f"[GEMINI] ERRO na inicialização: {e}", exc_info=True)
+        # Last resort: try basic model even if listing failed
+        try:
+            ACTIVE_MODEL_NAME = 'gemini-2.0-flash'
             model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
             IA_AVAILABLE = True
-    except:
-        IA_AVAILABLE = False
+            logger.info(f"[GEMINI] Fallback ativo: {ACTIVE_MODEL_NAME}")
+        except Exception as e2:
+            logger.error(f"[GEMINI] Fallback também falhou: {e2}")
+            IA_AVAILABLE = False
+else:
+    logger.warning("[GEMINI] GEMINI_KEY não encontrada no ambiente! IA desativada.")
 
 SAFETY_SETTINGS = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
@@ -148,8 +183,24 @@ def filter_risky_stocks(df):
 
 def get_ai_generic_analysis(prompt, investor_style_prompt=None):
     """Analise generica com IA, opcionalmente no estilo de um investidor"""
-    if not IA_AVAILABLE:
-        return "IA INDISPONIVEL"
+    global IA_AVAILABLE, model, ACTIVE_MODEL_NAME
+
+    if not IA_AVAILABLE or model is None:
+        # Try to reinitialize if key exists but init failed at startup
+        key = os.getenv("GEMINI_KEY", "")
+        if key:
+            try:
+                genai.configure(api_key=key)
+                ACTIVE_MODEL_NAME = 'gemini-2.0-flash'
+                model = genai.GenerativeModel(ACTIVE_MODEL_NAME)
+                IA_AVAILABLE = True
+                logger.info(f"[GEMINI] Reinicialização bem-sucedida: {ACTIVE_MODEL_NAME}")
+            except Exception as e:
+                logger.error(f"[GEMINI] Reinicialização falhou: {e}")
+                return f"IA INDISPONIVEL - Erro: {e}"
+        else:
+            return "IA INDISPONIVEL - GEMINI_KEY não configurada"
+
     try:
         full_prompt = prompt
         if investor_style_prompt:
@@ -157,6 +208,7 @@ def get_ai_generic_analysis(prompt, investor_style_prompt=None):
         response = model.generate_content(full_prompt, safety_settings=SAFETY_SETTINGS)
         return response.text
     except Exception as e:
+        logger.error(f"[GEMINI] Erro na geração: {e}", exc_info=True)
         return f"ERRO DE GERACAO: {str(e)}"
 
 def get_graham_analysis(ticker, price, fair_value, lpa, vpa, investor_style_prompt=None):
