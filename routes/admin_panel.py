@@ -10,6 +10,7 @@ from database.db_manager import db_manager
 from database.connection import get_supabase_client
 from datetime import datetime, timedelta
 from typing import Dict, List
+from collections import Counter
 import os
 import logging
 
@@ -133,6 +134,186 @@ async def get_data_status(session: dict = Depends(verify_admin_session)):
             "data": status
         })
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/dashboard-overview")
+async def get_dashboard_overview(session: dict = Depends(verify_admin_session)):
+    """Comprehensive dashboard overview data with chart-ready datasets"""
+    try:
+        # 1. Basic stats
+        stats = db_manager.get_stats()
+
+        # 2. Data source health
+        data_status = get_data_source_status()
+
+        # 3. Get all stocks for analysis
+        stocks_br = db_manager.get_stocks(market='BR')
+        stocks_us = db_manager.get_stocks(market='US')
+        etfs_br = db_manager.get_etfs(market='BR')
+        etfs_us = db_manager.get_etfs(market='US')
+        fiis = db_manager.get_fiis(market='BR')
+
+        # 4. Sector distribution (BR stocks)
+        sector_counts = Counter()
+        for s in stocks_br:
+            setor = s.get('setor') or 'Sem Setor'
+            sector_counts[setor] += 1
+        top_sectors = dict(sector_counts.most_common(10))
+
+        # 5. Top 10 stocks by Magic Rank (BR)
+        ranked_br = sorted(
+            [s for s in stocks_br if s.get('magic_rank') and s.get('magic_rank') > 0],
+            key=lambda x: x['magic_rank']
+        )[:10]
+        top_magic = [{'ticker': s['ticker'], 'rank': s['magic_rank'], 'price': s.get('price', 0), 'empresa': s.get('empresa', '')} for s in ranked_br]
+
+        # 6. Top 10 FIIs by DY
+        top_fiis_dy = sorted(
+            [f for f in fiis if f.get('dy') and f['dy'] > 0],
+            key=lambda x: x['dy'], reverse=True
+        )[:10]
+        top_fiis = [{'ticker': f['ticker'], 'dy': f['dy'], 'pvp': f.get('pvp', 0), 'price': f.get('price', 0)} for f in top_fiis_dy]
+
+        # 7. Top 10 stocks by ROIC (BR)
+        top_roic_stocks = sorted(
+            [s for s in stocks_br if s.get('roic') and s['roic'] > 0],
+            key=lambda x: x['roic'], reverse=True
+        )[:10]
+        top_roic = [{'ticker': s['ticker'], 'roic': s['roic'], 'price': s.get('price', 0)} for s in top_roic_stocks]
+
+        # 8. Top 10 stocks by DY (BR)
+        top_dy_stocks = sorted(
+            [s for s in stocks_br if s.get('dy') and s['dy'] > 0],
+            key=lambda x: x['dy'], reverse=True
+        )[:10]
+        top_dy = [{'ticker': s['ticker'], 'dy': s['dy'], 'price': s.get('price', 0)} for s in top_dy_stocks]
+
+        # 9. P/L distribution buckets (BR stocks)
+        pl_buckets = {'< 5': 0, '5-10': 0, '10-15': 0, '15-20': 0, '20-30': 0, '> 30': 0, 'Negativo': 0}
+        for s in stocks_br:
+            pl = s.get('pl')
+            if pl is None:
+                continue
+            if pl < 0:
+                pl_buckets['Negativo'] += 1
+            elif pl < 5:
+                pl_buckets['< 5'] += 1
+            elif pl < 10:
+                pl_buckets['5-10'] += 1
+            elif pl < 15:
+                pl_buckets['10-15'] += 1
+            elif pl < 20:
+                pl_buckets['15-20'] += 1
+            elif pl < 30:
+                pl_buckets['20-30'] += 1
+            else:
+                pl_buckets['> 30'] += 1
+
+        # 10. Update logs timeline (last 30 logs)
+        logs = db_manager.get_update_logs(limit=30)
+        logs_timeline = []
+        success_count = 0
+        error_count = 0
+        for log in logs:
+            logs_timeline.append({
+                'date': log.get('completed_at', ''),
+                'type': log.get('asset_type', ''),
+                'market': log.get('market', ''),
+                'status': log.get('status', ''),
+                'records': log.get('records_updated', 0),
+                'duration': log.get('duration_seconds', 0)
+            })
+            if log.get('status') == 'success':
+                success_count += 1
+            else:
+                error_count += 1
+
+        # 11. Margin of safety distribution (BR stocks with valor_justo)
+        margin_buckets = {'> 50%': 0, '20-50%': 0, '0-20%': 0, 'Sobrevalorizado': 0}
+        for s in stocks_br:
+            margem = s.get('margem')
+            if margem is None:
+                continue
+            if margem > 50:
+                margin_buckets['> 50%'] += 1
+            elif margem > 20:
+                margin_buckets['20-50%'] += 1
+            elif margem >= 0:
+                margin_buckets['0-20%'] += 1
+            else:
+                margin_buckets['Sobrevalorizado'] += 1
+
+        # 12. User stats
+        user_stats = {"total_users": 0, "new_this_week": 0, "active_users": 0, "total_logins": 0}
+        try:
+            supabase = get_supabase_client()
+            if supabase:
+                response = supabase.table('users').select('*').execute()
+                users = response.data if response.data else []
+                now = datetime.now()
+                week_ago = now - timedelta(days=7)
+                user_stats["total_users"] = len(users)
+                user_stats["new_this_week"] = sum(1 for u in users if u.get('created_at') and datetime.fromisoformat(u['created_at'].replace('Z', '+00:00').replace('+00:00', '')) > week_ago)
+                user_stats["active_users"] = sum(1 for u in users if u.get('last_login') and datetime.fromisoformat(u['last_login'].replace('Z', '+00:00').replace('+00:00', '')) > week_ago)
+                user_stats["total_logins"] = sum(u.get('login_count', 0) for u in users)
+        except Exception:
+            pass
+
+        # 13. Asset distribution for pie chart
+        asset_distribution = {
+            'Ações BR': len(stocks_br),
+            'Ações US': len(stocks_us),
+            'ETFs BR': len(etfs_br),
+            'ETFs US': len(etfs_us),
+            'FIIs': len(fiis)
+        }
+
+        # 14. Price range distribution (BR stocks)
+        price_ranges = {'< R$5': 0, 'R$5-15': 0, 'R$15-30': 0, 'R$30-50': 0, 'R$50-100': 0, '> R$100': 0}
+        for s in stocks_br:
+            p = s.get('price')
+            if p is None:
+                continue
+            if p < 5:
+                price_ranges['< R$5'] += 1
+            elif p < 15:
+                price_ranges['R$5-15'] += 1
+            elif p < 30:
+                price_ranges['R$15-30'] += 1
+            elif p < 50:
+                price_ranges['R$30-50'] += 1
+            elif p < 100:
+                price_ranges['R$50-100'] += 1
+            else:
+                price_ranges['> R$100'] += 1
+
+        return JSONResponse({
+            "status": "success",
+            "data": {
+                "stats": stats,
+                "data_status": data_status,
+                "user_stats": user_stats,
+                "asset_distribution": asset_distribution,
+                "sector_distribution": top_sectors,
+                "pl_distribution": pl_buckets,
+                "price_distribution": price_ranges,
+                "margin_distribution": margin_buckets,
+                "top_magic_formula": top_magic,
+                "top_fiis_dy": top_fiis,
+                "top_roic": top_roic,
+                "top_dy": top_dy,
+                "logs_timeline": logs_timeline,
+                "update_stats": {
+                    "total": len(logs),
+                    "success": success_count,
+                    "errors": error_count,
+                    "success_rate": round(success_count / len(logs) * 100, 1) if logs else 0
+                }
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in dashboard overview: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

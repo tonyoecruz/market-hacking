@@ -9,7 +9,6 @@
         gap: 4px;
         align-items: center;
     }
-
     .loading-dots .dot {
         width: 8px;
         height: 8px;
@@ -17,164 +16,437 @@
         background: #4a5568;
         animation: dotPulse 1.2s infinite;
     }
-
-    .loading-dots .dot:nth-child(1) {
-        animation-delay: 0s;
-    }
-
-    .loading-dots .dot:nth-child(2) {
-        animation-delay: 0.3s;
-    }
-
-    .loading-dots .dot:nth-child(3) {
-        animation-delay: 0.6s;
-    }
-
+    .loading-dots .dot:nth-child(1) { animation-delay: 0s; }
+    .loading-dots .dot:nth-child(2) { animation-delay: 0.3s; }
+    .loading-dots .dot:nth-child(3) { animation-delay: 0.6s; }
     @keyframes dotPulse {
-
-        0%,
-        100% {
-            background: #4a5568;
-            transform: scale(1);
-        }
-
-        30% {
-            background: #00FF9D;
-            transform: scale(1.3);
-        }
+        0%, 100% { background: #4a5568; transform: scale(1); }
+        30% { background: #00FF9D; transform: scale(1.3); }
     }
+
+    /* Dashboard specific styles */
+    .kpi-card {
+        background: linear-gradient(135deg, rgba(31,35,41,0.9), rgba(21,25,30,0.95));
+        border: 1px solid rgba(255,255,255,0.06);
+        transition: all 0.3s ease;
+    }
+    .kpi-card:hover {
+        border-color: rgba(0,255,157,0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+    }
+    .chart-container {
+        background: rgba(31,35,41,0.9);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+    .chart-container:hover {
+        border-color: rgba(0,255,157,0.15);
+    }
+    .chart-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .health-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .health-dot.green { background: #00FF9D; box-shadow: 0 0 6px rgba(0,255,157,0.5); }
+    .health-dot.yellow { background: #FBBF24; box-shadow: 0 0 6px rgba(251,191,36,0.5); }
+    .health-dot.red { background: #EF4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+    .health-dot.gray { background: #6B7280; }
+    .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+    .status-pill {
+        padding: 2px 10px;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .mini-table th {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #9CA3AF;
+        padding: 8px 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .mini-table td {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .mini-table tr:hover { background: rgba(255,255,255,0.02); }
+    .tab-active {
+        background: rgba(0,255,157,0.1) !important;
+        color: #00FF9D !important;
+        font-weight: 600 !important;
+        border-left: 3px solid #00FF9D;
+    }
+    .tab-inactive {
+        color: #9CA3AF;
+        border-left: 3px solid transparent;
+    }
+    .tab-inactive:hover {
+        background: rgba(255,255,255,0.03);
+        color: #e2e8f0;
+    }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeInUp 0.4s ease-out forwards; }
+    .skeleton {
+        background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 6px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="flex h-screen bg-dark-900">
     <!-- Sidebar -->
-    <div class="w-64 bg-dark-800 border-r border-gray-700">
-        <div class="p-6">
-            <h1 class="text-2xl font-bold text-white mb-2">🔐 Admin Panel</h1>
-            <p class="text-gray-400 text-sm">{{ user.username }}</p>
+    <div class="w-64 bg-dark-800 border-r border-gray-700 flex flex-col min-h-screen">
+        <div class="p-6 border-b border-gray-700/50">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                <span class="text-2xl">&#128274;</span> Admin Panel
+            </h1>
+            <p class="text-gray-500 text-sm mt-1">{{ user.username }}</p>
         </div>
 
-        <nav class="px-4 space-y-2">
+        <nav class="px-3 py-4 space-y-1 flex-1">
+            <button onclick="showTab('overview')" id="tab-overview"
+                class="w-full text-left px-4 py-3 rounded-lg tab-active text-sm flex items-center gap-3">
+                <span>&#128200;</span> Dashboard
+            </button>
             <button onclick="showTab('monitoring')" id="tab-monitoring"
-                class="w-full text-left px-4 py-3 rounded-lg bg-primary/10 text-primary font-semibold">
-                📊 Data Monitoring
+                class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
+                <span>&#128225;</span> Data Monitoring
             </button>
             <button onclick="showTab('users')" id="tab-users"
-                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
-                👥 User Management
+                class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
+                <span>&#128101;</span> User Management
             </button>
             <button onclick="showTab('stats')" id="tab-stats"
-                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
-                📈 System Stats
+                class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
+                <span>&#128202;</span> System Stats
             </button>
             <button onclick="showTab('logs')" id="tab-logs"
-                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
-                📝 Update Logs
+                class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
+                <span>&#128221;</span> Update Logs
             </button>
             <button onclick="showTab('parameters')" id="tab-parameters"
-                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
-                Parameters
+                class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
+                <span>&#9881;</span> Parameters
             </button>
             <button onclick="showTab('investors')" id="tab-investors"
-                class="w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700">
-                Investidores
+                class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
+                <span>&#128188;</span> Investidores
             </button>
         </nav>
 
-        <div class="absolute bottom-0 w-64 p-4 border-t border-gray-700">
+        <div class="p-4 border-t border-gray-700/50">
             <button onclick="logout()"
-                class="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30">
-                🚪 Logout
+                class="w-full px-4 py-2.5 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 text-sm flex items-center justify-center gap-2 transition-all">
+                <span>&#128682;</span> Logout
             </button>
         </div>
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 overflow-y-auto">
-        <header class="bg-dark-800 border-b border-gray-700 px-6 py-4">
-            <h2 id="page-title" class="text-2xl font-bold text-white">📊 Data Monitoring</h2>
+    <div class="flex-1 overflow-y-auto scrollbar-thin">
+        <header class="bg-dark-800/80 backdrop-blur-sm border-b border-gray-700/50 px-6 py-4 sticky top-0 z-10">
+            <div class="flex justify-between items-center">
+                <h2 id="page-title" class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>&#128200;</span> Dashboard Overview
+                </h2>
+                <div class="flex items-center gap-3">
+                    <span id="last-refresh-time" class="text-xs text-gray-500"></span>
+                    <button onclick="refreshCurrentTab()" class="px-3 py-1.5 bg-dark-700 text-gray-300 rounded-lg hover:bg-dark-600 text-xs flex items-center gap-1.5 transition-all">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
         </header>
 
         <main class="p-6">
-            <!-- Data Monitoring Tab -->
-            <div id="content-monitoring">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                    <!-- Data Source Cards -->
-                    <div id="card-stocks-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-white">🇧🇷 Ações Brasil</h3>
-                            <div id="status-stocks-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
-                        </div>
-                        <p id="count-stocks-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-stocks-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
-                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
-                        <p id="time-stocks-br" class="text-xs text-gray-500 mt-2">-</p>
-                    </div>
 
-                    <div id="card-stocks-us" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-white">🇺🇸 Ações EUA</h3>
-                            <div id="status-stocks-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+            <!-- ==================== OVERVIEW TAB ==================== -->
+            <div id="content-overview" class="space-y-6">
+                <!-- KPI Row -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="kpi-row">
+                    <div class="kpi-card rounded-xl p-4 animate-fade-in" style="animation-delay: 0ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-blue-500/10 text-blue-400">&#127463;&#127479;</div>
                         </div>
-                        <p id="count-stocks-us" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-stocks-us" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
-                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
-                        <p id="time-stocks-us" class="text-xs text-gray-500 mt-2">-</p>
+                        <p id="kpi-stocks-br" class="text-2xl font-bold text-white">-</p>
+                        <p class="text-xs text-gray-500 mt-1">Acoes Brasil</p>
                     </div>
-
-                    <div id="card-etfs-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-white">📊 ETFs Brasil</h3>
-                            <div id="status-etfs-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                    <div class="kpi-card rounded-xl p-4 animate-fade-in" style="animation-delay: 50ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-red-500/10 text-red-400">&#127482;&#127480;</div>
                         </div>
-                        <p id="count-etfs-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-etfs-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
-                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span>
-                        </p>
-                        <p id="time-etfs-br" class="text-xs text-gray-500 mt-2">-</p>
+                        <p id="kpi-stocks-us" class="text-2xl font-bold text-white">-</p>
+                        <p class="text-xs text-gray-500 mt-1">Acoes EUA</p>
                     </div>
-
-                    <div id="card-etfs-us" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-white">📊 ETFs EUA</h3>
-                            <div id="status-etfs-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                    <div class="kpi-card rounded-xl p-4 animate-fade-in" style="animation-delay: 100ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-purple-500/10 text-purple-400">&#128202;</div>
                         </div>
-                        <p id="count-etfs-us" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-etfs-us" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
-                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span>
-                        </p>
-                        <p id="time-etfs-us" class="text-xs text-gray-500 mt-2">-</p>
+                        <p id="kpi-etfs" class="text-2xl font-bold text-white">-</p>
+                        <p class="text-xs text-gray-500 mt-1">ETFs Total</p>
                     </div>
-
-                    <div id="card-fiis-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-white">🏢 FIIs Brasil</h3>
-                            <div id="status-fiis-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                    <div class="kpi-card rounded-xl p-4 animate-fade-in" style="animation-delay: 150ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-green-500/10 text-green-400">&#127970;</div>
                         </div>
-                        <p id="count-fiis-br" class="text-3xl font-bold text-white mb-2">-</p>
-                        <p id="message-fiis-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span
-                                    class="dot"></span><span class="dot"></span><span class="dot"></span></span>
-                        </p>
-                        <p id="time-fiis-br" class="text-xs text-gray-500 mt-2">-</p>
+                        <p id="kpi-fiis" class="text-2xl font-bold text-white">-</p>
+                        <p class="text-xs text-gray-500 mt-1">FIIs Brasil</p>
+                    </div>
+                    <div class="kpi-card rounded-xl p-4 animate-fade-in" style="animation-delay: 200ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-cyan-500/10 text-cyan-400">&#128101;</div>
+                        </div>
+                        <p id="kpi-users" class="text-2xl font-bold text-white">-</p>
+                        <p class="text-xs text-gray-500 mt-1">Usuarios</p>
+                    </div>
+                    <div class="kpi-card rounded-xl p-4 animate-fade-in" style="animation-delay: 250ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-emerald-500/10 text-emerald-400">&#9989;</div>
+                        </div>
+                        <p id="kpi-success-rate" class="text-2xl font-bold text-white">-</p>
+                        <p class="text-xs text-gray-500 mt-1">Taxa Sucesso</p>
                     </div>
                 </div>
 
+                <!-- Data Source Health -->
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <span>&#128225;</span> Status das Fontes de Dados
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3" id="health-cards">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Charts Row 1: Distribution + Sectors -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#127856;</span> Distribuicao de Ativos</div>
+                        <div style="height: 280px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="chart-asset-distribution"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#127981;</span> Top 10 Setores (Acoes BR)</div>
+                        <div style="height: 280px;">
+                            <canvas id="chart-sectors"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 2: Magic Formula + FIIs DY -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#9889;</span> Top 10 - Magic Formula (Acoes BR)</div>
+                        <div style="max-height: 380px; overflow-y: auto;" class="scrollbar-thin">
+                            <table class="w-full mini-table">
+                                <thead><tr>
+                                    <th class="text-left">#</th>
+                                    <th class="text-left">Ticker</th>
+                                    <th class="text-left">Empresa</th>
+                                    <th class="text-right">Preco</th>
+                                    <th class="text-right">Rank</th>
+                                </tr></thead>
+                                <tbody id="table-magic-formula"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#128176;</span> Top 10 FIIs por Dividend Yield</div>
+                        <div style="height: 300px;">
+                            <canvas id="chart-fiis-dy"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 3: ROIC + DY Stocks -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#128640;</span> Top 10 ROIC (Acoes BR)</div>
+                        <div style="height: 300px;">
+                            <canvas id="chart-roic"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#128184;</span> Top 10 Dividend Yield (Acoes BR)</div>
+                        <div style="height: 300px;">
+                            <canvas id="chart-dy-stocks"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 4: P/L Distribution + Price Ranges + Margin -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#128200;</span> Distribuicao P/L</div>
+                        <div style="height: 240px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="chart-pl-dist"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#128181;</span> Faixa de Precos</div>
+                        <div style="height: 240px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="chart-price-dist"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#128737;</span> Margem de Seguranca</div>
+                        <div style="height: 240px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="chart-margin-dist"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Stats + Update Timeline -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="chart-container">
+                        <div class="chart-title"><span>&#128101;</span> Estatisticas de Usuarios</div>
+                        <div class="space-y-4 mt-2">
+                            <div class="flex justify-between items-center py-2 border-b border-gray-700/30">
+                                <span class="text-gray-400 text-sm">Total Usuarios</span>
+                                <span id="user-total" class="text-white font-bold text-lg">-</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-700/30">
+                                <span class="text-gray-400 text-sm">Novos (7 dias)</span>
+                                <span id="user-new" class="text-green-400 font-bold text-lg">-</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-700/30">
+                                <span class="text-gray-400 text-sm">Ativos (7 dias)</span>
+                                <span id="user-active" class="text-cyan-400 font-bold text-lg">-</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <span class="text-gray-400 text-sm">Total Logins</span>
+                                <span id="user-logins" class="text-purple-400 font-bold text-lg">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container lg:col-span-2">
+                        <div class="chart-title"><span>&#128203;</span> Historico de Atualizacoes (Ultimas 30)</div>
+                        <div style="max-height: 280px; overflow-y: auto;" class="scrollbar-thin">
+                            <table class="w-full mini-table">
+                                <thead><tr>
+                                    <th class="text-left">Data</th>
+                                    <th class="text-left">Tipo</th>
+                                    <th class="text-left">Mercado</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-right">Registros</th>
+                                    <th class="text-right">Duracao</th>
+                                </tr></thead>
+                                <tbody id="table-update-history"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== DATA MONITORING TAB ==================== -->
+            <div id="content-monitoring" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <div id="card-stocks-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">&#127463;&#127479; Acoes Brasil</h3>
+                            <div id="status-stocks-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-stocks-br" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-stocks-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
+                        <p id="time-stocks-br" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+                    <div id="card-stocks-us" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">&#127482;&#127480; Acoes EUA</h3>
+                            <div id="status-stocks-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-stocks-us" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-stocks-us" class="text-sm text-gray-400">Loading <span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
+                        <p id="time-stocks-us" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+                    <div id="card-etfs-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">&#128202; ETFs Brasil</h3>
+                            <div id="status-etfs-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-etfs-br" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-etfs-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
+                        <p id="time-etfs-br" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+                    <div id="card-etfs-us" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">&#128202; ETFs EUA</h3>
+                            <div id="status-etfs-us" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-etfs-us" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-etfs-us" class="text-sm text-gray-400">Loading <span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
+                        <p id="time-etfs-us" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+                    <div id="card-fiis-br" class="bg-dark-800 rounded-lg p-6 border-l-4 border-gray-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">&#127970; FIIs Brasil</h3>
+                            <div id="status-fiis-br" class="w-4 h-4 rounded-full bg-gray-500 animate-pulse"></div>
+                        </div>
+                        <p id="count-fiis-br" class="text-3xl font-bold text-white mb-2">-</p>
+                        <p id="message-fiis-br" class="text-sm text-gray-400">Loading <span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
+                        <p id="time-fiis-br" class="text-xs text-gray-500 mt-2">-</p>
+                    </div>
+                </div>
                 <div class="bg-dark-800 rounded-lg p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold text-white">Auto-Refresh</h3>
-                        <div class="space-x-2">
-                            <button onclick="forceUpdate()"
-                                class="px-4 py-2 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30">
-                                ⚡ Force Update
-                            </button>
-                        </div>
+                        <button onclick="forceUpdate()"
+                            class="px-4 py-2 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30">
+                            &#9889; Force Update
+                        </button>
                     </div>
                     <p class="text-gray-400">Dados atualizados automaticamente a cada 5 minutos</p>
                 </div>
             </div>
 
-            <!-- User Management Tab -->
+            <!-- ==================== USER MANAGEMENT TAB ==================== -->
             <div id="content-users" class="hidden">
                 <div class="bg-dark-800 rounded-lg overflow-hidden">
                     <div class="p-6 border-b border-gray-700">
@@ -183,11 +455,11 @@
                             <div class="space-x-2">
                                 <button onclick="changeMyPassword()"
                                     class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30">
-                                    🔑 Change My Password
+                                    &#128273; Change My Password
                                 </button>
                                 <button onclick="createAdminUser()"
                                     class="px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30">
-                                    ➕ Create Admin User
+                                    &#10133; Create Admin User
                                 </button>
                             </div>
                         </div>
@@ -196,27 +468,20 @@
                         <table class="w-full">
                             <thead class="bg-dark-700">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">ID
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                        Username</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Email
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                        Created</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Actions</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Username</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Created</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="users-tbody" class="divide-y divide-gray-700">
-                                <!-- Users will be loaded here -->
-                            </tbody>
+                            <tbody id="users-tbody" class="divide-y divide-gray-700"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- System Stats Tab -->
+            <!-- ==================== SYSTEM STATS TAB ==================== -->
             <div id="content-stats" class="hidden">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div class="bg-dark-800 rounded-lg p-6">
@@ -232,7 +497,6 @@
                         <p id="stat-fiis" class="text-3xl font-bold text-white">-</p>
                     </div>
                 </div>
-
                 <div class="bg-dark-800 rounded-lg p-6">
                     <h3 class="text-xl font-bold text-white mb-4">Update Statistics</h3>
                     <div class="space-y-4">
@@ -248,7 +512,7 @@
                 </div>
             </div>
 
-            <!-- Logs Tab -->
+            <!-- ==================== LOGS TAB ==================== -->
             <div id="content-logs" class="hidden">
                 <div class="bg-dark-800 rounded-lg overflow-hidden">
                     <div class="p-6 border-b border-gray-700">
@@ -258,46 +522,34 @@
                         <table class="w-full">
                             <thead class="bg-dark-700">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Time
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Type
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Market
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Status
-                                    </th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Records</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Details</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Time</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Market</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Records</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Details</th>
                                 </tr>
                             </thead>
-                            <tbody id="logs-tbody" class="divide-y divide-gray-700">
-                                <!-- Logs will be loaded here -->
-                            </tbody>
+                            <tbody id="logs-tbody" class="divide-y divide-gray-700"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Parameters Tab -->
+            <!-- ==================== PARAMETERS TAB ==================== -->
             <div id="content-parameters" class="hidden">
-                <!-- Data Collection Settings -->
                 <div class="bg-dark-800 rounded-lg p-6 mb-6">
-                    <h3 class="text-xl font-bold text-white mb-6">⏱️ Intervalos de Coleta</h3>
+                    <h3 class="text-xl font-bold text-white mb-6">&#9201; Intervalos de Coleta</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-gray-300 text-sm font-semibold mb-2">Coleta de Dados de Mercado
-                                (minutos)</label>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Coleta de Dados de Mercado (minutos)</label>
                             <input type="number" id="setting-market-interval" min="5" max="1440"
                                 class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
                                 placeholder="60">
-                            <p class="text-gray-500 text-xs mt-1">Acoes, ETFs, FIIs - Min: 5 min, Max: 1440 min (24h)
-                            </p>
+                            <p class="text-gray-500 text-xs mt-1">Acoes, ETFs, FIIs - Min: 5 min, Max: 1440 min (24h)</p>
                         </div>
                         <div>
-                            <label class="block text-gray-300 text-sm font-semibold mb-2">Coleta de Imoveis
-                                (dias)</label>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Coleta de Imoveis (dias)</label>
                             <input type="number" id="setting-flipping-interval" min="1" max="30"
                                 class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
                                 placeholder="1">
@@ -314,15 +566,13 @@
                     <div class="mt-6 flex space-x-3">
                         <button onclick="saveSettings()"
                             class="px-6 py-3 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/80 transition-all">
-                            💾 Salvar Configuracoes
+                            &#128190; Salvar Configuracoes
                         </button>
-                        <span id="settings-save-status" class="text-green-400 py-3 hidden">✅ Salvo!</span>
+                        <span id="settings-save-status" class="text-green-400 py-3 hidden">&#9989; Salvo!</span>
                     </div>
                 </div>
-
-                <!-- House Flipping Cities -->
                 <div class="bg-dark-800 rounded-lg p-6">
-                    <h3 class="text-xl font-bold text-white mb-6">🏠 Cidades para House Flipping</h3>
+                    <h3 class="text-xl font-bold text-white mb-6">&#127968; Cidades para House Flipping</h3>
                     <div class="flex space-x-3 mb-6">
                         <input type="text" id="new-city-name"
                             class="flex-1 bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
@@ -341,12 +591,10 @@
                 </div>
             </div>
 
-            <!-- Investors Tab -->
+            <!-- ==================== INVESTORS TAB ==================== -->
             <div id="content-investors" class="hidden">
                 <div class="bg-dark-800 rounded-lg p-6 mb-6">
                     <h3 class="text-xl font-bold text-white mb-6">Investidores-Guia</h3>
-
-                    <!-- Add Investor Form -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
                             <label class="block text-gray-300 text-sm font-semibold mb-2">Nome do Investidor</label>
@@ -387,8 +635,6 @@
                             class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
                             placeholder="Atue como [nome do investidor]... descreva seu estilo de investimento..."></textarea>
                     </div>
-
-                    <!-- Investors List -->
                     <div id="investors-list">
                         <p class="text-gray-500">Carregando investidores...</p>
                     </div>
@@ -400,642 +646,756 @@
 </div>
 
 <script>
-    let currentTab = 'monitoring';
-    let refreshInterval;
+// ==================== GLOBAL STATE ====================
+let currentTab = 'overview';
+let refreshInterval;
+let chartInstances = {};
 
-    // Load data on page load
-    window.addEventListener('DOMContentLoaded', () => {
-        refreshData();
-        // Auto-refresh every 5 minutes
-        refreshInterval = setInterval(refreshData, 300000);
+// Chart.js global defaults
+Chart.defaults.color = '#9CA3AF';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.padding = 12;
+
+const COLORS = {
+    primary: '#00FF9D',
+    secondary: '#00C8FF',
+    accent1: '#A855F7',
+    accent2: '#F59E0B',
+    accent3: '#EF4444',
+    accent4: '#EC4899',
+    accent5: '#8B5CF6',
+    accent6: '#14B8A6',
+    palette: ['#00FF9D', '#00C8FF', '#A855F7', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6', '#F97316', '#06B6D4']
+};
+
+// ==================== INIT ====================
+window.addEventListener('DOMContentLoaded', () => {
+    loadDashboardOverview();
+    refreshInterval = setInterval(() => {
+        if (currentTab === 'overview') loadDashboardOverview();
+        else if (currentTab === 'monitoring') refreshData();
+    }, 300000);
+});
+
+// ==================== TAB NAVIGATION ====================
+function showTab(tab) {
+    currentTab = tab;
+    const tabs = ['overview', 'monitoring', 'users', 'stats', 'logs', 'parameters', 'investors'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        const content = document.getElementById(`content-${t}`);
+        if (t === tab) {
+            btn.className = 'w-full text-left px-4 py-3 rounded-lg tab-active text-sm flex items-center gap-3';
+            content.classList.remove('hidden');
+        } else {
+            btn.className = 'w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3';
+            content.classList.add('hidden');
+        }
     });
 
-    // Helper: handle 401 unauthorized responses
-    function handleAuthError(response) {
-        if (response.status === 401) {
-            alert('Sessao expirada. Redirecionando para login...');
-            window.location.href = '/admin/login';
-            return true;
-        }
-        return false;
+    const titles = {
+        'overview': '<span>&#128200;</span> Dashboard Overview',
+        'monitoring': '<span>&#128225;</span> Data Monitoring',
+        'users': '<span>&#128101;</span> User Management',
+        'stats': '<span>&#128202;</span> System Stats',
+        'logs': '<span>&#128221;</span> Update Logs',
+        'parameters': '<span>&#9881;</span> Parameters',
+        'investors': '<span>&#128188;</span> Investidores'
+    };
+    document.getElementById('page-title').innerHTML = titles[tab] || tab;
+
+    if (tab === 'overview') loadDashboardOverview();
+    if (tab === 'monitoring') refreshData();
+    if (tab === 'users') loadUsers();
+    if (tab === 'stats') loadStats();
+    if (tab === 'logs') loadLogs();
+    if (tab === 'investors') loadInvestorsList();
+    if (tab === 'parameters') loadSettings();
+}
+
+function refreshCurrentTab() {
+    showTab(currentTab);
+}
+
+// ==================== AUTH HELPER ====================
+function handleAuthError(response) {
+    if (response.status === 401) {
+        alert('Sessao expirada. Redirecionando para login...');
+        window.location.href = '/admin/login';
+        return true;
     }
+    return false;
+}
 
-    function showTab(tab) {
-        currentTab = tab;
+// ==================== DASHBOARD OVERVIEW ====================
+async function loadDashboardOverview() {
+    try {
+        const response = await fetch('/admin/api/dashboard-overview');
+        if (handleAuthError(response)) return;
+        const result = await response.json();
+        if (result.status !== 'success') return;
+        const d = result.data;
 
-        // Update tab buttons
-        const tabs = ['monitoring', 'users', 'stats', 'logs', 'parameters', 'investors'];
-        tabs.forEach(t => {
-            const btn = document.getElementById(`tab-${t}`);
-            const content = document.getElementById(`content-${t}`);
+        // KPIs
+        document.getElementById('kpi-stocks-br').textContent = (d.stats.stocks_br_count || 0).toLocaleString();
+        document.getElementById('kpi-stocks-us').textContent = (d.stats.stocks_us_count || 0).toLocaleString();
+        document.getElementById('kpi-etfs').textContent = (d.stats.etfs_count || 0).toLocaleString();
+        document.getElementById('kpi-fiis').textContent = (d.stats.fiis_count || 0).toLocaleString();
+        document.getElementById('kpi-users').textContent = (d.user_stats.total_users || 0).toLocaleString();
+        document.getElementById('kpi-success-rate').textContent = d.update_stats.success_rate + '%';
 
-            if (t === tab) {
-                btn.className = 'w-full text-left px-4 py-3 rounded-lg bg-primary/10 text-primary font-semibold';
-                content.classList.remove('hidden');
-            } else {
-                btn.className = 'w-full text-left px-4 py-3 rounded-lg text-gray-400 hover:bg-dark-700';
-                content.classList.add('hidden');
+        // Last refresh time
+        document.getElementById('last-refresh-time').textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
+
+        // Health cards
+        renderHealthCards(d.data_status);
+
+        // User stats
+        document.getElementById('user-total').textContent = d.user_stats.total_users || 0;
+        document.getElementById('user-new').textContent = '+' + (d.user_stats.new_this_week || 0);
+        document.getElementById('user-active').textContent = d.user_stats.active_users || 0;
+        document.getElementById('user-logins').textContent = (d.user_stats.total_logins || 0).toLocaleString();
+
+        // Charts
+        renderAssetDistribution(d.asset_distribution);
+        renderSectorsChart(d.sector_distribution);
+        renderFiisDyChart(d.top_fiis_dy);
+        renderRoicChart(d.top_roic);
+        renderDyStocksChart(d.top_dy);
+        renderPlDistribution(d.pl_distribution);
+        renderPriceDistribution(d.price_distribution);
+        renderMarginDistribution(d.margin_distribution);
+
+        // Tables
+        renderMagicFormulaTable(d.top_magic_formula);
+        renderUpdateHistory(d.logs_timeline);
+
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+    }
+}
+
+// ==================== HEALTH CARDS ====================
+function renderHealthCards(status) {
+    const container = document.getElementById('health-cards');
+    const labels = {
+        'stocks_br': '&#127463;&#127479; Acoes BR',
+        'stocks_us': '&#127482;&#127480; Acoes US',
+        'etfs_br': '&#128202; ETFs BR',
+        'etfs_us': '&#128202; ETFs US',
+        'fiis_br': '&#127970; FIIs BR'
+    };
+    let html = '';
+    for (const [key, info] of Object.entries(status)) {
+        html += `
+        <div class="bg-dark-700/50 rounded-lg p-4 border border-gray-700/30">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-gray-400">${labels[key] || key}</span>
+                <span class="health-dot ${info.color}"></span>
+            </div>
+            <p class="text-xl font-bold text-white">${(info.record_count || 0).toLocaleString()}</p>
+            <p class="text-xs text-gray-500 mt-1">${info.message || '-'}</p>
+            <p class="text-xs text-gray-600 mt-0.5">${info.last_update || 'Nunca'}</p>
+        </div>`;
+    }
+    container.innerHTML = html;
+}
+
+// ==================== CHART RENDERERS ====================
+function getOrCreateChart(id, config) {
+    if (chartInstances[id]) {
+        chartInstances[id].destroy();
+    }
+    const ctx = document.getElementById(id);
+    if (!ctx) return null;
+    chartInstances[id] = new Chart(ctx, config);
+    return chartInstances[id];
+}
+
+function renderAssetDistribution(data) {
+    getOrCreateChart('chart-asset-distribution', {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                data: Object.values(data),
+                backgroundColor: COLORS.palette.slice(0, Object.keys(data).length),
+                borderWidth: 0,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'right', labels: { padding: 15 } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.label}: ${ctx.raw.toLocaleString()} ativos`
+                    }
+                }
             }
+        }
+    });
+}
+
+function renderSectorsChart(data) {
+    const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]);
+    getOrCreateChart('chart-sectors', {
+        type: 'bar',
+        data: {
+            labels: sorted.map(x => x[0].length > 20 ? x[0].substring(0, 18) + '...' : x[0]),
+            datasets: [{
+                data: sorted.map(x => x[1]),
+                backgroundColor: COLORS.palette.map(c => c + '80'),
+                borderColor: COLORS.palette,
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.03)' } },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderFiisDyChart(data) {
+    getOrCreateChart('chart-fiis-dy', {
+        type: 'bar',
+        data: {
+            labels: data.map(f => f.ticker),
+            datasets: [{
+                label: 'DY %',
+                data: data.map(f => f.dy),
+                backgroundColor: 'rgba(0,255,157,0.6)',
+                borderColor: '#00FF9D',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (ctx) => `DY: ${ctx.raw.toFixed(2)}%` } }
+            },
+            scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { callback: v => v + '%' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderRoicChart(data) {
+    getOrCreateChart('chart-roic', {
+        type: 'bar',
+        data: {
+            labels: data.map(s => s.ticker),
+            datasets: [{
+                label: 'ROIC %',
+                data: data.map(s => s.roic),
+                backgroundColor: 'rgba(0,200,255,0.6)',
+                borderColor: '#00C8FF',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (ctx) => `ROIC: ${ctx.raw.toFixed(2)}%` } }
+            },
+            scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { callback: v => v + '%' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderDyStocksChart(data) {
+    getOrCreateChart('chart-dy-stocks', {
+        type: 'bar',
+        data: {
+            labels: data.map(s => s.ticker),
+            datasets: [{
+                label: 'DY %',
+                data: data.map(s => s.dy),
+                backgroundColor: 'rgba(168,85,247,0.6)',
+                borderColor: '#A855F7',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (ctx) => `DY: ${ctx.raw.toFixed(2)}%` } }
+            },
+            scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { callback: v => v + '%' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderPlDistribution(data) {
+    getOrCreateChart('chart-pl-dist', {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                data: Object.values(data),
+                backgroundColor: ['#00FF9D', '#00C8FF', '#A855F7', '#F59E0B', '#EC4899', '#8B5CF6', '#EF4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '55%',
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 8 } } }
+        }
+    });
+}
+
+function renderPriceDistribution(data) {
+    getOrCreateChart('chart-price-dist', {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                data: Object.values(data),
+                backgroundColor: ['#14B8A6', '#06B6D4', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '55%',
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 8 } } }
+        }
+    });
+}
+
+function renderMarginDistribution(data) {
+    getOrCreateChart('chart-margin-dist', {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                data: Object.values(data),
+                backgroundColor: ['#00FF9D', '#00C8FF', '#F59E0B', '#EF4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '55%',
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 8 } } }
+        }
+    });
+}
+
+// ==================== TABLE RENDERERS ====================
+function renderMagicFormulaTable(data) {
+    const tbody = document.getElementById('table-magic-formula');
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-6">Sem dados de Magic Formula</td></tr>';
+        return;
+    }
+    const colors = ['bg-yellow-500/20 text-yellow-400', 'bg-gray-400/20 text-gray-300', 'bg-orange-500/20 text-orange-400'];
+    tbody.innerHTML = data.map((s, i) => `
+        <tr>
+            <td><span class="rank-badge ${i < 3 ? colors[i] : 'bg-dark-600 text-gray-400'}">${i + 1}</span></td>
+            <td class="text-white font-semibold">${s.ticker}</td>
+            <td class="text-gray-400 text-xs">${(s.empresa || '').substring(0, 25)}</td>
+            <td class="text-right text-white">R$ ${(s.price || 0).toFixed(2)}</td>
+            <td class="text-right"><span class="text-primary font-mono text-sm">${(s.rank || 0).toFixed(0)}</span></td>
+        </tr>
+    `).join('');
+}
+
+function renderUpdateHistory(logs) {
+    const tbody = document.getElementById('table-update-history');
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-6">Sem logs de atualizacao</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => {
+        const date = log.date ? new Date(log.date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+        const statusClass = log.status === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400';
+        return `
+        <tr>
+            <td class="text-gray-400">${date}</td>
+            <td class="text-white">${log.type}</td>
+            <td class="text-gray-400">${log.market || '-'}</td>
+            <td class="text-center"><span class="status-pill ${statusClass}">${log.status}</span></td>
+            <td class="text-right text-white">${(log.records || 0).toLocaleString()}</td>
+            <td class="text-right text-gray-500">${log.duration ? log.duration + 's' : '-'}</td>
+        </tr>`;
+    }).join('');
+}
+
+// ==================== DATA MONITORING ====================
+async function refreshData() {
+    try {
+        const response = await fetch('/admin/api/data-status');
+        if (handleAuthError(response)) return;
+        const data = await response.json();
+        if (data.status === 'success') updateDataCards(data.data);
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+    }
+}
+
+function updateDataCards(data) {
+    const sources = ['stocks_br', 'stocks_us', 'etfs_br', 'etfs_us', 'fiis_br'];
+    sources.forEach(source => {
+        const info = data[source];
+        const key = source.replace('_', '-');
+        const statusEl = document.getElementById(`status-${key}`);
+        const countEl = document.getElementById(`count-${key}`);
+        const messageEl = document.getElementById(`message-${key}`);
+        const timeEl = document.getElementById(`time-${key}`);
+        const cardEl = document.getElementById(`card-${key}`);
+
+        if (!statusEl) return;
+
+        statusEl.className = `w-4 h-4 rounded-full ${info.color === 'green' ? 'bg-green-500' : info.color === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'}`;
+        cardEl.className = `bg-dark-800 rounded-lg p-6 border-l-4 ${info.color === 'green' ? 'border-green-500' : info.color === 'yellow' ? 'border-yellow-500' : 'border-red-500'}`;
+        countEl.textContent = info.record_count.toLocaleString();
+        messageEl.textContent = info.message;
+        timeEl.textContent = info.last_update || 'Never updated';
+    });
+}
+
+// ==================== USERS ====================
+async function loadUsers() {
+    try {
+        const response = await fetch('/admin/api/users');
+        const data = await response.json();
+        if (data.status === 'success') {
+            document.getElementById('user-count').textContent = data.data.total;
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = data.data.users.map(user => `
+                <tr class="hover:bg-dark-700">
+                    <td class="px-6 py-4 text-white">${user.id}</td>
+                    <td class="px-6 py-4 text-white font-semibold">${user.username}</td>
+                    <td class="px-6 py-4 text-gray-300">${user.email}</td>
+                    <td class="px-6 py-4 text-gray-400">${new Date(user.created_at).toLocaleDateString()}</td>
+                    <td class="px-6 py-4 text-right">
+                        ${user.id !== 1 ? `
+                            <button onclick="resetPassword(${user.id})" class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded mr-2 hover:bg-blue-500/30">Reset Password</button>
+                            <button onclick="deleteUser(${user.id})" class="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30">Delete</button>
+                        ` : '<span class="text-gray-500">Admin</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) { console.error('Error loading users:', error); }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    try {
+        const response = await fetch(`/admin/api/users/${userId}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (response.ok) { alert(data.message || 'User deleted'); await loadUsers(); }
+        else { alert(data.detail || 'Error deleting user'); }
+    } catch (error) { alert('Error deleting user'); }
+}
+
+async function resetPassword(userId) {
+    const newPassword = prompt('Enter new password (min 8 characters):');
+    if (!newPassword) return;
+    try {
+        const response = await fetch(`/admin/api/users/${userId}/reset-password`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_password: newPassword })
         });
+        if (response.ok) alert('Password reset successfully');
+    } catch (error) { alert('Error resetting password'); }
+}
 
-        // Update page title
-        const titles = {
-            'monitoring': '📊 Data Monitoring',
-            'users': '👥 User Management',
-            'stats': '📈 System Stats',
-            'logs': '📝 Update Logs',
-            'parameters': 'Parameters',
-            'investors': 'Investidores'
-        };
-        document.getElementById('page-title').textContent = titles[tab] || tab;
-
-        // Load tab-specific data
-        if (tab === 'users') loadUsers();
-        if (tab === 'stats') loadStats();
-        if (tab === 'logs') loadLogs();
-        if (tab === 'investors') loadInvestorsList();
-        if (tab === 'parameters') loadSettings();
-    }
-
-    async function refreshData() {
-        try {
-            const response = await fetch('/admin/api/data-status');
-            if (handleAuthError(response)) return;
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                updateDataCards(data.data);
-            }
-        } catch (error) {
-            console.error('Error refreshing data:', error);
-        }
-    }
-
-    function updateDataCards(data) {
-        const sources = ['stocks_br', 'stocks_us', 'etfs_br', 'etfs_us', 'fiis_br'];
-
-        sources.forEach(source => {
-            const info = data[source];
-            const statusEl = document.getElementById(`status-${source}`);
-            const countEl = document.getElementById(`count-${source}`);
-            const messageEl = document.getElementById(`message-${source}`);
-            const timeEl = document.getElementById(`time-${source}`);
-            const cardEl = document.getElementById(`card-${source}`);
-
-            // Update status indicator
-            statusEl.className = `w-4 h-4 rounded-full ${info.color === 'green' ? 'bg-green-500' :
-                info.color === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
-                }`;
-
-            // Update border color
-            cardEl.className = `bg-dark-800 rounded-lg p-6 border-l-4 ${info.color === 'green' ? 'border-green-500' :
-                info.color === 'yellow' ? 'border-yellow-500' : 'border-red-500'
-                }`;
-
-            // Update content
-            countEl.textContent = info.record_count.toLocaleString();
-            messageEl.textContent = info.message;
-            timeEl.textContent = info.last_update || 'Never updated';
+async function createAdminUser() {
+    const username = prompt('Enter new admin username:');
+    if (!username) return;
+    const email = prompt('Enter admin email:');
+    if (!email) return;
+    const password = prompt('Enter password (min 8 characters):');
+    if (!password || password.length < 8) { alert('Password must be at least 8 characters'); return; }
+    try {
+        const response = await fetch('/admin/api/users/create-admin', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password })
         });
-    }
+        const data = await response.json();
+        if (response.ok) { alert('Admin user created!'); await loadUsers(); }
+        else { alert(data.detail || 'Error creating admin'); }
+    } catch (error) { alert('Error creating admin user'); }
+}
 
-    async function loadUsers() {
-        try {
-            const response = await fetch('/admin/api/users');
-            const data = await response.json();
+async function changeMyPassword() {
+    const currentPassword = prompt('Enter your current password:');
+    if (!currentPassword) return;
+    const newPassword = prompt('Enter new password (min 8 characters):');
+    if (!newPassword || newPassword.length < 8) { alert('Password must be at least 8 characters'); return; }
+    const confirmPassword = prompt('Confirm new password:');
+    if (newPassword !== confirmPassword) { alert('Passwords do not match'); return; }
+    try {
+        const response = await fetch('/admin/api/change-password', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+        });
+        const data = await response.json();
+        if (response.ok) alert('Password changed!');
+        else alert(data.detail || 'Error changing password');
+    } catch (error) { alert('Error changing password'); }
+}
 
-            if (data.status === 'success') {
-                document.getElementById('user-count').textContent = data.data.total;
+// ==================== SYSTEM STATS ====================
+async function loadStats() {
+    try {
+        const response = await fetch('/admin/api/system-stats');
+        const data = await response.json();
+        if (data.status === 'success') {
+            document.getElementById('stat-stocks').textContent = data.data.database.stocks_count.toLocaleString();
+            document.getElementById('stat-etfs').textContent = data.data.database.etfs_count.toLocaleString();
+            document.getElementById('stat-fiis').textContent = data.data.database.fiis_count.toLocaleString();
+            document.getElementById('stat-success-rate').textContent = data.data.updates.success_rate + '%';
+            document.getElementById('stat-total-updates').textContent = data.data.updates.total;
+        }
+    } catch (error) { console.error('Error loading stats:', error); }
+}
 
-                const tbody = document.getElementById('users-tbody');
-                tbody.innerHTML = data.data.users.map(user => `
-                    <tr class="hover:bg-dark-700">
-                        <td class="px-6 py-4 text-white">${user.id}</td>
-                        <td class="px-6 py-4 text-white font-semibold">${user.username}</td>
-                        <td class="px-6 py-4 text-gray-300">${user.email}</td>
-                        <td class="px-6 py-4 text-gray-400">${new Date(user.created_at).toLocaleDateString()}</td>
-                        <td class="px-6 py-4 text-right">
-                            ${user.id !== 1 ? `
-                                <button onclick="resetPassword(${user.id})" class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded mr-2 hover:bg-blue-500/30">
-                                    Reset Password
-                                </button>
-                                <button onclick="deleteUser(${user.id})" class="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30">
-                                    Delete
-                                </button>
-                            ` : '<span class="text-gray-500">Admin</span>'}
+// ==================== LOGS ====================
+async function loadLogs() {
+    try {
+        const response = await fetch('/admin/api/logs?limit=50');
+        const data = await response.json();
+        if (data.status === 'success') {
+            const tbody = document.getElementById('logs-tbody');
+            tbody.innerHTML = data.data.map(log => `
+                <tr class="hover:bg-dark-700">
+                    <td class="px-6 py-4 text-gray-300">${new Date(log.completed_at).toLocaleString()}</td>
+                    <td class="px-6 py-4 text-white">${log.asset_type}</td>
+                    <td class="px-6 py-4 text-gray-400">${log.market || '-'}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded text-xs ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${log.status}</span>
+                    </td>
+                    <td class="px-6 py-4 text-white">${log.records_updated || 0}</td>
+                    <td class="px-6 py-4 text-right">
+                        ${log.status === 'error' && log.error_message ?
+                            `<button onclick="alert(\`${log.error_message.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)" class="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded hover:bg-red-500/30">View Error</button>`
+                            : '-'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) { console.error('Error loading logs:', error); }
+}
+
+// ==================== FORCE UPDATE ====================
+async function forceUpdate() {
+    if (!confirm('This will trigger a full data update. This may take several minutes. Continue?')) return;
+    try {
+        const response = await fetch('/admin/api/trigger-update', { method: 'POST' });
+        if (handleAuthError(response)) return;
+        if (response.ok) alert('Data update triggered! Check the Update Logs tab in a few minutes.');
+        else { const data = await response.json(); alert('Error: ' + (data.detail || 'Error triggering update')); }
+    } catch (error) { alert('Error triggering update'); }
+}
+
+// ==================== LOGOUT ====================
+async function logout() {
+    try { await fetch('/admin/logout', { method: 'POST' }); }
+    catch (e) {}
+    window.location.href = '/admin/login';
+}
+
+// ==================== SETTINGS ====================
+async function loadSettings() {
+    try {
+        const response = await fetch('/admin/api/settings');
+        if (handleAuthError(response)) return;
+        const data = await response.json();
+        if (data.status === 'success') {
+            data.settings.forEach(s => {
+                if (s.key === 'market_update_interval_minutes') document.getElementById('setting-market-interval').value = s.value;
+                if (s.key === 'flipping_update_interval_days') document.getElementById('setting-flipping-interval').value = s.value;
+                if (s.key === 'auto_update_enabled') document.getElementById('setting-auto-update').checked = s.value === 'true';
+            });
+        }
+    } catch (error) { console.error('Error loading settings:', error); }
+    loadCities();
+}
+
+async function saveSettings() {
+    const marketInterval = document.getElementById('setting-market-interval').value;
+    const flippingInterval = document.getElementById('setting-flipping-interval').value;
+    const autoUpdate = document.getElementById('setting-auto-update').checked;
+    if (marketInterval < 5 || marketInterval > 1440) { alert('Intervalo de mercado deve ser entre 5 e 1440 minutos'); return; }
+    if (flippingInterval < 1 || flippingInterval > 30) { alert('Intervalo de imoveis deve ser entre 1 e 30 dias'); return; }
+    try {
+        const response = await fetch('/admin/api/settings', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings: { market_update_interval_minutes: marketInterval, flipping_update_interval_days: flippingInterval, auto_update_enabled: autoUpdate ? 'true' : 'false' } })
+        });
+        if (handleAuthError(response)) return;
+        if (response.ok) {
+            const status = document.getElementById('settings-save-status');
+            status.classList.remove('hidden');
+            setTimeout(() => status.classList.add('hidden'), 3000);
+        } else { const data = await response.json(); alert('Erro: ' + (data.detail || 'Erro ao salvar')); }
+    } catch (error) { alert('Erro ao salvar configuracoes'); }
+}
+
+// ==================== CITIES ====================
+async function loadCities() {
+    try {
+        const response = await fetch('/admin/api/flipping/cities');
+        if (handleAuthError(response)) return;
+        const data = await response.json();
+        const container = document.getElementById('cities-list');
+        if (data.status === 'success' && data.cities.length > 0) {
+            container.innerHTML = data.cities.map(city => `
+                <div class="flex items-center space-x-2 bg-dark-700 border border-gray-600 px-4 py-2 rounded-lg">
+                    <span class="text-white font-semibold">${city.city}</span>
+                    ${city.state ? `<span class="text-gray-400 text-sm">(${city.state})</span>` : ''}
+                    <button onclick="removeCity(${city.id})" class="text-red-400 hover:text-red-300 ml-2" title="Remover">&#10005;</button>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p class="text-gray-500">Nenhuma cidade configurada. Adicione cidades acima.</p>';
+        }
+    } catch (error) { console.error('Error loading cities:', error); }
+}
+
+async function addCity() {
+    const cityInput = document.getElementById('new-city-name');
+    const stateInput = document.getElementById('new-city-state');
+    const city = cityInput.value.trim();
+    const state = stateInput.value.trim();
+    if (!city) { alert('Digite o nome da cidade'); return; }
+    try {
+        const response = await fetch('/admin/api/flipping/cities', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ city, state })
+        });
+        if (handleAuthError(response)) return;
+        if (response.ok) { cityInput.value = ''; stateInput.value = ''; loadCities(); }
+        else { const data = await response.json(); alert('Erro: ' + (data.detail || 'Erro ao adicionar')); }
+    } catch (error) { alert('Erro ao adicionar cidade'); }
+}
+
+async function removeCity(cityId) {
+    if (!confirm('Remover esta cidade?')) return;
+    try {
+        const response = await fetch(`/admin/api/flipping/cities/${cityId}`, { method: 'DELETE' });
+        if (handleAuthError(response)) return;
+        if (response.ok) loadCities();
+        else alert('Erro ao remover cidade');
+    } catch (error) { alert('Erro ao remover cidade'); }
+}
+
+// ==================== INVESTORS ====================
+async function loadInvestorsList() {
+    try {
+        const response = await fetch('/admin/api/investors', { credentials: 'include' });
+        if (handleAuthError(response)) return;
+        const data = await response.json();
+        const container = document.getElementById('investors-list');
+        if (data.investors && data.investors.length > 0) {
+            container.innerHTML = `
+            <table class="w-full">
+                <thead><tr class="border-b border-gray-700">
+                    <th class="text-left py-2 px-3 text-gray-400 text-sm">Nome</th>
+                    <th class="text-left py-2 px-3 text-gray-400 text-sm">Descricao</th>
+                    <th class="text-left py-2 px-3 text-gray-400 text-sm">Voz</th>
+                    <th class="text-right py-2 px-3 text-gray-400 text-sm">Acoes</th>
+                </tr></thead>
+                <tbody>${data.investors.map(inv => `
+                    <tr class="border-b border-gray-700/50 hover:bg-dark-700">
+                        <td class="py-3 px-3 text-white font-semibold">${inv.name}</td>
+                        <td class="py-3 px-3 text-gray-300 text-sm">${inv.description || '-'}</td>
+                        <td class="py-3 px-3 text-gray-400 text-xs">${inv.voice_id || 'default'}</td>
+                        <td class="py-3 px-3 text-right">
+                            <button onclick="removeInvestor(${inv.id})" class="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 text-sm">Remover</button>
                         </td>
-                    </tr>
-                `).join('');
-            }
-        } catch (error) {
-            console.error('Error loading users:', error);
+                    </tr>`).join('')}</tbody>
+            </table>`;
+        } else {
+            container.innerHTML = '<p class="text-gray-500">Nenhum investidor cadastrado.</p>';
         }
-    }
-
-    async function loadStats() {
-        try {
-            const response = await fetch('/admin/api/system-stats');
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                document.getElementById('stat-stocks').textContent = data.data.database.stocks_count.toLocaleString();
-                document.getElementById('stat-etfs').textContent = data.data.database.etfs_count.toLocaleString();
-                document.getElementById('stat-fiis').textContent = data.data.database.fiis_count.toLocaleString();
-                document.getElementById('stat-success-rate').textContent = data.data.updates.success_rate + '%';
-                document.getElementById('stat-total-updates').textContent = data.data.updates.total;
-            }
-        } catch (error) {
-            console.error('Error loading stats:', error);
-        }
-    }
-
-    async function loadLogs() {
-        try {
-            const response = await fetch('/admin/api/logs?limit=50');
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                const tbody = document.getElementById('logs-tbody');
-                tbody.innerHTML = data.data.map(log => `
-                    <tr class="hover:bg-dark-700">
-                        <td class="px-6 py-4 text-gray-300">${new Date(log.completed_at).toLocaleString()}</td>
-                        <td class="px-6 py-4 text-white">${log.asset_type}</td>
-                        <td class="px-6 py-4 text-gray-400">${log.market || '-'}</td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 py-1 rounded text-xs ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                    }">
-                                ${log.status}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-white">${log.records_updated || 0}</td>
-                        <td class="px-6 py-4 text-right">
-                            ${log.status === 'error' && log.error_message ?
-                        `<button onclick="alert(\`${log.error_message.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)" class="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded hover:bg-red-500/30">View Error</button>`
-                        : '-'}
-                        </td>
-                    </tr>
-                `).join('');
-            }
-        } catch (error) {
-            console.error('Error loading logs:', error);
-        }
-    }
-
-    async function deleteUser(userId) {
-        if (!confirm('Are you sure you want to delete this user?')) return;
-
-        try {
-            const response = await fetch(`/admin/api/users/${userId}`, {
-                method: 'DELETE'
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(data.message || 'User deleted successfully');
-                // Reload the users list
-                await loadUsers();
-            } else {
-                alert(data.detail || 'Error deleting user');
-            }
-        } catch (error) {
-            console.error('Error deleting user:', error);
-            alert('Error deleting user');
-        }
-    }
-
-    async function resetPassword(userId) {
-        const newPassword = prompt('Enter new password (min 8 characters):');
-        if (!newPassword) return;
-
-        try {
-            const response = await fetch(`/admin/api/users/${userId}/reset-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ new_password: newPassword })
-            });
-
-            if (response.ok) {
-                alert('Password reset successfully');
-            }
-        } catch (error) {
-            alert('Error resetting password');
-        }
-    }
-
-    async function createAdminUser() {
-        const username = prompt('Enter new admin username:');
-        if (!username) return;
-
-        const email = prompt('Enter admin email:');
-        if (!email) return;
-
-        const password = prompt('Enter password (min 8 characters):');
-        if (!password || password.length < 8) {
-            alert('Password must be at least 8 characters');
-            return;
-        }
-
-        try {
-            const response = await fetch('/admin/api/users/create-admin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, email, password })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert('Admin user created successfully!');
-                await loadUsers();
-            } else {
-                alert(data.detail || 'Error creating admin user');
-            }
-        } catch (error) {
-            console.error('Error creating admin:', error);
-            alert('Error creating admin user');
-        }
-    }
-
-    async function changeMyPassword() {
-        const currentPassword = prompt('Enter your current password:');
-        if (!currentPassword) return;
-
-        const newPassword = prompt('Enter new password (min 8 characters):');
-        if (!newPassword || newPassword.length < 8) {
-            alert('Password must be at least 8 characters');
-            return;
-        }
-
-        const confirmPassword = prompt('Confirm new password:');
-        if (newPassword !== confirmPassword) {
-            alert('Passwords do not match');
-            return;
-        }
-
-        try {
-            const response = await fetch('/admin/api/change-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert('Password changed successfully!');
-            } else {
-                alert(data.detail || 'Error changing password');
-            }
-        } catch (error) {
-            console.error('Error changing password:', error);
-            alert('Error changing password');
-        }
-    }
-
-    async function forceUpdate() {
-        if (!confirm('This will trigger a full data update. This may take several minutes. Continue?')) return;
-
-        try {
-            const response = await fetch('/admin/api/trigger-update', {
-                method: 'POST'
-            });
-
-            if (handleAuthError(response)) return;
-
-            if (response.ok) {
-                alert('Data update triggered! Check the Update Logs tab in a few minutes to see the results.');
-            } else {
-                const data = await response.json();
-                alert('Error: ' + (data.detail || 'Error triggering update'));
-            }
-        } catch (error) {
-            console.error('Error triggering update:', error);
-            alert('Error triggering update');
-        }
-    }
-
-    async function debugUpdate() {
-        if (!confirm('This will trigger a BACKGROUND update to prevent site crashes. The process runs on the server and logs will appear here live. Continue?')) return;
-
-        try {
-            const btn = event.target || document.getElementById('debug-btn');
-            const originalText = btn.innerText;
-            btn.innerText = '🚀 Starting...';
-            btn.disabled = true;
-
-            const response = await fetch('/admin/api/trigger-update?sync=false', {
-                method: 'POST'
-            });
-
-            if (handleAuthError(response)) return;
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showTab('logs');
-                alert('Update started in background! Logs will refresh automatically.');
-
-                // Start aggressive polling
-                if (refreshInterval) clearInterval(refreshInterval);
-                loadLogs();
-                refreshInterval = setInterval(loadLogs, 3000);
-
-                btn.innerText = 'Run Background Update';
-                btn.disabled = false;
-            } else {
-                alert('FAILED: ' + (data.detail || 'Unknown error'));
-                btn.disabled = false;
-                btn.innerText = originalText;
-            }
-        } catch (error) {
-            console.error('Error triggering update:', error);
-            alert('CRITICAL ERROR: ' + error.message);
-            window.location.reload();
-        }
-    }
-
-    async function logout() {
-        try {
-            await fetch('/admin/logout', { method: 'POST' });
-            window.location.href = '/admin/login';
-        } catch (error) {
-            window.location.href = '/admin/login';
-        }
-    }
-    // ==================== SETTINGS FUNCTIONS ====================
-
-    async function loadSettings() {
-        try {
-            const response = await fetch('/admin/api/settings');
-            if (handleAuthError(response)) return;
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                const settings = data.settings;
-                settings.forEach(s => {
-                    if (s.key === 'market_update_interval_minutes') {
-                        document.getElementById('setting-market-interval').value = s.value;
-                    }
-                    if (s.key === 'flipping_update_interval_days') {
-                        document.getElementById('setting-flipping-interval').value = s.value;
-                    }
-                    if (s.key === 'auto_update_enabled') {
-                        document.getElementById('setting-auto-update').checked = s.value === 'true';
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Error loading settings:', error);
-        }
-
-        // Also load cities
-        loadCities();
-    }
-
-    async function saveSettings() {
-        const marketInterval = document.getElementById('setting-market-interval').value;
-        const flippingInterval = document.getElementById('setting-flipping-interval').value;
-        const autoUpdate = document.getElementById('setting-auto-update').checked;
-
-        if (marketInterval < 5 || marketInterval > 1440) {
-            alert('Intervalo de mercado deve ser entre 5 e 1440 minutos');
-            return;
-        }
-        if (flippingInterval < 1 || flippingInterval > 30) {
-            alert('Intervalo de imoveis deve ser entre 1 e 30 dias');
-            return;
-        }
-
-        try {
-            const response = await fetch('/admin/api/settings', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    settings: {
-                        market_update_interval_minutes: marketInterval,
-                        flipping_update_interval_days: flippingInterval,
-                        auto_update_enabled: autoUpdate ? 'true' : 'false'
-                    }
-                })
-            });
-
-            if (handleAuthError(response)) return;
-            const data = await response.json();
-
-            if (response.ok) {
-                const status = document.getElementById('settings-save-status');
-                status.classList.remove('hidden');
-                setTimeout(() => status.classList.add('hidden'), 3000);
-            } else {
-                alert('Erro: ' + (data.detail || 'Erro ao salvar'));
-            }
-        } catch (error) {
-            console.error('Error saving settings:', error);
-            alert('Erro ao salvar configuracoes');
-        }
-    }
-
-    // ==================== CITIES FUNCTIONS ====================
-
-    async function loadCities() {
-        try {
-            const response = await fetch('/admin/api/flipping/cities');
-            if (handleAuthError(response)) return;
-            const data = await response.json();
-
-            const container = document.getElementById('cities-list');
-
-            if (data.status === 'success' && data.cities.length > 0) {
-                container.innerHTML = data.cities.map(city => `
-                    <div class="flex items-center space-x-2 bg-dark-700 border border-gray-600 px-4 py-2 rounded-lg">
-                        <span class="text-white font-semibold">${city.city}</span>
-                        ${city.state ? `<span class="text-gray-400 text-sm">(${city.state})</span>` : ''}
-                        <button onclick="removeCity(${city.id})" 
-                            class="text-red-400 hover:text-red-300 ml-2" title="Remover">
-                            ✕
-                        </button>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<p class="text-gray-500">Nenhuma cidade configurada. Adicione cidades acima.</p>';
-            }
-        } catch (error) {
-            console.error('Error loading cities:', error);
-        }
-    }
-
-    async function addCity() {
-        const cityInput = document.getElementById('new-city-name');
-        const stateInput = document.getElementById('new-city-state');
-        const city = cityInput.value.trim();
-        const state = stateInput.value.trim();
-
-        if (!city) {
-            alert('Digite o nome da cidade');
-            return;
-        }
-
-        try {
-            const response = await fetch('/admin/api/flipping/cities', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ city, state })
-            });
-
-            if (handleAuthError(response)) return;
-
-            if (response.ok) {
-                cityInput.value = '';
-                stateInput.value = '';
-                loadCities();
-            } else {
-                const data = await response.json();
-                alert('Erro: ' + (data.detail || 'Erro ao adicionar'));
-            }
-        } catch (error) {
-            console.error('Error adding city:', error);
-            alert('Erro ao adicionar cidade');
-        }
-    }
-
-    async function removeCity(cityId) {
-        if (!confirm('Remover esta cidade?')) return;
-
-        try {
-            const response = await fetch(`/admin/api/flipping/cities/${cityId}`, {
-                method: 'DELETE'
-            });
-
-            if (handleAuthError(response)) return;
-
-            if (response.ok) {
-                loadCities();
-            } else {
-                alert('Erro ao remover cidade');
-            }
-        } catch (error) {
-            console.error('Error removing city:', error);
-            alert('Erro ao remover cidade');
-        }
-    }
-
-    // ==================== INVESTORS ====================
-
-    async function loadInvestorsList() {
-        try {
-            const response = await fetch('/admin/api/investors', { credentials: 'include' });
-            if (handleAuthError(response)) return;
-            const data = await response.json();
-
-            const container = document.getElementById('investors-list');
-            if (data.investors && data.investors.length > 0) {
-                container.innerHTML = `
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-gray-700">
-                            <th class="text-left py-2 px-3 text-gray-400 text-sm">Nome</th>
-                            <th class="text-left py-2 px-3 text-gray-400 text-sm">Descricao</th>
-                            <th class="text-left py-2 px-3 text-gray-400 text-sm">Voz</th>
-                            <th class="text-right py-2 px-3 text-gray-400 text-sm">Acoes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.investors.map(inv => `
-                        <tr class="border-b border-gray-700/50 hover:bg-dark-700">
-                            <td class="py-3 px-3 text-white font-semibold">${inv.name}</td>
-                            <td class="py-3 px-3 text-gray-300 text-sm">${inv.description || '-'}</td>
-                            <td class="py-3 px-3 text-gray-400 text-xs">${inv.voice_id || 'default'}</td>
-                            <td class="py-3 px-3 text-right">
-                                <button onclick="removeInvestor(${inv.id})"
-                                    class="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 text-sm">
-                                    Remover
-                                </button>
-                            </td>
-                        </tr>
-                        `).join('')}
-                    </tbody>
-                </table>`;
-            } else {
-                container.innerHTML = '<p class="text-gray-500">Nenhum investidor cadastrado.</p>';
-            }
-        } catch (e) {
-            console.error('Error loading investors:', e);
-        }
-    }
-
-    async function addInvestor() {
-        const name = document.getElementById('inv-name').value.trim();
-        const description = document.getElementById('inv-description').value.trim();
-        const stylePrompt = document.getElementById('inv-style-prompt').value.trim();
-        const voiceId = document.getElementById('inv-voice').value;
-
-        if (!name) { alert('Nome obrigatorio'); return; }
-
-        try {
-            const response = await fetch('/admin/api/investors', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ name, description, style_prompt: stylePrompt, voice_id: voiceId })
-            });
-            if (handleAuthError(response)) return;
-            const data = await response.json();
-            if (data.status === 'success') {
-                document.getElementById('inv-name').value = '';
-                document.getElementById('inv-description').value = '';
-                document.getElementById('inv-style-prompt').value = '';
-                loadInvestorsList();
-            } else {
-                alert(data.message || 'Erro ao adicionar');
-            }
-        } catch (e) {
-            console.error('Error adding investor:', e);
-            alert('Erro ao adicionar investidor');
-        }
-    }
-
-    async function removeInvestor(id) {
-        if (!confirm('Remover este investidor?')) return;
-        try {
-            const response = await fetch(`/admin/api/investors/${id}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            if (handleAuthError(response)) return;
-            loadInvestorsList();
-        } catch (e) {
-            console.error('Error removing investor:', e);
-            alert('Erro ao remover investidor');
-        }
-    }
-
-    async function autoGenerateStyle() {
-        const name = document.getElementById('inv-name').value.trim();
-        if (!name) { alert('Preencha o nome do investidor primeiro'); return; }
-
-        document.getElementById('inv-style-prompt').value = 'Gerando estilo com IA...';
-
-        try {
-            const response = await fetch('/admin/api/investors/generate-style', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ name })
-            });
-            if (handleAuthError(response)) return;
-            const data = await response.json();
-            if (data.status === 'success') {
-                document.getElementById('inv-style-prompt').value = data.style_prompt;
-            } else {
-                document.getElementById('inv-style-prompt').value = '';
-                alert(data.message || 'Erro ao gerar estilo');
-            }
-        } catch (e) {
+    } catch (e) { console.error('Error loading investors:', e); }
+}
+
+async function addInvestor() {
+    const name = document.getElementById('inv-name').value.trim();
+    const description = document.getElementById('inv-description').value.trim();
+    const stylePrompt = document.getElementById('inv-style-prompt').value.trim();
+    const voiceId = document.getElementById('inv-voice').value;
+    if (!name) { alert('Nome obrigatorio'); return; }
+    try {
+        const response = await fetch('/admin/api/investors', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ name, description, style_prompt: stylePrompt, voice_id: voiceId })
+        });
+        if (handleAuthError(response)) return;
+        const data = await response.json();
+        if (data.status === 'success') {
+            document.getElementById('inv-name').value = '';
+            document.getElementById('inv-description').value = '';
             document.getElementById('inv-style-prompt').value = '';
-            alert('Erro ao gerar estilo');
-        }
-    }
+            loadInvestorsList();
+        } else { alert(data.message || 'Erro ao adicionar'); }
+    } catch (e) { alert('Erro ao adicionar investidor'); }
+}
 
+async function removeInvestor(id) {
+    if (!confirm('Remover este investidor?')) return;
+    try {
+        const response = await fetch(`/admin/api/investors/${id}`, { method: 'DELETE', credentials: 'include' });
+        if (handleAuthError(response)) return;
+        loadInvestorsList();
+    } catch (e) { alert('Erro ao remover investidor'); }
+}
+
+async function autoGenerateStyle() {
+    const name = document.getElementById('inv-name').value.trim();
+    if (!name) { alert('Preencha o nome do investidor primeiro'); return; }
+    document.getElementById('inv-style-prompt').value = 'Gerando estilo com IA...';
+    try {
+        const response = await fetch('/admin/api/investors/generate-style', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ name })
+        });
+        if (handleAuthError(response)) return;
+        const data = await response.json();
+        if (data.status === 'success') document.getElementById('inv-style-prompt').value = data.style_prompt;
+        else { document.getElementById('inv-style-prompt').value = ''; alert(data.message || 'Erro ao gerar estilo'); }
+    } catch (e) { document.getElementById('inv-style-prompt').value = ''; alert('Erro ao gerar estilo'); }
+}
 </script>
 {% endblock %}
