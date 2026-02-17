@@ -28,7 +28,7 @@ async def acoes_page(request: Request, user: dict = Depends(get_optional_user)):
     })
 
 @router.get("/api/data")
-async def get_acoes_data(market: str = None, min_liq: float = 200000, filter_units: bool = False, filter_risky: bool = False):
+async def get_acoes_data(market: str = None, min_liq: float = 0, filter_units: bool = False, filter_risky: bool = False):
     try:
         stocks = db.get_stocks(market=market, min_liq=min_liq)
         if not stocks:
@@ -49,8 +49,11 @@ async def get_acoes_data(market: str = None, min_liq: float = 200000, filter_uni
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Liquidity filter
-        df_filtered = df[df['liquidezmediadiaria'].fillna(0) > min_liq].copy()
+        # Liquidity filter (only apply if min_liq > 0)
+        if min_liq > 0:
+            df_filtered = df[df['liquidezmediadiaria'].fillna(0) > min_liq].copy()
+        else:
+            df_filtered = df[df['price'].fillna(0) > 0].copy()
 
         if filter_units:
             df_filtered = df_filtered[df_filtered['ticker'].str.endswith('11')]

@@ -255,6 +255,38 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Add to Portfolio -->
+            <div id="portfolio-section" class="bg-dark-700 rounded-xl p-5 mt-4">
+                <h4 class="text-lg font-bold text-white flex items-center space-x-2 mb-3">
+                    <span>💼</span>
+                    <span>Adicionar à Carteira</span>
+                </h4>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Carteira</label>
+                        <select id="wallet-select"
+                            class="w-full px-3 py-2 bg-dark-600 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="1">Principal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Quantidade</label>
+                        <input type="number" id="wallet-qty" value="1" min="0.01" step="1"
+                            class="w-full px-3 py-2 bg-dark-600 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="addToPortfolio()" id="add-portfolio-btn"
+                            class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition text-sm flex items-center justify-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Adicionar</span>
+                        </button>
+                    </div>
+                </div>
+                <p id="portfolio-msg" class="text-xs text-gray-400 mt-2 hidden"></p>
+            </div>
         </div>
     </div>
 </div>
@@ -264,6 +296,8 @@
     let allStocksData = [];
     let currentAnalysisText = '';
     let currentAudio = null;
+    let currentModalTicker = '';
+    let currentModalPrice = 0;
 
     // Auto-load data on page load
     window.addEventListener('DOMContentLoaded', () => {
@@ -485,7 +519,11 @@
         document.getElementById('valuation-card').className = 'mb-6 rounded-xl p-5 border-2 border-gray-700 bg-dark-700';
         document.getElementById('modal-data-grid').innerHTML = '';
         document.getElementById('analysis-modal').classList.remove('hidden');
+        document.getElementById('portfolio-msg').classList.add('hidden');
         currentAnalysisText = '';
+        currentModalTicker = ticker;
+        currentModalPrice = 0;
+        loadWallets();
 
         try {
             const market = document.getElementById('market-selector').value || 'BR';
@@ -503,6 +541,7 @@
 
                 // Valuation Card
                 const price = stock.price || 0;
+                currentModalPrice = price;
                 const fairValue = stock.valor_justo || 0;
                 const margin = fairValue > 0 && price > 0 ? ((fairValue / price) - 1) : 0;
                 const val = getValuationBadge(price, fairValue);
@@ -594,6 +633,71 @@
         toast.textContent = message;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
+    }
+
+    async function loadWallets() {
+        try {
+            const response = await fetch('/dashboard/api/wallets');
+            if (response.ok) {
+                const data = await response.json();
+                const select = document.getElementById('wallet-select');
+                if (data.wallets && data.wallets.length > 0) {
+                    select.innerHTML = data.wallets.map(w =>
+                        `<option value="${w.id}">${w.name}</option>`
+                    ).join('');
+                }
+            }
+        } catch (e) {
+            // User may not be logged in - keep default option
+        }
+    }
+
+    async function addToPortfolio() {
+        const btn = document.getElementById('add-portfolio-btn');
+        const msg = document.getElementById('portfolio-msg');
+        const walletId = document.getElementById('wallet-select').value;
+        const qty = parseFloat(document.getElementById('wallet-qty').value) || 1;
+
+        if (!currentModalTicker || currentModalPrice <= 0) {
+            msg.textContent = 'Dados do ativo não disponíveis';
+            msg.className = 'text-xs text-red-400 mt-2';
+            msg.classList.remove('hidden');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>';
+
+        try {
+            const response = await fetch('/dashboard/api/wallet/add-json', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticker: currentModalTicker,
+                    quantity: qty,
+                    price: currentModalPrice,
+                    wallet_id: parseInt(walletId)
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                msg.textContent = `${currentModalTicker} adicionado à carteira!`;
+                msg.className = 'text-xs text-green-400 mt-2';
+                showToast(`${currentModalTicker} adicionado à carteira!`, 'success');
+            } else {
+                msg.textContent = data.detail || data.message || 'Erro ao adicionar';
+                msg.className = 'text-xs text-red-400 mt-2';
+            }
+        } catch (e) {
+            msg.textContent = 'Faça login para adicionar à carteira';
+            msg.className = 'text-xs text-yellow-400 mt-2';
+        } finally {
+            msg.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg><span>Adicionar</span>';
+        }
     }
 </script>
 {% endblock %}

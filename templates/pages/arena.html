@@ -193,13 +193,19 @@
                 body: JSON.stringify({ ticker1, ticker2, investor: localStorage.getItem('investor_persona') || '' })
             });
 
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                showToast(errData.detail || 'Erro na batalha. Verifique se os ativos foram escaneados.', 'error');
+                return;
+            }
+
             const data = await response.json();
 
             if (data.status === 'success') {
                 displayBattleResult(data);
                 showToast('Batalha concluída!', 'success');
             } else {
-                showToast(data.detail || 'Erro na batalha. Verifique se os ativos foram escaneados.', 'error');
+                showToast(data.message || 'Erro na batalha', 'error');
             }
         } catch (error) {
             showToast('Erro ao processar batalha', 'error');

@@ -17,8 +17,56 @@ HEADERS = {
 
 PAGE_SIZE = 500
 
+# Full search filter with all ranges set to null = no filter = return everything
+# StatusInvest requires explicit structure to return ALL results (not just a subset)
+SEARCH_FILTER_STOCKS = json.dumps({
+    "Sector": "",
+    "SubSector": "",
+    "Segment": "",
+    "my_range": "-20;100",
+    "dy": {"Item1": None, "Item2": None},
+    "p_L": {"Item1": None, "Item2": None},
+    "peg_Ratio": {"Item1": None, "Item2": None},
+    "p_VP": {"Item1": None, "Item2": None},
+    "p_Ativo": {"Item1": None, "Item2": None},
+    "margemBruta": {"Item1": None, "Item2": None},
+    "margemEbit": {"Item1": None, "Item2": None},
+    "margemLiquida": {"Item1": None, "Item2": None},
+    "p_Ebit": {"Item1": None, "Item2": None},
+    "eV_Ebit": {"Item1": None, "Item2": None},
+    "dividaLiquidaEbit": {"Item1": None, "Item2": None},
+    "dividaliquidaPatrimonioLiquido": {"Item1": None, "Item2": None},
+    "p_SR": {"Item1": None, "Item2": None},
+    "p_CapitalGiro": {"Item1": None, "Item2": None},
+    "p_AtivoCirculante": {"Item1": None, "Item2": None},
+    "roe": {"Item1": None, "Item2": None},
+    "roic": {"Item1": None, "Item2": None},
+    "roa": {"Item1": None, "Item2": None},
+    "liquidezCorrente": {"Item1": None, "Item2": None},
+    "pl_Ativo": {"Item1": None, "Item2": None},
+    "passivo_Ativo": {"Item1": None, "Item2": None},
+    "gpianoTangivel": {"Item1": None, "Item2": None},
+    "recepidasNet5Years": {"Item1": None, "Item2": None},
+    "lucpidasNet5Years": {"Item1": None, "Item2": None},
+    "liqupidasMediaDiaria": {"Item1": None, "Item2": None}
+})
 
-def _fetch_paginated(category_type, label="items"):
+SEARCH_FILTER_FIIS = json.dumps({
+    "Segment": "",
+    "gestao": "",
+    "my_range": "0;20",
+    "dy": {"Item1": None, "Item2": None},
+    "p_VP": {"Item1": None, "Item2": None},
+    "percentualcaixa": {"Item1": None, "Item2": None},
+    "dividend": {"Item1": None, "Item2": None},
+    "patrimonio": {"Item1": None, "Item2": None},
+    "valorpatrimonialcota": {"Item1": None, "Item2": None},
+    "numerocotas": {"Item1": None, "Item2": None},
+    "lastdividend": {"Item1": None, "Item2": None}
+})
+
+
+def _fetch_paginated(category_type, label="items", search_filter=None):
     """
     Fetches ALL records from StatusInvest paginated endpoint.
     Returns a list of dicts (raw JSON items).
@@ -29,7 +77,7 @@ def _fetch_paginated(category_type, label="items"):
 
     while True:
         params = {
-            "search": "{}",
+            "search": search_filter or "{}",
             "CategoryType": category_type,
             "take": PAGE_SIZE,
             "skip": skip,
@@ -77,7 +125,7 @@ def get_br_stocks_statusinvest():
     Returns: DataFrame with standardized columns (ticker, price, pl, pvp, etc.)
     """
     try:
-        data = _fetch_paginated(category_type=1, label="BR stocks")
+        data = _fetch_paginated(category_type=1, label="BR stocks", search_filter=SEARCH_FILTER_STOCKS)
 
         if not data:
             logger.warning("StatusInvest: No stock data returned.")
@@ -140,7 +188,7 @@ def get_br_fiis_statusinvest():
     Returns: DataFrame with standardized columns.
     """
     try:
-        data = _fetch_paginated(category_type=2, label="BR FIIs")
+        data = _fetch_paginated(category_type=2, label="BR FIIs", search_filter=SEARCH_FILTER_FIIS)
 
         if not data:
             logger.warning("StatusInvest: No FII data returned.")

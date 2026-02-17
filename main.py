@@ -2,6 +2,9 @@
 SCOPE3 - FastAPI Main Application
 Modern financial analysis platform with modular architecture
 """
+from dotenv import load_dotenv
+load_dotenv()  # Load .env BEFORE any other imports that use env vars
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates

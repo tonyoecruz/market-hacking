@@ -56,6 +56,15 @@ async def get_portfolio_api(
     }
 
 
+@router.get("/api/wallets")
+async def get_wallets_api(
+    user: dict = Depends(get_current_user_from_cookie)
+):
+    """Get user's wallets list"""
+    wallets = WalletQueries.get_wallets(user["id"])
+    return {"wallets": wallets}
+
+
 @router.post("/api/wallet/add")
 async def add_to_wallet(
     ticker: str = Form(...),
@@ -74,10 +83,39 @@ async def add_to_wallet(
         price=price,
         wallet_id=wallet_id
     )
-    
+
     if not success:
         raise HTTPException(status_code=400, detail=message)
-    
+
+    return {"success": True, "message": message}
+
+
+@router.post("/api/wallet/add-json")
+async def add_to_wallet_json(
+    request: Request,
+    user: dict = Depends(get_current_user_from_cookie)
+):
+    """Add asset to wallet via JSON (used from analysis modals)"""
+    body = await request.json()
+    ticker = body.get("ticker", "").upper().strip()
+    quantity = float(body.get("quantity", 1))
+    price = float(body.get("price", 0))
+    wallet_id = int(body.get("wallet_id", 1))
+
+    if not ticker or price <= 0:
+        raise HTTPException(status_code=400, detail="Ticker e preço são obrigatórios")
+
+    success, message = AssetQueries.add_to_wallet(
+        user_id=user["id"],
+        ticker=ticker,
+        quantity=quantity,
+        price=price,
+        wallet_id=wallet_id
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+
     return {"success": True, "message": message}
 
 

@@ -61,4 +61,18 @@ async def battle(request: Request):
             investor_style_prompt = inv['style_prompt']
 
     analysis = data_utils.get_battle_analysis(t1, str(asset1), t2, str(asset2), investor_style_prompt=investor_style_prompt)
-    return JSONResponse({'status': 'success', 'analysis': analysis})
+
+    # Ensure asset dicts have numeric values for the frontend
+    def safe_asset(a):
+        if isinstance(a, dict):
+            return a
+        return {}
+
+    return JSONResponse({
+        'status': 'success',
+        'analysis': analysis,
+        'ticker1': t1,
+        'ticker2': t2,
+        'data1': safe_asset(asset1),
+        'data2': safe_asset(asset2)
+    })
