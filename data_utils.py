@@ -21,9 +21,11 @@ import threading
 import logging
 
 # Ensure .env is loaded (safety - may already be loaded by main.py)
+# Use explicit path to guarantee it finds the .env file
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    load_dotenv(_env_path)
 except ImportError:
     pass
 

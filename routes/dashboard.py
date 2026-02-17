@@ -65,6 +65,29 @@ async def get_wallets_api(
     return {"wallets": wallets}
 
 
+@router.post("/api/wallet/create")
+async def create_wallet_api(
+    request: Request,
+    user: dict = Depends(get_current_user_from_cookie)
+):
+    """Create a new wallet via JSON"""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Nome da carteira é obrigatório")
+
+    success, message = WalletQueries.create_wallet(user["id"], name)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+
+    # Return the new wallet's ID
+    wallets = WalletQueries.get_wallets(user["id"])
+    new_wallet = next((w for w in wallets if w.get("name") == name), None)
+    wallet_id = new_wallet["id"] if new_wallet else None
+
+    return {"success": True, "message": message, "wallet_id": wallet_id}
+
+
 @router.post("/api/wallet/add")
 async def add_to_wallet(
     ticker: str = Form(...),
