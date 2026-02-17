@@ -309,22 +309,31 @@ class DatabaseManager:
         try:
             # Sanitize Data
             df = df.replace({pd.NA: None, float('nan'): None, np.nan: None})
-            
+
+            # Remove duplicate tickers (StatusInvest may return duplicates)
+            df = df.drop_duplicates(subset=['ticker'], keep='first')
+
             valid_columns = ['ticker', 'market', 'price', 'dy', 'pvp', 'liquidezmediadiaria']
-            
-            # Bulk Query Existing
+
+            # Query ALL existing tickers (unique constraint is on ticker alone, not ticker+market)
             existing_tickers = set(
-                x[0] for x in db.query(FIIDB.ticker).filter(FIIDB.market == market).all()
+                x[0] for x in db.query(FIIDB.ticker).all()
             )
-            
+
             new_objects = []
             count = 0
-            
+            seen_tickers = set()
+
             for _, row in df.iterrows():
-                ticker = row['ticker']
+                ticker = str(row['ticker']).strip().upper()
+                if ticker in seen_tickers:
+                    continue
+                seen_tickers.add(ticker)
+
                 fii_data = {k: v for k, v in row.to_dict().items() if k in valid_columns}
+                fii_data['ticker'] = ticker
                 if 'market' not in fii_data: fii_data['market'] = market
-                
+
                 if ticker in existing_tickers:
                     # Update
                     fii_data['updated_at'] = datetime.now()
@@ -332,15 +341,22 @@ class DatabaseManager:
                 else:
                     # Insert
                     new_objects.append(FIIDB(**fii_data))
+                    existing_tickers.add(ticker)  # Prevent duplicate inserts
                 count += 1
-            
+
+                # Commit in chunks
+                if count % 200 == 0:
+                    db.commit()
+
             if new_objects:
                 db.bulk_save_objects(new_objects)
-            
+
             db.commit()
+            logger.info(f"Successfully saved {count} FIIs ({len(new_objects)} new)")
             return count
         except Exception as e:
             db.rollback()
+            logger.error(f"Error in save_fiis: {str(e)}", exc_info=True)
             raise e
         finally:
             db.close()
