@@ -201,7 +201,7 @@ class AgencyCrawler:
             logger.warning(f"[CRAWL] Error fetching {url}: {e}")
             return ""
 
-    async def crawl_agency(self, agency: dict, city: str, max_pages: int = 3) -> list:
+    async def crawl_agency(self, agency: dict, city: str, max_pages: int = 2) -> list:
         """
         Fetch agency site pages via HTTP and extract structured listings.
         Returns list of dicts matching the expected DataFrame schema.
@@ -210,14 +210,14 @@ class AgencyCrawler:
         domain_root = f"https://{agency['domain']}"
         all_listings = []
 
-        # Build candidate URLs to try
+        # Build candidate URLs to try (homepage + listing patterns)
         urls_to_try = [base_url]
         for pattern in LISTING_URL_PATTERNS:
             candidate = f"{domain_root}{pattern}"
             if candidate != base_url:
                 urls_to_try.append(candidate)
 
-        async with httpx.AsyncClient(timeout=15, verify=False) as client:
+        async with httpx.AsyncClient(timeout=12, verify=False) as client:
             pages_crawled = 0
             for url in urls_to_try:
                 if pages_crawled >= max_pages:
@@ -232,10 +232,13 @@ class AgencyCrawler:
                     all_listings.extend(listings)
                     pages_crawled += 1
                     logger.info(f"[CRAWL] Extracted {len(listings)} listings from {url}")
+                    # If we got listings from first page, skip trying more URLs
+                    if pages_crawled >= 1 and len(all_listings) >= 5:
+                        break
                 else:
                     logger.info(f"[CRAWL] No listings found on {url}")
 
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.3)
 
         logger.info(f"[CRAWL] Total: {len(all_listings)} listings from {agency['name']}")
         return all_listings
