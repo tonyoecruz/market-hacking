@@ -39,9 +39,5 @@ lxml
 google-generativeai
 plotly
 
-# Web Crawling (House Flipping)
-crawl4ai
-playwright
-
 # Text-to-Speech
 edge-tts

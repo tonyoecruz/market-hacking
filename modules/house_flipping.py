@@ -1,6 +1,6 @@
 """
 House Flipping - Intelligent Real Estate Opportunity Finder
-Pipeline: Serper.dev (agency discovery) -> Crawl4AI (site crawling) -> Gemini (data extraction) -> Pandas (analysis)
+Pipeline: Serper.dev (agency discovery) -> httpx (site fetching) -> Gemini (data extraction) -> Pandas (analysis)
 """
 import httpx
 import pandas as pd
@@ -8,6 +8,7 @@ import logging
 import asyncio
 import json
 import os
+import re
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -108,12 +109,48 @@ class SerperAgencyDiscovery:
         return agencies
 
 
-# ==================== STEP 2: SITE CRAWLING + LLM EXTRACTION ====================
+# ==================== STEP 2: LIGHTWEIGHT HTTP CRAWLING + LLM EXTRACTION ====================
+
+# Common User-Agent to avoid being blocked
+_HTTP_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+}
+
+
+def _html_to_text(html: str) -> str:
+    """
+    Lightweight HTML-to-text conversion. Strips scripts, styles and tags,
+    preserving meaningful text content for LLM extraction.
+    No external dependencies required.
+    """
+    # Remove script and style blocks entirely
+    text = re.sub(r'<script[^>]*>.*?</script>', ' ', html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<style[^>]*>.*?</style>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<noscript[^>]*>.*?</noscript>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
+    # Remove HTML comments
+    text = re.sub(r'<!--.*?-->', ' ', text, flags=re.DOTALL)
+    # Replace <br>, <p>, <div>, <li>, <tr> with newlines for readability
+    text = re.sub(r'<(?:br|p|div|li|tr|h[1-6])[^>]*/?>', '\n', text, flags=re.IGNORECASE)
+    # Strip all remaining HTML tags
+    text = re.sub(r'<[^>]+>', ' ', text)
+    # Decode common HTML entities
+    text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+    text = text.replace('&nbsp;', ' ').replace('&quot;', '"').replace('&#39;', "'")
+    text = re.sub(r'&#\d+;', ' ', text)
+    text = re.sub(r'&\w+;', ' ', text)
+    # Collapse whitespace
+    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r'\n\s*\n+', '\n', text)
+    return text.strip()
+
 
 class AgencyCrawler:
     """
-    Crawls real estate agency websites using Crawl4AI and extracts
+    Fetches real estate agency websites using httpx (no browser needed) and extracts
     structured listing data using Google Gemini LLM.
+    Lightweight: no Playwright/Chromium dependency, works on any hosting platform.
     """
 
     def __init__(self):
@@ -125,88 +162,94 @@ class AgencyCrawler:
         genai.configure(api_key=self.gemini_api_key)
         return genai.GenerativeModel("gemini-2.0-flash")
 
+    async def _fetch_page(self, client: httpx.AsyncClient, url: str) -> str:
+        """Fetch a single page and return cleaned text content."""
+        try:
+            logger.info(f"[CRAWL] Fetching: {url}")
+            response = await client.get(url, headers=_HTTP_HEADERS, follow_redirects=True)
+            response.raise_for_status()
+
+            content_type = response.headers.get("content-type", "")
+            if "text/html" not in content_type and "text/plain" not in content_type:
+                logger.info(f"[CRAWL] Skipping {url} - not HTML (content-type: {content_type})")
+                return ""
+
+            html = response.text
+            if len(html) < 500:
+                logger.info(f"[CRAWL] Skipping {url} - HTML too short ({len(html)} chars)")
+                return ""
+
+            text = _html_to_text(html)
+
+            if len(text) < 200:
+                logger.info(f"[CRAWL] Skipping {url} - extracted text too short ({len(text)} chars)")
+                return ""
+
+            logger.info(f"[CRAWL] Got {len(text)} chars of text from {url}")
+            return text
+
+        except httpx.HTTPStatusError as e:
+            logger.info(f"[CRAWL] HTTP {e.response.status_code} for {url}")
+            return ""
+        except httpx.ConnectError:
+            logger.info(f"[CRAWL] Connection failed for {url}")
+            return ""
+        except httpx.TimeoutException:
+            logger.info(f"[CRAWL] Timeout for {url}")
+            return ""
+        except Exception as e:
+            logger.warning(f"[CRAWL] Error fetching {url}: {e}")
+            return ""
+
     async def crawl_agency(self, agency: dict, city: str, max_pages: int = 3) -> list:
         """
-        Crawl one agency site and extract structured listings.
+        Fetch agency site pages via HTTP and extract structured listings.
         Returns list of dicts matching the expected DataFrame schema.
         """
-        from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode
-
         base_url = agency["url"]
         domain_root = f"https://{agency['domain']}"
         all_listings = []
 
-        # Build candidate URLs
+        # Build candidate URLs to try
         urls_to_try = [base_url]
         for pattern in LISTING_URL_PATTERNS:
             candidate = f"{domain_root}{pattern}"
             if candidate != base_url:
                 urls_to_try.append(candidate)
 
-        config = CrawlerRunConfig(
-            cache_mode=CacheMode.BYPASS,
-            page_timeout=20000,
-            wait_until="domcontentloaded",
-        )
-
-        # Optimize for low memory/Render free tier
-        browser_config = {
-            "headless": True,
-            "args": [
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-extensions",
-                "--window-size=800,600"
-            ]
-        }
-
-        async with AsyncWebCrawler(verbose=True, **browser_config) as crawler:
+        async with httpx.AsyncClient(timeout=15, verify=False) as client:
             pages_crawled = 0
             for url in urls_to_try:
                 if pages_crawled >= max_pages:
                     break
 
-                try:
-                    logger.info(f"[CRAWL] Fetching: {url}")
-                    result = await crawler.arun(url=url, config=config)
-
-                    if not result.success:
-                        logger.warning(f"[CRAWL] Failed: {url} - {getattr(result, 'error_message', 'unknown')}")
-                        continue
-
-                    markdown = result.markdown or ""
-                    if len(markdown) < 300:
-                        logger.info(f"[CRAWL] Skipping {url} - content too short ({len(markdown)} chars)")
-                        continue
-
-                    listings = await self._extract_with_gemini(markdown, city, agency["name"])
-                    if listings:
-                        all_listings.extend(listings)
-                        pages_crawled += 1
-                        logger.info(f"[CRAWL] Extracted {len(listings)} listings from {url}")
-                    else:
-                        logger.info(f"[CRAWL] No listings found on {url}")
-
-                except Exception as e:
-                    logger.warning(f"[CRAWL] Error crawling {url}: {e}")
+                text = await self._fetch_page(client, url)
+                if not text:
                     continue
 
-                await asyncio.sleep(1.0)
+                listings = await self._extract_with_gemini(text, city, agency["name"])
+                if listings:
+                    all_listings.extend(listings)
+                    pages_crawled += 1
+                    logger.info(f"[CRAWL] Extracted {len(listings)} listings from {url}")
+                else:
+                    logger.info(f"[CRAWL] No listings found on {url}")
+
+                await asyncio.sleep(0.5)
 
         logger.info(f"[CRAWL] Total: {len(all_listings)} listings from {agency['name']}")
         return all_listings
 
-    async def _extract_with_gemini(self, markdown_content: str, city: str, agency_name: str) -> list:
+    async def _extract_with_gemini(self, page_text: str, city: str, agency_name: str) -> list:
         """
-        Send crawled markdown to Gemini and extract structured listing data.
+        Send page text to Gemini and extract structured listing data.
         """
         if not self.gemini_api_key:
             logger.error("[GEMINI] No API key configured (GEMINI_KEY or GEMINI_API_KEY)")
             return []
 
         # Truncate to avoid token limits
-        content = markdown_content[:15000]
+        content = page_text[:15000]
 
         prompt = f"""Analise o conteudo abaixo de um site de imobiliaria e extraia TODOS os imoveis a venda listados.
 
@@ -300,7 +343,7 @@ Conteudo do site da imobiliaria "{agency_name}":
 
             # Rate limit between agencies
             if i < min(len(agencies), max_agencies) - 1:
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(1.0)
 
         logger.info(f"[CRAWL] Pipeline complete: {len(all_listings)} total listings from {len(agencies)} agencies")
         return all_listings
