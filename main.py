@@ -15,7 +15,7 @@ import uvicorn
 import logging
 
 # Import routes
-from routes import auth, dashboard, acoes, etfs, elite_mix, fiis, arena, admin, admin_auth, admin_panel
+from routes import auth, dashboard, acoes, etfs, elite_mix, fiis, arena, admin, admin_auth, admin_panel, renda_fixa
 from routes import admin_logs  # Real-time logs
 
 # Import database and scheduler
@@ -64,6 +64,7 @@ app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 app.include_router(admin_auth.router, prefix="/admin", tags=["Admin Auth"])
 app.include_router(admin_panel.router, prefix="/admin", tags=["Admin Panel"])
 app.include_router(admin_logs.router, prefix="/admin", tags=["Admin Logs"])
+app.include_router(renda_fixa.router, prefix="/renda-fixa", tags=["Renda Fixa"])
 
 # House Flipping Module
 from routes import flipping

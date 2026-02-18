@@ -5,15 +5,17 @@
 {% block head %}
 <style>
     .kpi-card {
-        background: linear-gradient(135deg, rgba(31,35,41,0.9), rgba(21,25,30,0.95));
-        border: 1px solid rgba(255,255,255,0.06);
+        background: linear-gradient(135deg, rgba(31, 35, 41, 0.9), rgba(21, 25, 30, 0.95));
+        border: 1px solid rgba(255, 255, 255, 0.06);
         transition: all 0.3s ease;
     }
+
     .kpi-card:hover {
-        border-color: rgba(0,255,157,0.3);
+        border-color: rgba(0, 255, 157, 0.3);
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
     }
+
     .kpi-icon {
         width: 48px;
         height: 48px;
@@ -23,16 +25,19 @@
         justify-content: center;
         font-size: 1.4rem;
     }
+
     .chart-container {
-        background: rgba(31,35,41,0.9);
-        border: 1px solid rgba(255,255,255,0.06);
+        background: rgba(31, 35, 41, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 12px;
         padding: 20px;
         transition: all 0.3s ease;
     }
+
     .chart-container:hover {
-        border-color: rgba(0,255,157,0.15);
+        border-color: rgba(0, 255, 157, 0.15);
     }
+
     .chart-title {
         font-size: 0.95rem;
         font-weight: 600;
@@ -42,43 +47,70 @@
         align-items: center;
         gap: 8px;
     }
+
     .mini-table th {
         font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         color: #9CA3AF;
         padding: 8px 12px;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
+
     .mini-table td {
         padding: 8px 12px;
         font-size: 0.85rem;
-        border-bottom: 1px solid rgba(255,255,255,0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     }
-    .mini-table tr:hover { background: rgba(255,255,255,0.02); }
+
+    .mini-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
     @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
-    .animate-fade-in { animation: fadeInUp 0.4s ease-out forwards; }
+
+    .animate-fade-in {
+        animation: fadeInUp 0.4s ease-out forwards;
+    }
+
     .skeleton {
-        background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.03) 75%);
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 6px;
     }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    @keyframes shimmer {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
 
     /* Wallet dropdown */
     .wallet-dropdown {
         background: #15191E;
-        border: 1px solid rgba(255,255,255,0.1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 8px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
         min-width: 220px;
         max-height: 260px;
         overflow-y: auto;
     }
+
     .wallet-dropdown label {
         display: flex;
         align-items: center;
@@ -89,7 +121,11 @@
         font-size: 0.85rem;
         color: #e2e8f0;
     }
-    .wallet-dropdown label:hover { background: rgba(255,255,255,0.04); }
+
+    .wallet-dropdown label:hover {
+        background: rgba(255, 255, 255, 0.04);
+    }
+
     .wallet-dropdown input[type="checkbox"] {
         accent-color: #00FF9D;
         width: 16px;
@@ -99,39 +135,65 @@
     .filter-btn {
         padding: 8px 16px;
         background: #1F2329;
-        border: 1px solid rgba(255,255,255,0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 8px;
         color: #e2e8f0;
         font-size: 0.85rem;
         cursor: pointer;
         transition: all 0.2s;
     }
-    .filter-btn:hover { border-color: rgba(0,255,157,0.3); }
-    .filter-btn:focus { outline: none; ring: 2px solid #00FF9D; }
+
+    .filter-btn:hover {
+        border-color: rgba(0, 255, 157, 0.3);
+    }
+
+    .filter-btn:focus {
+        outline: none;
+        ring: 2px solid #00FF9D;
+    }
+
     .filter-select {
         padding: 8px 14px;
         background: #1F2329;
-        border: 1px solid rgba(255,255,255,0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 8px;
         color: #e2e8f0;
         font-size: 0.85rem;
         cursor: pointer;
         appearance: auto;
     }
-    .filter-select:focus { outline: none; border-color: rgba(0,255,157,0.4); }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: rgba(0, 255, 157, 0.4);
+    }
+
     .filter-date {
         padding: 6px 10px;
         background: #1F2329;
-        border: 1px solid rgba(255,255,255,0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 8px;
         color: #e2e8f0;
         font-size: 0.8rem;
     }
-    .filter-date:focus { outline: none; border-color: rgba(0,255,157,0.4); }
 
-    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
-    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .filter-date:focus {
+        outline: none;
+        border-color: rgba(0, 255, 157, 0.4);
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+    }
 </style>
 {% endblock %}
 
@@ -150,10 +212,18 @@
                 <div class="flex items-center gap-3 flex-wrap">
                     <!-- Wallet Multiselect -->
                     <div class="relative">
-                        <button id="wallet-filter-btn" class="filter-btn flex items-center gap-2" onclick="toggleWalletDropdown()">
-                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                        <button id="wallet-filter-btn" class="filter-btn flex items-center gap-2"
+                            onclick="toggleWalletDropdown()">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z">
+                                </path>
+                            </svg>
                             <span id="wallet-filter-label">Todas as Carteiras</span>
-                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7"></path>
+                            </svg>
                         </button>
                         <div id="wallet-dropdown" class="hidden absolute right-0 mt-2 wallet-dropdown z-50">
                             <div id="wallet-checkboxes" class="py-2"></div>
@@ -178,7 +248,11 @@
 
                     <!-- Refresh Button -->
                     <button onclick="loadAnalytics()" class="filter-btn" title="Atualizar">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                            </path>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -190,9 +264,11 @@
             <!-- Empty State (hidden by default) -->
             <div id="empty-state" class="hidden">
                 <div class="chart-container text-center py-16">
-                    <svg class="w-20 h-20 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-20 h-20 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4">
+                        </path>
                     </svg>
                     <h3 class="text-xl font-bold text-gray-400 mb-2">Sua carteira esta vazia</h3>
                     <p class="text-gray-500 text-sm mb-6">Adicione ativos para visualizar sua dashboard analitica</p>
@@ -209,10 +285,15 @@
                     <div class="kpi-card rounded-xl p-5 animate-fade-in" style="animation-delay: 0ms">
                         <div class="flex items-center justify-between mb-3">
                             <div class="kpi-icon bg-green-500/10 text-green-400">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                                    </path>
+                                </svg>
                             </div>
                         </div>
-                        <p id="kpi-patrimonio" class="text-2xl font-bold text-white"><span class="skeleton inline-block w-32 h-7">&nbsp;</span></p>
+                        <p id="kpi-patrimonio" class="text-2xl font-bold text-white"><span
+                                class="skeleton inline-block w-32 h-7">&nbsp;</span></p>
                         <p class="text-xs text-gray-500 mt-1">Patrimonio Total</p>
                     </div>
 
@@ -220,10 +301,14 @@
                     <div class="kpi-card rounded-xl p-5 animate-fade-in" style="animation-delay: 60ms">
                         <div class="flex items-center justify-between mb-3">
                             <div class="kpi-icon bg-cyan-500/10 text-cyan-400">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
                             </div>
                         </div>
-                        <p id="kpi-rentabilidade" class="text-2xl font-bold text-white"><span class="skeleton inline-block w-24 h-7">&nbsp;</span></p>
+                        <p id="kpi-rentabilidade" class="text-2xl font-bold text-white"><span
+                                class="skeleton inline-block w-24 h-7">&nbsp;</span></p>
                         <p class="text-xs text-gray-500 mt-1">Rentabilidade no Periodo</p>
                     </div>
 
@@ -231,10 +316,15 @@
                     <div class="kpi-card rounded-xl p-5 animate-fade-in" style="animation-delay: 120ms">
                         <div class="flex items-center justify-between mb-3">
                             <div class="kpi-icon bg-purple-500/10 text-purple-400">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+                                    </path>
+                                </svg>
                             </div>
                         </div>
-                        <p id="kpi-dividendos" class="text-2xl font-bold text-white"><span class="skeleton inline-block w-28 h-7">&nbsp;</span></p>
+                        <p id="kpi-dividendos" class="text-2xl font-bold text-white"><span
+                                class="skeleton inline-block w-28 h-7">&nbsp;</span></p>
                         <p class="text-xs text-gray-500 mt-1">Dividendos Estimados (12m)</p>
                     </div>
                 </div>
@@ -299,10 +389,14 @@
                                     <th class="text-right">Rentab.</th>
                                     <th class="text-right">DY</th>
                                     <th class="text-right">Div. Est.</th>
+                                    <th class="text-center">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="table-assets-detail">
-                                <tr><td colspan="11" class="text-center text-gray-500 py-8"><span class="skeleton inline-block w-48 h-5">&nbsp;</span></td></tr>
+                                <tr>
+                                    <td colspan="12" class="text-center text-gray-500 py-8"><span
+                                            class="skeleton inline-block w-48 h-5">&nbsp;</span></td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -312,429 +406,476 @@
     </main>
 </div>
 
+<!-- Edit Asset Modal -->
+<div id="edit-modal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-dark-800 rounded-xl border border-gray-700 p-6 w-full max-w-md shadow-2xl relative">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span class="bg-blue-500/20 text-blue-400 p-1.5 rounded-lg"><svg class="w-5 h-5" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                    </path>
+                </svg></span>
+            Editar Ativo
+        </h3>
+
+        <input type="hidden" id="edit-ticker">
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">Ticker</label>
+                <input type="text" id="edit-ticker-display" disabled
+                    class="w-full px-3 py-2 bg-dark-900 border border-gray-600 rounded-lg text-gray-400 text-sm">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Quantidade</label>
+                    <input type="number" id="edit-qty" step="0.000001" min="0"
+                        class="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary transition-colors">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Preço Médio (R$)</label>
+                    <input type="number" id="edit-price" step="0.01" min="0"
+                        class="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary transition-colors">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="closeEditModal()"
+                class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancelar</button>
+            <button onclick="saveEdit()" id="btn-save-edit"
+                class="px-4 py-2 bg-primary text-black font-semibold rounded-lg text-sm hover:bg-green-400 transition-colors flex items-center gap-2">
+                <span>Salvar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
-// ===================== CHART.JS SETUP =====================
-Chart.defaults.color = '#9CA3AF';
-Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
-Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
-Chart.defaults.font.size = 11;
-Chart.defaults.plugins.legend.labels.boxWidth = 12;
-Chart.defaults.plugins.legend.labels.padding = 12;
+    // ===================== CHART.JS SETUP =====================
+    Chart.defaults.color = '#9CA3AF';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+    Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+    Chart.defaults.font.size = 11;
+    Chart.defaults.plugins.legend.labels.boxWidth = 12;
+    Chart.defaults.plugins.legend.labels.padding = 12;
 
-let chartInstances = {};
-const COLORS = {
-    primary: '#00FF9D',
-    secondary: '#00C8FF',
-    accent1: '#A855F7',
-    accent2: '#F59E0B',
-    accent3: '#EF4444',
-    palette: ['#00FF9D', '#00C8FF', '#A855F7', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6', '#F97316', '#06B6D4']
-};
+    let chartInstances = {};
+    const COLORS = {
+        primary: '#00FF9D',
+        secondary: '#00C8FF',
+        accent1: '#A855F7',
+        accent2: '#F59E0B',
+        accent3: '#EF4444',
+        palette: ['#00FF9D', '#00C8FF', '#A855F7', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6', '#F97316', '#06B6D4']
+    };
 
-function getOrCreateChart(id, config) {
-    if (chartInstances[id]) {
-        chartInstances[id].destroy();
-    }
-    const ctx = document.getElementById(id);
-    if (!ctx) return null;
-    chartInstances[id] = new Chart(ctx, config);
-    return chartInstances[id];
-}
-
-function formatBRL(value) {
-    return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// ===================== WALLET DROPDOWN =====================
-let walletsLoaded = false;
-
-function toggleWalletDropdown() {
-    const dd = document.getElementById('wallet-dropdown');
-    dd.classList.toggle('hidden');
-}
-
-// Close dropdown on outside click
-document.addEventListener('click', function(e) {
-    const dd = document.getElementById('wallet-dropdown');
-    const btn = document.getElementById('wallet-filter-btn');
-    if (!dd.contains(e.target) && !btn.contains(e.target)) {
-        dd.classList.add('hidden');
-    }
-});
-
-function renderWalletFilter(wallets) {
-    if (walletsLoaded) return;
-    walletsLoaded = true;
-
-    const container = document.getElementById('wallet-checkboxes');
-    if (!wallets || wallets.length === 0) {
-        container.innerHTML = '<p class="px-4 py-2 text-gray-500 text-xs">Nenhuma carteira</p>';
-        return;
+    function getOrCreateChart(id, config) {
+        if (chartInstances[id]) {
+            chartInstances[id].destroy();
+        }
+        const ctx = document.getElementById(id);
+        if (!ctx) return null;
+        chartInstances[id] = new Chart(ctx, config);
+        return chartInstances[id];
     }
 
-    let html = '';
-    for (const w of wallets) {
-        html += `<label><input type="checkbox" class="wallet-checkbox" value="${w.id}" onchange="onWalletFilterChange()"> ${w.name}</label>`;
+    function formatBRL(value) {
+        return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    container.innerHTML = html;
-}
 
-function onWalletFilterChange() {
-    const checked = document.querySelectorAll('.wallet-checkbox:checked');
-    const label = document.getElementById('wallet-filter-label');
-    if (checked.length === 0) {
-        label.textContent = 'Todas as Carteiras';
-    } else if (checked.length === 1) {
-        label.textContent = checked[0].parentElement.textContent.trim();
-    } else {
-        label.textContent = checked.length + ' Carteiras';
+    // ===================== WALLET DROPDOWN =====================
+    let walletsLoaded = false;
+
+    function toggleWalletDropdown() {
+        const dd = document.getElementById('wallet-dropdown');
+        dd.classList.toggle('hidden');
     }
-    loadAnalytics();
-}
 
-// ===================== PERIOD FILTER =====================
-function onPeriodChange() {
-    const period = document.getElementById('period-filter').value;
-    const customDiv = document.getElementById('custom-dates');
-    if (period === 'custom') {
-        customDiv.classList.remove('hidden');
-    } else {
-        customDiv.classList.add('hidden');
+    // Close dropdown on outside click
+    document.addEventListener('click', function (e) {
+        const dd = document.getElementById('wallet-dropdown');
+        const btn = document.getElementById('wallet-filter-btn');
+        if (!dd.contains(e.target) && !btn.contains(e.target)) {
+            dd.classList.add('hidden');
+        }
+    });
+
+    function renderWalletFilter(wallets) {
+        if (walletsLoaded) return;
+        walletsLoaded = true;
+
+        const container = document.getElementById('wallet-checkboxes');
+        if (!wallets || wallets.length === 0) {
+            container.innerHTML = '<p class="px-4 py-2 text-gray-500 text-xs">Nenhuma carteira</p>';
+            return;
+        }
+
+        let html = '';
+        for (const w of wallets) {
+            html += `<label><input type="checkbox" class="wallet-checkbox" value="${w.id}" onchange="onWalletFilterChange()"> ${w.name}</label>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function onWalletFilterChange() {
+        const checked = document.querySelectorAll('.wallet-checkbox:checked');
+        const label = document.getElementById('wallet-filter-label');
+        if (checked.length === 0) {
+            label.textContent = 'Todas as Carteiras';
+        } else if (checked.length === 1) {
+            label.textContent = checked[0].parentElement.textContent.trim();
+        } else {
+            label.textContent = checked.length + ' Carteiras';
+        }
         loadAnalytics();
     }
-}
 
-// ===================== FILTER PARAMS =====================
-function buildFilterParams() {
-    const params = new URLSearchParams();
-
-    // Wallet IDs
-    const checked = document.querySelectorAll('.wallet-checkbox:checked');
-    if (checked.length > 0) {
-        params.set('wallet_ids', [...checked].map(cb => cb.value).join(','));
+    // ===================== PERIOD FILTER =====================
+    function onPeriodChange() {
+        const period = document.getElementById('period-filter').value;
+        const customDiv = document.getElementById('custom-dates');
+        if (period === 'custom') {
+            customDiv.classList.remove('hidden');
+        } else {
+            customDiv.classList.add('hidden');
+            loadAnalytics();
+        }
     }
 
-    // Period
-    const period = document.getElementById('period-filter').value;
-    const now = new Date();
-    if (period === '7d') {
-        const d = new Date(now.getTime() - 7 * 86400000);
-        params.set('date_from', d.toISOString().split('T')[0]);
-    } else if (period === '30d') {
-        const d = new Date(now.getTime() - 30 * 86400000);
-        params.set('date_from', d.toISOString().split('T')[0]);
-    } else if (period === '12m') {
-        const d = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        params.set('date_from', d.toISOString().split('T')[0]);
-    } else if (period === 'custom') {
-        const df = document.getElementById('date-from').value;
-        const dt = document.getElementById('date-to').value;
-        if (df) params.set('date_from', df);
-        if (dt) params.set('date_to', dt);
-    }
+    // ===================== FILTER PARAMS =====================
+    function buildFilterParams() {
+        const params = new URLSearchParams();
 
-    return params.toString();
-}
-
-// ===================== SKELETON LOADING =====================
-function showSkeletons() {
-    document.getElementById('kpi-patrimonio').innerHTML = '<span class="skeleton inline-block w-32 h-7">&nbsp;</span>';
-    document.getElementById('kpi-rentabilidade').innerHTML = '<span class="skeleton inline-block w-24 h-7">&nbsp;</span>';
-    document.getElementById('kpi-dividendos').innerHTML = '<span class="skeleton inline-block w-28 h-7">&nbsp;</span>';
-}
-
-// ===================== MAIN LOADER =====================
-async function loadAnalytics() {
-    showSkeletons();
-
-    try {
-        const qs = buildFilterParams();
-        const resp = await fetch('/dashboard/api/analytics?' + qs);
-
-        if (resp.status === 401) {
-            window.location.href = '/auth/login';
-            return;
+        // Wallet IDs
+        const checked = document.querySelectorAll('.wallet-checkbox:checked');
+        if (checked.length > 0) {
+            params.set('wallet_ids', [...checked].map(cb => cb.value).join(','));
         }
 
-        const data = await resp.json();
-
-        // Update timestamp
-        document.getElementById('last-update-time').textContent =
-            'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
-
-        // Handle empty portfolio
-        if (data.kpis.num_ativos === 0) {
-            document.getElementById('empty-state').classList.remove('hidden');
-            document.getElementById('analytics-content').classList.add('hidden');
-            return;
+        // Period
+        const period = document.getElementById('period-filter').value;
+        const now = new Date();
+        if (period === '7d') {
+            const d = new Date(now.getTime() - 7 * 86400000);
+            params.set('date_from', d.toISOString().split('T')[0]);
+        } else if (period === '30d') {
+            const d = new Date(now.getTime() - 30 * 86400000);
+            params.set('date_from', d.toISOString().split('T')[0]);
+        } else if (period === '12m') {
+            const d = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+            params.set('date_from', d.toISOString().split('T')[0]);
+        } else if (period === 'custom') {
+            const df = document.getElementById('date-from').value;
+            const dt = document.getElementById('date-to').value;
+            if (df) params.set('date_from', df);
+            if (dt) params.set('date_to', dt);
         }
 
-        document.getElementById('empty-state').classList.add('hidden');
-        document.getElementById('analytics-content').classList.remove('hidden');
-
-        // Populate wallet filter (once)
-        renderWalletFilter(data.wallets);
-
-        // Render KPIs
-        renderKPIs(data.kpis);
-
-        // Render charts
-        renderEvolucaoChart(data.evolucao_patrimonial);
-        renderCarteirasChart(data.comparativo_carteiras);
-        renderClasseDoughnut(data.distribuicao_classe);
-        renderPerfClasseChart(data.performance_classe);
-        renderAssetsTable(data.assets_detail);
-
-    } catch (err) {
-        console.error('[Dashboard] Analytics load error:', err);
-    }
-}
-
-// ===================== RENDERERS =====================
-
-function renderKPIs(kpis) {
-    document.getElementById('kpi-patrimonio').innerHTML = formatBRL(kpis.patrimonio_total);
-
-    const rentColor = kpis.rentabilidade_pct >= 0 ? 'text-green-400' : 'text-red-400';
-    const rentSign = kpis.rentabilidade_pct >= 0 ? '+' : '';
-    document.getElementById('kpi-rentabilidade').innerHTML =
-        `<span class="${rentColor}">${rentSign}${kpis.rentabilidade_pct.toFixed(2)}%</span>` +
-        `<span class="text-xs text-gray-500 ml-2">(${formatBRL(kpis.patrimonio_total - kpis.total_investido)})</span>`;
-
-    document.getElementById('kpi-dividendos').innerHTML = formatBRL(kpis.dividendos_estimados);
-}
-
-function renderEvolucaoChart(data) {
-    if (!data.labels || data.labels.length === 0) {
-        document.getElementById('chart-evolucao').parentElement.innerHTML =
-            '<p class="text-gray-500 text-sm text-center py-12">Sem dados de evolucao disponivel</p>';
-        return;
+        return params.toString();
     }
 
-    getOrCreateChart('chart-evolucao', {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: [
-                {
-                    label: 'Total Aportado',
-                    data: data.aporte_acumulado,
-                    borderColor: COLORS.secondary,
-                    backgroundColor: COLORS.secondary + '15',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: COLORS.secondary,
-                },
-                {
-                    label: 'Valor Atual',
-                    data: data.valor_atual_acumulado,
-                    borderColor: COLORS.primary,
-                    backgroundColor: COLORS.primary + '15',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: COLORS.primary,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            return ctx.dataset.label + ': ' + formatBRL(ctx.parsed.y);
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    grid: { color: 'rgba(255,255,255,0.03)' },
-                    ticks: { callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }
-                },
-                x: { grid: { display: false } }
+    // ===================== SKELETON LOADING =====================
+    function showSkeletons() {
+        document.getElementById('kpi-patrimonio').innerHTML = '<span class="skeleton inline-block w-32 h-7">&nbsp;</span>';
+        document.getElementById('kpi-rentabilidade').innerHTML = '<span class="skeleton inline-block w-24 h-7">&nbsp;</span>';
+        document.getElementById('kpi-dividendos').innerHTML = '<span class="skeleton inline-block w-28 h-7">&nbsp;</span>';
+    }
+
+    // ===================== MAIN LOADER =====================
+    async function loadAnalytics() {
+        showSkeletons();
+
+        try {
+            const qs = buildFilterParams();
+            const resp = await fetch('/dashboard/api/analytics?' + qs);
+
+            if (resp.status === 401) {
+                window.location.href = '/auth/login';
+                return;
             }
-        }
-    });
-}
 
-function renderCarteirasChart(data) {
-    if (!data.labels || data.labels.length === 0) {
-        document.getElementById('chart-carteiras').parentElement.innerHTML =
-            '<p class="text-gray-500 text-sm text-center py-12">Sem carteiras para comparar</p>';
-        return;
+            const data = await resp.json();
+
+            // Update timestamp
+            document.getElementById('last-update-time').textContent =
+                'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
+
+            // Handle empty portfolio
+            if (data.kpis.num_ativos === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('analytics-content').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('analytics-content').classList.remove('hidden');
+
+            // Populate wallet filter (once)
+            renderWalletFilter(data.wallets);
+
+            // Render KPIs
+            renderKPIs(data.kpis);
+
+            // Render charts
+            renderEvolucaoChart(data.evolucao_patrimonial);
+            renderCarteirasChart(data.comparativo_carteiras);
+            renderClasseDoughnut(data.distribuicao_classe);
+            renderPerfClasseChart(data.performance_classe);
+            renderAssetsTable(data.assets_detail);
+
+        } catch (err) {
+            console.error('[Dashboard] Analytics load error:', err);
+        }
     }
 
-    getOrCreateChart('chart-carteiras', {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [
-                {
-                    label: 'Investido',
-                    data: data.investido,
-                    backgroundColor: COLORS.secondary + '70',
-                    borderColor: COLORS.secondary,
-                    borderWidth: 1,
-                    borderRadius: 4,
-                },
-                {
-                    label: 'Valor Atual',
-                    data: data.valor_atual,
-                    backgroundColor: COLORS.primary + '70',
-                    borderColor: COLORS.primary,
-                    borderWidth: 1,
-                    borderRadius: 4,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        afterLabel: function(ctx) {
-                            if (ctx.datasetIndex === 1) {
-                                const rent = data.rentabilidade_pct[ctx.dataIndex];
-                                return 'Rentab: ' + (rent >= 0 ? '+' : '') + rent.toFixed(2) + '%';
+    // ===================== RENDERERS =====================
+
+    function renderKPIs(kpis) {
+        document.getElementById('kpi-patrimonio').innerHTML = formatBRL(kpis.patrimonio_total);
+
+        const rentColor = kpis.rentabilidade_pct >= 0 ? 'text-green-400' : 'text-red-400';
+        const rentSign = kpis.rentabilidade_pct >= 0 ? '+' : '';
+        document.getElementById('kpi-rentabilidade').innerHTML =
+            `<span class="${rentColor}">${rentSign}${kpis.rentabilidade_pct.toFixed(2)}%</span>` +
+            `<span class="text-xs text-gray-500 ml-2">(${formatBRL(kpis.patrimonio_total - kpis.total_investido)})</span>`;
+
+        document.getElementById('kpi-dividendos').innerHTML = formatBRL(kpis.dividendos_estimados);
+    }
+
+    function renderEvolucaoChart(data) {
+        if (!data.labels || data.labels.length === 0) {
+            document.getElementById('chart-evolucao').parentElement.innerHTML =
+                '<p class="text-gray-500 text-sm text-center py-12">Sem dados de evolucao disponivel</p>';
+            return;
+        }
+
+        getOrCreateChart('chart-evolucao', {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Total Aportado',
+                        data: data.aporte_acumulado,
+                        borderColor: COLORS.secondary,
+                        backgroundColor: COLORS.secondary + '15',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: COLORS.secondary,
+                    },
+                    {
+                        label: 'Valor Atual',
+                        data: data.valor_atual_acumulado,
+                        borderColor: COLORS.primary,
+                        backgroundColor: COLORS.primary + '15',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: COLORS.primary,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' + formatBRL(ctx.parsed.y);
                             }
-                        },
-                        label: function(ctx) {
-                            return ctx.dataset.label + ': ' + formatBRL(ctx.parsed.y);
                         }
                     }
-                }
-            },
-            scales: {
-                y: {
-                    grid: { color: 'rgba(255,255,255,0.03)' },
-                    ticks: { callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }
                 },
-                x: { grid: { display: false } }
-            }
-        }
-    });
-}
-
-function renderClasseDoughnut(data) {
-    if (!data.labels || data.labels.length === 0) {
-        document.getElementById('chart-classe-doughnut').parentElement.innerHTML =
-            '<p class="text-gray-500 text-sm text-center">Sem dados</p>';
-        return;
-    }
-
-    getOrCreateChart('chart-classe-doughnut', {
-        type: 'doughnut',
-        data: {
-            labels: data.labels.map((l, i) => l + ' (' + data.percentuais[i].toFixed(1) + '%)'),
-            datasets: [{
-                data: data.valores,
-                backgroundColor: [COLORS.primary, COLORS.secondary, COLORS.accent1],
-                borderWidth: 0,
-                hoverOffset: 8,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '65%',
-            plugins: {
-                legend: { position: 'right', labels: { padding: 16 } },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            return formatBRL(ctx.parsed) + ' (' + data.percentuais[ctx.dataIndex].toFixed(1) + '%)';
-                        }
-                    }
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: { callback: v => 'R$ ' + (v / 1000).toFixed(0) + 'k' }
+                    },
+                    x: { grid: { display: false } }
                 }
             }
-        }
-    });
-}
-
-function renderPerfClasseChart(data) {
-    if (!data.labels || data.labels.length === 0) {
-        document.getElementById('chart-perf-classe').parentElement.innerHTML =
-            '<p class="text-gray-500 text-sm text-center py-12">Sem dados de performance</p>';
-        return;
+        });
     }
 
-    const barColors = data.rentabilidade_pct.map(r => r >= 0 ? COLORS.primary + '70' : COLORS.accent3 + '70');
-    const borderColors = data.rentabilidade_pct.map(r => r >= 0 ? COLORS.primary : COLORS.accent3);
+    function renderCarteirasChart(data) {
+        if (!data.labels || data.labels.length === 0) {
+            document.getElementById('chart-carteiras').parentElement.innerHTML =
+                '<p class="text-gray-500 text-sm text-center py-12">Sem carteiras para comparar</p>';
+            return;
+        }
 
-    getOrCreateChart('chart-perf-classe', {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                label: 'Rentabilidade %',
-                data: data.rentabilidade_pct,
-                backgroundColor: barColors,
-                borderColor: borderColors,
-                borderWidth: 1,
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        afterLabel: function(ctx) {
-                            const i = ctx.dataIndex;
-                            return 'Investido: ' + formatBRL(data.investido[i]) + '\nAtual: ' + formatBRL(data.valor_atual[i]);
-                        },
-                        label: function(ctx) {
-                            const v = ctx.parsed.x;
-                            return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
-                        }
+        getOrCreateChart('chart-carteiras', {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Investido',
+                        data: data.investido,
+                        backgroundColor: COLORS.secondary + '70',
+                        borderColor: COLORS.secondary,
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    },
+                    {
+                        label: 'Valor Atual',
+                        data: data.valor_atual,
+                        backgroundColor: COLORS.primary + '70',
+                        borderColor: COLORS.primary,
+                        borderWidth: 1,
+                        borderRadius: 4,
                     }
-                }
+                ]
             },
-            scales: {
-                x: {
-                    grid: { color: 'rgba(255,255,255,0.03)' },
-                    ticks: { callback: v => v + '%' }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function (ctx) {
+                                if (ctx.datasetIndex === 1) {
+                                    const rent = data.rentabilidade_pct[ctx.dataIndex];
+                                    return 'Rentab: ' + (rent >= 0 ? '+' : '') + rent.toFixed(2) + '%';
+                                }
+                            },
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' + formatBRL(ctx.parsed.y);
+                            }
+                        }
+                    }
                 },
-                y: { grid: { display: false } }
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: { callback: v => 'R$ ' + (v / 1000).toFixed(0) + 'k' }
+                    },
+                    x: { grid: { display: false } }
+                }
             }
-        }
-    });
-}
-
-function renderAssetsTable(assets) {
-    const tbody = document.getElementById('table-assets-detail');
-
-    if (!assets || assets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-gray-500 py-8">Nenhum ativo encontrado</td></tr>';
-        return;
+        });
     }
 
-    let html = '';
-    for (const a of assets) {
-        const gainClass = a.gain_pct >= 0 ? 'text-green-400' : 'text-red-400';
-        const gainSign = a.gain_pct >= 0 ? '+' : '';
-        const classBadge = {
-            'Acao': 'bg-blue-500/20 text-blue-400',
-            'FII': 'bg-purple-500/20 text-purple-400',
-            'ETF': 'bg-cyan-500/20 text-cyan-400'
-        }[a.classe] || 'bg-gray-500/20 text-gray-400';
+    function renderClasseDoughnut(data) {
+        if (!data.labels || data.labels.length === 0) {
+            document.getElementById('chart-classe-doughnut').parentElement.innerHTML =
+                '<p class="text-gray-500 text-sm text-center">Sem dados</p>';
+            return;
+        }
 
-        html += `<tr>
+        getOrCreateChart('chart-classe-doughnut', {
+            type: 'doughnut',
+            data: {
+                labels: data.labels.map((l, i) => l + ' (' + data.percentuais[i].toFixed(1) + '%)'),
+                datasets: [{
+                    data: data.valores,
+                    backgroundColor: [COLORS.primary, COLORS.secondary, COLORS.accent1],
+                    borderWidth: 0,
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'right', labels: { padding: 16 } },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return formatBRL(ctx.parsed) + ' (' + data.percentuais[ctx.dataIndex].toFixed(1) + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderPerfClasseChart(data) {
+        if (!data.labels || data.labels.length === 0) {
+            document.getElementById('chart-perf-classe').parentElement.innerHTML =
+                '<p class="text-gray-500 text-sm text-center py-12">Sem dados de performance</p>';
+            return;
+        }
+
+        const barColors = data.rentabilidade_pct.map(r => r >= 0 ? COLORS.primary + '70' : COLORS.accent3 + '70');
+        const borderColors = data.rentabilidade_pct.map(r => r >= 0 ? COLORS.primary : COLORS.accent3);
+
+        getOrCreateChart('chart-perf-classe', {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Rentabilidade %',
+                    data: data.rentabilidade_pct,
+                    backgroundColor: barColors,
+                    borderColor: borderColors,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function (ctx) {
+                                const i = ctx.dataIndex;
+                                return 'Investido: ' + formatBRL(data.investido[i]) + '\nAtual: ' + formatBRL(data.valor_atual[i]);
+                            },
+                            label: function (ctx) {
+                                const v = ctx.parsed.x;
+                                return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: { callback: v => v + '%' }
+                    },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function renderAssetsTable(assets) {
+        const tbody = document.getElementById('table-assets-detail');
+
+        if (!assets || assets.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="12" class="text-center text-gray-500 py-8">Nenhum ativo encontrado</td></tr>';
+            return;
+        }
+
+        let html = '';
+        for (const a of assets) {
+            const gainClass = a.gain_pct >= 0 ? 'text-green-400' : 'text-red-400';
+            const gainSign = a.gain_pct >= 0 ? '+' : '';
+            const classBadge = {
+                'Acao': 'bg-blue-500/20 text-blue-400',
+                'FII': 'bg-purple-500/20 text-purple-400',
+                'ETF': 'bg-cyan-500/20 text-cyan-400'
+            }[a.classe] || 'bg-gray-500/20 text-gray-400';
+
+            html += `<tr>
             <td class="text-white font-semibold">${a.ticker}</td>
             <td><span class="px-2 py-0.5 rounded text-xs font-bold ${classBadge}">${a.classe}</span></td>
             <td class="text-gray-400 text-xs">${a.wallet_name}</td>
@@ -746,12 +887,103 @@ function renderAssetsTable(assets) {
             <td class="text-right ${gainClass} font-semibold">${gainSign}${a.gain_pct.toFixed(2)}%</td>
             <td class="text-right text-gray-400">${a.dy > 0 ? a.dy.toFixed(2) + '%' : '-'}</td>
             <td class="text-right text-gray-300">${a.est_dividends > 0 ? formatBRL(a.est_dividends) : '-'}</td>
+            <td class="text-center">
+                <div class="flex items-center justify-center gap-2">
+                    <button onclick="openEditModal('${a.ticker}', ${a.quantity}, ${a.avg_price})" class="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded transition-colors" title="Editar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                    <button onclick="deleteAsset('${a.ticker}')" class="p-1.5 text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Excluir">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            </td>
         </tr>`;
+        }
+        tbody.innerHTML = html;
     }
-    tbody.innerHTML = html;
-}
 
-// ===================== INIT =====================
-window.addEventListener('DOMContentLoaded', loadAnalytics);
+    // ===================== EDIT/DELETE ACTIONS =====================
+
+    function openEditModal(ticker, qty, price) {
+        document.getElementById('edit-ticker').value = ticker;
+        document.getElementById('edit-ticker-display').value = ticker;
+        document.getElementById('edit-qty').value = qty;
+        document.getElementById('edit-price').value = price;
+
+        document.getElementById('edit-modal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').classList.add('hidden');
+    }
+
+    async function saveEdit() {
+        const ticker = document.getElementById('edit-ticker').value;
+        const qty = parseFloat(document.getElementById('edit-qty').value);
+        const price = parseFloat(document.getElementById('edit-price').value);
+        const btn = document.getElementById('btn-save-edit');
+
+        if (qty < 0 || price < 0) {
+            alert('Quantidade e preço devem ser positivos');
+            return;
+        }
+
+        try {
+            btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></span> Salvando...';
+
+            const formData = new FormData();
+            formData.append('ticker', ticker);
+            formData.append('quantity', qty);
+            formData.append('price', price);
+
+            const resp = await fetch('/dashboard/api/wallet/edit', {
+                method: 'PUT',
+                body: formData
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                closeEditModal();
+                loadAnalytics(); // Reload table
+            } else {
+                alert('Erro ao salvar: ' + (data.detail || data.message));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<span>Salvar</span>';
+        }
+    }
+
+    async function deleteAsset(ticker) {
+        if (!confirm(`Tem certeza que deseja remover ${ticker} da sua carteira?`)) {
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/dashboard/api/wallet/remove/${ticker}`, {
+                method: 'DELETE'
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                loadAnalytics(); // Reload table
+            } else {
+                alert('Erro ao excluir: ' + (data.detail || data.message));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao excluir ativo');
+        }
+    }
+
+    // ===================== INIT =====================
+    window.addEventListener('DOMContentLoaded', loadAnalytics);
 </script>
 {% endblock %}

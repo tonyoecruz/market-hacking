@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}Renda Fixa - SCOPE3{% endblock %}
+
+{% block head %}
+<style>
+    .glass-panel {
+        background: rgba(31, 35, 41, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .metric-card {
+        background: linear-gradient(145deg, rgba(31, 35, 41, 0.8), rgba(20, 24, 29, 0.9));
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: transform 0.2s;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(0, 255, 157, 0.3);
+    }
+
+    .table-row-hover:hover {
+        background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Custom Range Slider for Simulation if needed later */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-dark-900">
+    {% include "components/sidebar.html" %}
+
+    <main class="flex-1 overflow-y-auto scrollbar-thin p-6">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h2 class="text-3xl font-bold text-white mb-2">Renda Fixa Inteligente</h2>
+                <p class="text-gray-400">As melhores oportunidades de CDB, LCI e LCA do mercado, selecionadas por IA.
+                </p>
+            </div>
+
+            <button onclick="openAddModal()"
+                class="bg-primary hover:bg-green-400 text-black font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Adicionar Manualmente
+            </button>
+        </header>
+
+        <!-- Top Opportunities Table -->
+        <div class="glass-panel rounded-xl p-6 mb-8">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span class="text-yellow-400">&#9733;</span> TOP 10 Oportunidades
+            </h3>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-gray-400 text-sm border-b border-gray-700">
+                            <th class="py-3 px-4">Tipo</th>
+                            <th class="py-3 px-4">Emissor</th>
+                            <th class="py-3 px-4">Rentabilidade</th>
+                            <th class="py-3 px-4">Vencimento</th>
+                            <th class="py-3 px-4 text-center">Risco</th>
+                            <th class="py-3 px-4 text-center">Score</th>
+                            <th class="py-3 px-4 text-right">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-opps-body">
+                        <!-- Populated by JS -->
+                        <tr>
+                            <td colspan="7" class="text-center py-8 text-gray-500">Carregando oportunidades...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Educational/Info Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="metric-card rounded-xl p-5">
+                <h4 class="text-gray-400 text-sm font-semibold mb-2">Taxa Selic Atual</h4>
+                <p class="text-3xl font-bold text-white">10.75% <span
+                        class="text-sm text-gray-500 font-normal">a.a.</span></p>
+            </div>
+            <div class="metric-card rounded-xl p-5">
+                <h4 class="text-gray-400 text-sm font-semibold mb-2">CDI Hoje</h4>
+                <p class="text-3xl font-bold text-white">10.65% <span
+                        class="text-sm text-gray-500 font-normal">a.a.</span></p>
+            </div>
+            <div class="metric-card rounded-xl p-5">
+                <h4 class="text-gray-400 text-sm font-semibold mb-2">IPCA (12m)</h4>
+                <p class="text-3xl font-bold text-white">4.50% <span
+                        class="text-sm text-gray-500 font-normal">acum.</span></p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Add Asset Modal -->
+<div id="add-modal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-dark-800 rounded-xl border border-gray-700 p-6 w-full max-w-lg shadow-2xl relative">
+        <button onclick="closeAddModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+
+        <h3 class="text-xl font-bold text-white mb-6">Adicionar Renda Fixa</h3>
+
+        <form id="add-form" onsubmit="submitAsset(event)" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Tipo de Ativo</label>
+                    <select id="asset-type"
+                        class="w-full bg-dark-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <option value="CDB">CDB</option>
+                        <option value="LCI">LCI</option>
+                        <option value="LCA">LCA</option>
+                        <option value="LC">LC</option>
+                        <option value="Debenture">Debênture</option>
+                        <option value="Tesouro">Tesouro Direto</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Emissor / Nome</label>
+                    <input type="text" id="asset-issuer" placeholder="Ex: Banco Master" required
+                        class="w-full bg-dark-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Yield Configuration -->
+            <div class="bg-dark-900/50 p-4 rounded-lg border border-gray-700">
+                <h4 class="text-sm text-primary font-semibold mb-3">Rentabilidade</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">% do CDI</label>
+                        <input type="number" id="pct-cdi" placeholder="100" min="0" step="0.1"
+                            class="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <p class="text-[10px] text-gray-500 mt-1">Deixe 0 se for pré-fixado</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Taxa Pré (% a.a.)</label>
+                        <input type="number" id="pct-pre" placeholder="0" min="0" step="0.1"
+                            class="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <p class="text-[10px] text-gray-500 mt-1">Deixe 0 se for 100% pós</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Valor Investido (R$)</label>
+                    <input type="number" id="invested-value" required min="0.01" step="0.01"
+                        class="w-full bg-dark-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Data de Vencimento</label>
+                    <input type="date" id="maturity-date"
+                        class="w-full bg-dark-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">Carteira</label>
+                <select id="wallet-select"
+                    class="w-full bg-dark-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                    {% for wallet in wallets %}
+                    <option value="{{ wallet.id }}">{{ wallet.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" id="btn-submit"
+                class="w-full bg-primary hover:bg-green-400 text-black font-bold py-3 rounded-lg mt-4 transition-colors">
+                Adicionar à Carteira
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    async function loadTopOpportunities() {
+        const tbody = document.getElementById('top-opps-body');
+        try {
+            const resp = await fetch('/renda-fixa/api/top-opportunities');
+            const data = await resp.json();
+
+            if (!data.opportunities || data.opportunities.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">Nenhuma oportunidade encontrada no momento.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            data.opportunities.forEach(opp => {
+                let riskBadge = '';
+                if (opp.risk_score <= 1) riskBadge = '<span class="text-green-400 text-xs border border-green-400/30 px-2 py-0.5 rounded">Baixo</span>';
+                else if (opp.risk_score <= 3) riskBadge = '<span class="text-yellow-400 text-xs border border-yellow-400/30 px-2 py-0.5 rounded">Médio</span>';
+                else riskBadge = '<span class="text-red-400 text-xs border border-red-400/30 px-2 py-0.5 rounded">Alto</span>';
+
+                let rateDisplay = '';
+                if (opp.rate_type === 'Pré-fixado') rateDisplay = `<span class="text-white font-bold">${opp.rate_val}%</span> <span class="text-xs text-gray-500">a.a.</span>`;
+                else rateDisplay = `<span class="text-white font-bold">${opp.rate_val}%</span> <span class="text-xs text-gray-500">CDI</span>`;
+                if (opp.rate_type === 'Isento') rateDisplay += ' <span class="text-[10px] text-green-400 ml-1">ISENTO</span>';
+
+                html += `
+            <tr class="table-row-hover border-b border-gray-700/50 transition-colors">
+                <td class="py-3 px-4 text-white font-semibold">${opp.type}</td>
+                <td class="py-3 px-4 text-gray-300 gap-2 flex items-center">
+                    ${opp.issuer} 
+                    <span class="text-[10px] text-gray-500 bg-gray-800 px-1 rounded">${opp.safety_rating}</span>
+                </td>
+                <td class="py-3 px-4">${rateDisplay}</td>
+                <td class="py-3 px-4 text-gray-400 text-sm">${opp.maturity}</td>
+                <td class="py-3 px-4 text-center">${riskBadge}</td>
+                <td class="py-3 px-4 text-center text-primary font-bold text-sm">${opp.score}</td>
+                <td class="py-3 px-4 text-right">
+                    <button onclick="prefillAndOpenModal('${opp.type}', '${opp.issuer}', ${opp.rate_val}, '${opp.rate_type}', '${opp.maturity}')" 
+                        class="text-blue-400 hover:text-white hover:bg-blue-500/20 px-3 py-1 rounded text-sm transition-colors">
+                        + Carteira
+                    </button>
+                </td>
+            </tr>`;
+            });
+            tbody.innerHTML = html;
+
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-red-500">Erro ao carregar oportunidades.</td></tr>';
+        }
+    }
+
+    // Modal Logic
+    function openAddModal() {
+        document.getElementById('add-form').reset();
+        document.getElementById('add-modal').classList.remove('hidden');
+    }
+
+    function prefillAndOpenModal(type, issuer, rateVal, rateType, maturity) {
+        openAddModal();
+        document.getElementById('asset-type').value = type;
+        document.getElementById('asset-issuer').value = issuer;
+        document.getElementById('maturity-date').value = maturity;
+
+        if (rateType === 'Pré-fixado') {
+            document.getElementById('pct-pre').value = rateVal;
+            document.getElementById('pct-cdi').value = 0;
+        } else {
+            document.getElementById('pct-cdi').value = rateVal;
+            document.getElementById('pct-pre').value = 0;
+        }
+    }
+
+    function closeAddModal() {
+        document.getElementById('add-modal').classList.add('hidden');
+    }
+
+    async function submitAsset(e) {
+        e.preventDefault();
+
+        const btn = document.getElementById('btn-submit');
+        const originalText = btn.innerHTML;
+
+        // Logic: If user leaves blank, assume defaults as requested
+        let pctCdi = parseFloat(document.getElementById('pct-cdi').value) || 0;
+        let pctPre = parseFloat(document.getElementById('pct-pre').value) || 0;
+
+        if (pctCdi === 0 && pctPre === 0) {
+            // "Se o usuário não escrever nada ficará sempre 100% do CDI"
+            pctCdi = 100;
+        }
+
+        const payload = {
+            type: document.getElementById('asset-type').value,
+            issuer: document.getElementById('asset-issuer').value,
+            pct_cdi: pctCdi,
+            pct_pre: pctPre,
+            value: parseFloat(document.getElementById('invested-value').value),
+            maturity_date: document.getElementById('maturity-date').value,
+            wallet_id: document.getElementById('wallet-select').value
+        };
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = 'Adicionando...';
+
+            const resp = await fetch('/renda-fixa/api/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                alert('Ativo adicionado com sucesso!');
+                closeAddModal();
+            } else {
+                alert('Erro: ' + (data.detail || data.message));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Erro de conexão ao adicionar ativo.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', loadTopOpportunities);
+</script>
+{% endblock %}

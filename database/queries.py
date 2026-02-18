@@ -212,7 +212,7 @@ class AssetQueries:
             return []
     
     @staticmethod
-    def add_to_wallet(user_id: int, ticker: str, quantity: float, price: float, wallet_id: int) -> tuple[bool, str]:
+    def add_to_wallet(user_id: int, ticker: str, quantity: float, price: float, wallet_id: int, metadata: Dict[str, Any] = None) -> tuple[bool, str]:
         """Add or update asset in wallet"""
         try:
             supabase = get_supabase_client()
@@ -229,23 +229,43 @@ class AssetQueries:
                 new_qty = old_qty + quantity
                 new_avg_price = ((old_qty * old_price) + (quantity * price)) / new_qty
                 
-                supabase.table('assets').update({
+                update_data = {
                     'quantity': new_qty,
                     'avg_price': new_avg_price,
                     'updated_at': datetime.utcnow().isoformat()
-                }).eq('id', existing['id']).execute()
+                }
+                
+                # Merge metadata if provided
+                if metadata:
+                    existing_meta = existing.get('metadata') or {}
+                    if isinstance(existing_meta, str):
+                        import json
+                        try:
+                            existing_meta = json.loads(existing_meta)
+                        except:
+                            existing_meta = {}
+                    
+                    # Merge new metadata on top of existing
+                    existing_meta.update(metadata)
+                    update_data['metadata'] = existing_meta
+
+                supabase.table('assets').update(update_data).eq('id', existing['id']).execute()
                 
                 return True, f"{ticker} atualizado na carteira"
             else:
                 # Insert new asset
-                supabase.table('assets').insert({
+                data = {
                     'wallet_id': wallet_id,
                     'ticker': ticker.upper(),
                     'quantity': quantity,
                     'avg_price': price,
                     'created_at': datetime.utcnow().isoformat(),
                     'updated_at': datetime.utcnow().isoformat()
-                }).execute()
+                }
+                if metadata:
+                    data['metadata'] = metadata
+
+                supabase.table('assets').insert(data).execute()
                 
                 return True, f"{ticker} adicionado à carteira"
         except Exception as e:
