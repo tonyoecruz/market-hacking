@@ -149,7 +149,19 @@ class AgencyCrawler:
             wait_until="domcontentloaded",
         )
 
-        async with AsyncWebCrawler() as crawler:
+        # Optimize for low memory/Render free tier
+        browser_config = {
+            "headless": True,
+            "args": [
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-extensions",
+                "--window-size=800,600"
+            ]
+        }
+
+        async with AsyncWebCrawler(verbose=True, **browser_config) as crawler:
             pages_crawled = 0
             for url in urls_to_try:
                 if pages_crawled >= max_pages:

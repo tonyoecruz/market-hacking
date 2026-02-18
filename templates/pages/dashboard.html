@@ -2,191 +2,756 @@
 
 {% block title %}Dashboard - SCOPE3{% endblock %}
 
+{% block head %}
+<style>
+    .kpi-card {
+        background: linear-gradient(135deg, rgba(31,35,41,0.9), rgba(21,25,30,0.95));
+        border: 1px solid rgba(255,255,255,0.06);
+        transition: all 0.3s ease;
+    }
+    .kpi-card:hover {
+        border-color: rgba(0,255,157,0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+    }
+    .chart-container {
+        background: rgba(31,35,41,0.9);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+    .chart-container:hover {
+        border-color: rgba(0,255,157,0.15);
+    }
+    .chart-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .mini-table th {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #9CA3AF;
+        padding: 8px 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .mini-table td {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .mini-table tr:hover { background: rgba(255,255,255,0.02); }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeInUp 0.4s ease-out forwards; }
+    .skeleton {
+        background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 6px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Wallet dropdown */
+    .wallet-dropdown {
+        background: #15191E;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        min-width: 220px;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+    .wallet-dropdown label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        cursor: pointer;
+        transition: background 0.15s;
+        font-size: 0.85rem;
+        color: #e2e8f0;
+    }
+    .wallet-dropdown label:hover { background: rgba(255,255,255,0.04); }
+    .wallet-dropdown input[type="checkbox"] {
+        accent-color: #00FF9D;
+        width: 16px;
+        height: 16px;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #1F2329;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .filter-btn:hover { border-color: rgba(0,255,157,0.3); }
+    .filter-btn:focus { outline: none; ring: 2px solid #00FF9D; }
+    .filter-select {
+        padding: 8px 14px;
+        background: #1F2329;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-size: 0.85rem;
+        cursor: pointer;
+        appearance: auto;
+    }
+    .filter-select:focus { outline: none; border-color: rgba(0,255,157,0.4); }
+    .filter-date {
+        padding: 6px 10px;
+        background: #1F2329;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-size: 0.8rem;
+    }
+    .filter-date:focus { outline: none; border-color: rgba(0,255,157,0.4); }
+
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="flex h-screen bg-dark-900">
-    <!-- Sidebar -->
-    <!-- Sidebar -->
     {% include "components/sidebar.html" %}
 
-    <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto">
-        <!-- Header -->
-        <header class="bg-dark-800 border-b border-gray-700 p-6">
-            <h2 class="text-2xl font-bold text-white">Minha Carteira</h2>
-            <p class="text-gray-400 mt-1">Acompanhe seus investimentos em tempo real</p>
+    <main class="flex-1 overflow-y-auto scrollbar-thin">
+        <!-- Sticky Header with Filters -->
+        <header class="bg-dark-800/80 backdrop-blur-sm border-b border-gray-700/50 px-6 py-4 sticky top-0 z-10">
+            <div class="flex justify-between items-center flex-wrap gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Minha Carteira</h2>
+                    <p class="text-gray-500 text-xs mt-0.5" id="last-update-time"></p>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <!-- Wallet Multiselect -->
+                    <div class="relative">
+                        <button id="wallet-filter-btn" class="filter-btn flex items-center gap-2" onclick="toggleWalletDropdown()">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                            <span id="wallet-filter-label">Todas as Carteiras</span>
+                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="wallet-dropdown" class="hidden absolute right-0 mt-2 wallet-dropdown z-50">
+                            <div id="wallet-checkboxes" class="py-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Period Filter -->
+                    <select id="period-filter" class="filter-select" onchange="onPeriodChange()">
+                        <option value="all">Todo o Periodo</option>
+                        <option value="7d">Ultimos 7 dias</option>
+                        <option value="30d">Ultimos 30 dias</option>
+                        <option value="12m">Ultimos 12 meses</option>
+                        <option value="custom">Personalizado</option>
+                    </select>
+
+                    <!-- Custom Date Inputs -->
+                    <div id="custom-dates" class="hidden flex items-center gap-2">
+                        <input type="date" id="date-from" class="filter-date" onchange="loadAnalytics()">
+                        <span class="text-gray-500 text-xs">ate</span>
+                        <input type="date" id="date-to" class="filter-date" onchange="loadAnalytics()">
+                    </div>
+
+                    <!-- Refresh Button -->
+                    <button onclick="loadAnalytics()" class="filter-btn" title="Atualizar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    </button>
+                </div>
+            </div>
         </header>
 
-        <!-- Content -->
-        <div class="p-6">
-            <!-- Investor Persona Selector -->
-            <div class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-xl p-6 mb-6">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
-                            <span>🎯</span>
-                            <span>Investidor-Guia</span>
-                        </h3>
-                        <p class="text-gray-400 text-sm mt-1">Escolha um mentor para personalizar as análises de IA</p>
+        <!-- Dashboard Content -->
+        <div class="p-6 space-y-6" id="dashboard-content">
+
+            <!-- Empty State (hidden by default) -->
+            <div id="empty-state" class="hidden">
+                <div class="chart-container text-center py-16">
+                    <svg class="w-20 h-20 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    <h3 class="text-xl font-bold text-gray-400 mb-2">Sua carteira esta vazia</h3>
+                    <p class="text-gray-500 text-sm mb-6">Adicione ativos para visualizar sua dashboard analitica</p>
+                    <p class="text-gray-600 text-xs">Acesse as paginas de Acoes, FIIs ou ETFs para adicionar ativos</p>
+                </div>
+            </div>
+
+            <!-- Analytics Content (shown when portfolio has data) -->
+            <div id="analytics-content" class="space-y-6">
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Patrimonio Total -->
+                    <div class="kpi-card rounded-xl p-5 animate-fade-in" style="animation-delay: 0ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-green-500/10 text-green-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                        </div>
+                        <p id="kpi-patrimonio" class="text-2xl font-bold text-white"><span class="skeleton inline-block w-32 h-7">&nbsp;</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Patrimonio Total</p>
                     </div>
-                    <div class="flex items-center space-x-3">
-                        <select id="investor-selector" onchange="saveInvestorPreference()"
-                            class="px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary min-w-[220px]">
-                            <option value="">🤖 IA Padrão</option>
-                        </select>
-                        <div id="investor-info" class="hidden bg-dark-700 px-3 py-2 rounded-lg">
-                            <p class="text-sm text-gray-300" id="investor-description"></p>
+
+                    <!-- Rentabilidade -->
+                    <div class="kpi-card rounded-xl p-5 animate-fade-in" style="animation-delay: 60ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-cyan-500/10 text-cyan-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            </div>
+                        </div>
+                        <p id="kpi-rentabilidade" class="text-2xl font-bold text-white"><span class="skeleton inline-block w-24 h-7">&nbsp;</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Rentabilidade no Periodo</p>
+                    </div>
+
+                    <!-- Dividendos -->
+                    <div class="kpi-card rounded-xl p-5 animate-fade-in" style="animation-delay: 120ms">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="kpi-icon bg-purple-500/10 text-purple-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            </div>
+                        </div>
+                        <p id="kpi-dividendos" class="text-2xl font-bold text-white"><span class="skeleton inline-block w-28 h-7">&nbsp;</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Dividendos Estimados (12m)</p>
+                    </div>
+                </div>
+
+                <!-- Evolucao Patrimonial (full width) -->
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <span>&#128200;</span> Evolucao Patrimonial
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="chart-evolucao"></canvas>
+                    </div>
+                </div>
+
+                <!-- Grid: Comparativo por Carteira + Distribuicao por Classe -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="chart-container">
+                        <div class="chart-title">
+                            <span>&#127942;</span> Comparativo por Carteira
+                        </div>
+                        <div style="height: 280px;">
+                            <canvas id="chart-carteiras"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">
+                            <span>&#127856;</span> Composicao por Classe de Ativo
+                        </div>
+                        <div style="height: 280px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="chart-classe-doughnut"></canvas>
                         </div>
                     </div>
                 </div>
-            </div>
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="glass rounded-xl p-6">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-400 text-sm">Patrimônio Total</span>
-                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-                            </path>
-                        </svg>
+
+                <!-- Performance por Classe -->
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <span>&#128640;</span> Performance por Classe de Ativo
                     </div>
-                    <p class="text-3xl font-bold text-white">R$ 0,00</p>
-                    <p class="text-sm text-green-500 mt-1">+0.00%</p>
-                </div>
-
-                <div class="glass rounded-xl p-6">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-400 text-sm">Total Investido</span>
-                        <svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                        </svg>
+                    <div style="height: 250px;">
+                        <canvas id="chart-perf-classe"></canvas>
                     </div>
-                    <p class="text-3xl font-bold text-white">R$ 0,00</p>
                 </div>
 
-                <div class="glass rounded-xl p-6">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-gray-400 text-sm">Ativos</span>
-                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
-                            </path>
-                        </svg>
+                <!-- Assets Detail Table -->
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <span>&#128203;</span> Detalhamento de Ativos
                     </div>
-                    <p class="text-3xl font-bold text-white">{{ portfolio|length }}</p>
+                    <div class="overflow-x-auto scrollbar-thin" style="max-height: 420px; overflow-y: auto;">
+                        <table class="w-full mini-table">
+                            <thead class="sticky top-0" style="background: rgba(31,35,41,1);">
+                                <tr>
+                                    <th class="text-left">Ticker</th>
+                                    <th class="text-left">Classe</th>
+                                    <th class="text-left">Carteira</th>
+                                    <th class="text-right">Qtd</th>
+                                    <th class="text-right">Preco Medio</th>
+                                    <th class="text-right">Preco Atual</th>
+                                    <th class="text-right">Investido</th>
+                                    <th class="text-right">Valor Atual</th>
+                                    <th class="text-right">Rentab.</th>
+                                    <th class="text-right">DY</th>
+                                    <th class="text-right">Div. Est.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-assets-detail">
+                                <tr><td colspan="11" class="text-center text-gray-500 py-8"><span class="skeleton inline-block w-48 h-5">&nbsp;</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Portfolio Table -->
-            <div class="glass rounded-xl p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-bold text-white">Seus Ativos</h3>
-                    <button
-                        class="px-4 py-2 bg-gradient-to-r from-primary to-secondary text-dark-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-primary/50 transition">
-                        + Adicionar Ativo
-                    </button>
-                </div>
-
-                {% if portfolio %}
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-700">
-                                <th class="text-left py-3 px-4 text-gray-400 font-semibold">Ticker</th>
-                                <th class="text-right py-3 px-4 text-gray-400 font-semibold">Quantidade</th>
-                                <th class="text-right py-3 px-4 text-gray-400 font-semibold">Preço Médio</th>
-                                <th class="text-right py-3 px-4 text-gray-400 font-semibold">Total Investido</th>
-                                <th class="text-right py-3 px-4 text-gray-400 font-semibold">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for asset in portfolio %}
-                            <tr class="border-b border-gray-700/50 hover:bg-dark-700/50 transition">
-                                <td class="py-4 px-4">
-                                    <span class="text-white font-semibold">{{ asset.ticker }}</span>
-                                </td>
-                                <td class="text-right py-4 px-4 text-gray-300">{{ asset.quantity }}</td>
-                                <td class="text-right py-4 px-4 text-gray-300">R$ {{ "%.2f"|format(asset.avg_price) }}
-                                </td>
-                                <td class="text-right py-4 px-4 text-white font-semibold">
-                                    R$ {{ "%.2f"|format(asset.quantity * asset.avg_price) }}
-                                </td>
-                                <td class="text-right py-4 px-4">
-                                    <button class="text-primary hover:text-secondary transition">Editar</button>
-                                    <button class="text-red-500 hover:text-red-400 transition ml-3">Remover</button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="text-center py-12">
-                    <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4">
-                        </path>
-                    </svg>
-                    <p class="text-gray-400 text-lg">Sua carteira está vazia</p>
-                    <p class="text-gray-500 text-sm mt-2">Adicione seu primeiro ativo para começar</p>
-                </div>
-                {% endif %}
             </div>
         </div>
     </main>
 </div>
 
 <script>
-    let investorData = [];
+// ===================== CHART.JS SETUP =====================
+Chart.defaults.color = '#9CA3AF';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.padding = 12;
 
-    // Load investors on page load
-    window.addEventListener('DOMContentLoaded', async () => {
-        try {
-            const response = await fetch('/api/investors');
-            const data = await response.json();
-            if (data.status === 'success' && data.investors) {
-                investorData = data.investors;
-                const selector = document.getElementById('investor-selector');
-                data.investors.forEach(inv => {
-                    const option = document.createElement('option');
-                    option.value = inv.name;
-                    option.textContent = `🎯 ${inv.name}`;
-                    selector.appendChild(option);
-                });
+let chartInstances = {};
+const COLORS = {
+    primary: '#00FF9D',
+    secondary: '#00C8FF',
+    accent1: '#A855F7',
+    accent2: '#F59E0B',
+    accent3: '#EF4444',
+    palette: ['#00FF9D', '#00C8FF', '#A855F7', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6', '#F97316', '#06B6D4']
+};
 
-                // Restore saved preference
-                const saved = localStorage.getItem('investor_persona');
-                if (saved) {
-                    selector.value = saved;
-                    showInvestorInfo(saved);
+function getOrCreateChart(id, config) {
+    if (chartInstances[id]) {
+        chartInstances[id].destroy();
+    }
+    const ctx = document.getElementById(id);
+    if (!ctx) return null;
+    chartInstances[id] = new Chart(ctx, config);
+    return chartInstances[id];
+}
+
+function formatBRL(value) {
+    return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ===================== WALLET DROPDOWN =====================
+let walletsLoaded = false;
+
+function toggleWalletDropdown() {
+    const dd = document.getElementById('wallet-dropdown');
+    dd.classList.toggle('hidden');
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('wallet-dropdown');
+    const btn = document.getElementById('wallet-filter-btn');
+    if (!dd.contains(e.target) && !btn.contains(e.target)) {
+        dd.classList.add('hidden');
+    }
+});
+
+function renderWalletFilter(wallets) {
+    if (walletsLoaded) return;
+    walletsLoaded = true;
+
+    const container = document.getElementById('wallet-checkboxes');
+    if (!wallets || wallets.length === 0) {
+        container.innerHTML = '<p class="px-4 py-2 text-gray-500 text-xs">Nenhuma carteira</p>';
+        return;
+    }
+
+    let html = '';
+    for (const w of wallets) {
+        html += `<label><input type="checkbox" class="wallet-checkbox" value="${w.id}" onchange="onWalletFilterChange()"> ${w.name}</label>`;
+    }
+    container.innerHTML = html;
+}
+
+function onWalletFilterChange() {
+    const checked = document.querySelectorAll('.wallet-checkbox:checked');
+    const label = document.getElementById('wallet-filter-label');
+    if (checked.length === 0) {
+        label.textContent = 'Todas as Carteiras';
+    } else if (checked.length === 1) {
+        label.textContent = checked[0].parentElement.textContent.trim();
+    } else {
+        label.textContent = checked.length + ' Carteiras';
+    }
+    loadAnalytics();
+}
+
+// ===================== PERIOD FILTER =====================
+function onPeriodChange() {
+    const period = document.getElementById('period-filter').value;
+    const customDiv = document.getElementById('custom-dates');
+    if (period === 'custom') {
+        customDiv.classList.remove('hidden');
+    } else {
+        customDiv.classList.add('hidden');
+        loadAnalytics();
+    }
+}
+
+// ===================== FILTER PARAMS =====================
+function buildFilterParams() {
+    const params = new URLSearchParams();
+
+    // Wallet IDs
+    const checked = document.querySelectorAll('.wallet-checkbox:checked');
+    if (checked.length > 0) {
+        params.set('wallet_ids', [...checked].map(cb => cb.value).join(','));
+    }
+
+    // Period
+    const period = document.getElementById('period-filter').value;
+    const now = new Date();
+    if (period === '7d') {
+        const d = new Date(now.getTime() - 7 * 86400000);
+        params.set('date_from', d.toISOString().split('T')[0]);
+    } else if (period === '30d') {
+        const d = new Date(now.getTime() - 30 * 86400000);
+        params.set('date_from', d.toISOString().split('T')[0]);
+    } else if (period === '12m') {
+        const d = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        params.set('date_from', d.toISOString().split('T')[0]);
+    } else if (period === 'custom') {
+        const df = document.getElementById('date-from').value;
+        const dt = document.getElementById('date-to').value;
+        if (df) params.set('date_from', df);
+        if (dt) params.set('date_to', dt);
+    }
+
+    return params.toString();
+}
+
+// ===================== SKELETON LOADING =====================
+function showSkeletons() {
+    document.getElementById('kpi-patrimonio').innerHTML = '<span class="skeleton inline-block w-32 h-7">&nbsp;</span>';
+    document.getElementById('kpi-rentabilidade').innerHTML = '<span class="skeleton inline-block w-24 h-7">&nbsp;</span>';
+    document.getElementById('kpi-dividendos').innerHTML = '<span class="skeleton inline-block w-28 h-7">&nbsp;</span>';
+}
+
+// ===================== MAIN LOADER =====================
+async function loadAnalytics() {
+    showSkeletons();
+
+    try {
+        const qs = buildFilterParams();
+        const resp = await fetch('/dashboard/api/analytics?' + qs);
+
+        if (resp.status === 401) {
+            window.location.href = '/auth/login';
+            return;
+        }
+
+        const data = await resp.json();
+
+        // Update timestamp
+        document.getElementById('last-update-time').textContent =
+            'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
+
+        // Handle empty portfolio
+        if (data.kpis.num_ativos === 0) {
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('analytics-content').classList.add('hidden');
+            return;
+        }
+
+        document.getElementById('empty-state').classList.add('hidden');
+        document.getElementById('analytics-content').classList.remove('hidden');
+
+        // Populate wallet filter (once)
+        renderWalletFilter(data.wallets);
+
+        // Render KPIs
+        renderKPIs(data.kpis);
+
+        // Render charts
+        renderEvolucaoChart(data.evolucao_patrimonial);
+        renderCarteirasChart(data.comparativo_carteiras);
+        renderClasseDoughnut(data.distribuicao_classe);
+        renderPerfClasseChart(data.performance_classe);
+        renderAssetsTable(data.assets_detail);
+
+    } catch (err) {
+        console.error('[Dashboard] Analytics load error:', err);
+    }
+}
+
+// ===================== RENDERERS =====================
+
+function renderKPIs(kpis) {
+    document.getElementById('kpi-patrimonio').innerHTML = formatBRL(kpis.patrimonio_total);
+
+    const rentColor = kpis.rentabilidade_pct >= 0 ? 'text-green-400' : 'text-red-400';
+    const rentSign = kpis.rentabilidade_pct >= 0 ? '+' : '';
+    document.getElementById('kpi-rentabilidade').innerHTML =
+        `<span class="${rentColor}">${rentSign}${kpis.rentabilidade_pct.toFixed(2)}%</span>` +
+        `<span class="text-xs text-gray-500 ml-2">(${formatBRL(kpis.patrimonio_total - kpis.total_investido)})</span>`;
+
+    document.getElementById('kpi-dividendos').innerHTML = formatBRL(kpis.dividendos_estimados);
+}
+
+function renderEvolucaoChart(data) {
+    if (!data.labels || data.labels.length === 0) {
+        document.getElementById('chart-evolucao').parentElement.innerHTML =
+            '<p class="text-gray-500 text-sm text-center py-12">Sem dados de evolucao disponivel</p>';
+        return;
+    }
+
+    getOrCreateChart('chart-evolucao', {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Total Aportado',
+                    data: data.aporte_acumulado,
+                    borderColor: COLORS.secondary,
+                    backgroundColor: COLORS.secondary + '15',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: COLORS.secondary,
+                },
+                {
+                    label: 'Valor Atual',
+                    data: data.valor_atual_acumulado,
+                    borderColor: COLORS.primary,
+                    backgroundColor: COLORS.primary + '15',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: COLORS.primary,
                 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': ' + formatBRL(ctx.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.03)' },
+                    ticks: { callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }
+                },
+                x: { grid: { display: false } }
             }
-        } catch (e) {
-            console.log('Could not load investors:', e);
         }
     });
+}
 
-    function saveInvestorPreference() {
-        const value = document.getElementById('investor-selector').value;
-        localStorage.setItem('investor_persona', value);
-        showInvestorInfo(value);
+function renderCarteirasChart(data) {
+    if (!data.labels || data.labels.length === 0) {
+        document.getElementById('chart-carteiras').parentElement.innerHTML =
+            '<p class="text-gray-500 text-sm text-center py-12">Sem carteiras para comparar</p>';
+        return;
     }
 
-    function showInvestorInfo(name) {
-        const infoDiv = document.getElementById('investor-info');
-        const descP = document.getElementById('investor-description');
-
-        if (name) {
-            const inv = investorData.find(i => i.name === name);
-            if (inv) {
-                descP.textContent = inv.description;
-                infoDiv.classList.remove('hidden');
-                return;
+    getOrCreateChart('chart-carteiras', {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Investido',
+                    data: data.investido,
+                    backgroundColor: COLORS.secondary + '70',
+                    borderColor: COLORS.secondary,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Valor Atual',
+                    data: data.valor_atual,
+                    backgroundColor: COLORS.primary + '70',
+                    borderColor: COLORS.primary,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(ctx) {
+                            if (ctx.datasetIndex === 1) {
+                                const rent = data.rentabilidade_pct[ctx.dataIndex];
+                                return 'Rentab: ' + (rent >= 0 ? '+' : '') + rent.toFixed(2) + '%';
+                            }
+                        },
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': ' + formatBRL(ctx.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.03)' },
+                    ticks: { callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }
+                },
+                x: { grid: { display: false } }
             }
         }
-        infoDiv.classList.add('hidden');
+    });
+}
+
+function renderClasseDoughnut(data) {
+    if (!data.labels || data.labels.length === 0) {
+        document.getElementById('chart-classe-doughnut').parentElement.innerHTML =
+            '<p class="text-gray-500 text-sm text-center">Sem dados</p>';
+        return;
     }
+
+    getOrCreateChart('chart-classe-doughnut', {
+        type: 'doughnut',
+        data: {
+            labels: data.labels.map((l, i) => l + ' (' + data.percentuais[i].toFixed(1) + '%)'),
+            datasets: [{
+                data: data.valores,
+                backgroundColor: [COLORS.primary, COLORS.secondary, COLORS.accent1],
+                borderWidth: 0,
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'right', labels: { padding: 16 } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return formatBRL(ctx.parsed) + ' (' + data.percentuais[ctx.dataIndex].toFixed(1) + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderPerfClasseChart(data) {
+    if (!data.labels || data.labels.length === 0) {
+        document.getElementById('chart-perf-classe').parentElement.innerHTML =
+            '<p class="text-gray-500 text-sm text-center py-12">Sem dados de performance</p>';
+        return;
+    }
+
+    const barColors = data.rentabilidade_pct.map(r => r >= 0 ? COLORS.primary + '70' : COLORS.accent3 + '70');
+    const borderColors = data.rentabilidade_pct.map(r => r >= 0 ? COLORS.primary : COLORS.accent3);
+
+    getOrCreateChart('chart-perf-classe', {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Rentabilidade %',
+                data: data.rentabilidade_pct,
+                backgroundColor: barColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(ctx) {
+                            const i = ctx.dataIndex;
+                            return 'Investido: ' + formatBRL(data.investido[i]) + '\nAtual: ' + formatBRL(data.valor_atual[i]);
+                        },
+                        label: function(ctx) {
+                            const v = ctx.parsed.x;
+                            return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.03)' },
+                    ticks: { callback: v => v + '%' }
+                },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderAssetsTable(assets) {
+    const tbody = document.getElementById('table-assets-detail');
+
+    if (!assets || assets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-gray-500 py-8">Nenhum ativo encontrado</td></tr>';
+        return;
+    }
+
+    let html = '';
+    for (const a of assets) {
+        const gainClass = a.gain_pct >= 0 ? 'text-green-400' : 'text-red-400';
+        const gainSign = a.gain_pct >= 0 ? '+' : '';
+        const classBadge = {
+            'Acao': 'bg-blue-500/20 text-blue-400',
+            'FII': 'bg-purple-500/20 text-purple-400',
+            'ETF': 'bg-cyan-500/20 text-cyan-400'
+        }[a.classe] || 'bg-gray-500/20 text-gray-400';
+
+        html += `<tr>
+            <td class="text-white font-semibold">${a.ticker}</td>
+            <td><span class="px-2 py-0.5 rounded text-xs font-bold ${classBadge}">${a.classe}</span></td>
+            <td class="text-gray-400 text-xs">${a.wallet_name}</td>
+            <td class="text-right text-gray-300">${a.quantity}</td>
+            <td class="text-right text-gray-400">${formatBRL(a.avg_price)}</td>
+            <td class="text-right text-gray-300">${formatBRL(a.current_price)}</td>
+            <td class="text-right text-gray-300">${formatBRL(a.invested)}</td>
+            <td class="text-right text-white font-semibold">${formatBRL(a.current_value)}</td>
+            <td class="text-right ${gainClass} font-semibold">${gainSign}${a.gain_pct.toFixed(2)}%</td>
+            <td class="text-right text-gray-400">${a.dy > 0 ? a.dy.toFixed(2) + '%' : '-'}</td>
+            <td class="text-right text-gray-300">${a.est_dividends > 0 ? formatBRL(a.est_dividends) : '-'}</td>
+        </tr>`;
+    }
+    tbody.innerHTML = html;
+}
+
+// ===================== INIT =====================
+window.addEventListener('DOMContentLoaded', loadAnalytics);
 </script>
 {% endblock %}
