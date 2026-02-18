@@ -1,184 +1,324 @@
-import requests
-from bs4 import BeautifulSoup
+"""
+House Flipping - Intelligent Real Estate Opportunity Finder
+Pipeline: Serper.dev (agency discovery) -> Crawl4AI (site crawling) -> Gemini (data extraction) -> Pandas (analysis)
+"""
+import httpx
 import pandas as pd
 import logging
-import random
-import time
-from urllib.parse import quote
+import asyncio
+import json
+import os
+from urllib.parse import urlparse
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class RealEstateScraper:
+# ==================== CONFIGURATION ====================
+
+BLOCKED_DOMAINS = [
+    "olx.com.br", "mercadolivre.com.br", "facebook.com", "instagram.com",
+    "twitter.com", "x.com", "youtube.com", "linkedin.com",
+    "zapimoveis.com.br", "vivareal.com.br", "imovelweb.com.br",
+    "quintoandar.com.br", "chaves-na-mao.com.br", "123i.com.br",
+    "google.com", "reclameaqui.com.br", "jusbrasil.com.br",
+    "wikipedia.org", "tiktok.com", "pinterest.com", "tripadvisor.com",
+    "glassdoor.com", "indeed.com", "gov.br", "creci.org.br",
+]
+
+LISTING_URL_PATTERNS = [
+    "/imoveis", "/venda", "/comprar", "/casas", "/apartamentos",
+    "/imoveis-a-venda", "/imoveis/venda", "/compra", "/lancamentos",
+]
+
+
+# ==================== STEP 1: AGENCY DISCOVERY (Serper.dev) ====================
+
+class SerperAgencyDiscovery:
     """
-    Base class for Real Estate Scraping with common utilities.
+    Discovers local real estate agencies in a city using Serper.dev Google Search API.
+    Returns a list of agency websites filtered from marketplaces and social media.
     """
+
     def __init__(self):
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
-        }
+        self.api_key = os.getenv("SERPER_API_KEY", "")
+        self.base_url = "https://google.serper.dev/search"
 
-    def get_soup(self, url):
-        try:
-            response = requests.get(url, headers=self.headers, timeout=10)
-            if response.status_code == 200:
-                return BeautifulSoup(response.text, 'html.parser')
-            logger.error(f"Failed to fetch {url}: Status {response.status_code}")
-            return None
-        except Exception as e:
-            logger.error(f"Error fetching {url}: {e}")
-            return None
-
-class OLXScraper(RealEstateScraper):
-    """
-    Targeted scraper for OLX Real Estate listings.
-    """
-    def search_city(self, city, state="sp"):
+    async def discover(self, city: str, state: str = None) -> list:
         """
-        Searches for real estate in a specific city on OLX.
-        Note: State is defaulted to SP for MVP, but logic should handle state mapping.
+        Search for real estate agencies in a city.
+        Returns: [{"name": str, "domain": str, "url": str}]
         """
-        # Clean city name for URL
-        city_slug = city.lower().replace(' ', '-').replace('ã', 'a').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ç', 'c')
-        
-        # Construct Base URL (Simplified for MVP - direct search not always maps perfectly to region subdomains)
-        # OLX uses structure: https://www.olx.com.br/imoveis/venda/estado-uf/regiao?q=...
-        # A robust way is to use the general search and filter by category.
-        
-        base_url = f"https://www.olx.com.br/imoveis/venda?q={quote(city)}"
-        
-        logger.info(f"Scraping OLX for {city}: {base_url}")
-        soup = self.get_soup(base_url)
-        listings = []
-        
-        if not soup:
+        if not self.api_key:
+            logger.error("[SERPER] SERPER_API_KEY not configured")
             return []
 
-        # Find listings container using new selectors
-        # New OLX Layout uses section.olx-adcard
-        items = soup.find_all('section', {'class': lambda x: x and 'olx-adcard' in x})
-        
-        if not items:
-            # Fallback to old selectors just in case
-            items = soup.find_all(attrs={"data-ds-component": "DS-AdCard"})
-        
-        if not items:
-             items = soup.select('ul#ad-list > li')
+        query = f"Imobiliarias em {city}"
+        if state:
+            query += f" - {state}"
 
-        for item in items:
-            try:
-                # Extract Link
-                link_tag = item.find('a', {'class': lambda x: x and 'olx-adcard__link' in x})
-                if not link_tag: 
-                    link_tag = item.find('a', href=True) # Fallback
-                
-                if not link_tag: continue
-                link = link_tag['href']
-                
-                # Extract Title
-                title_tag = item.find('h2', {'class': lambda x: x and 'olx-adcard__title' in x})
-                if not title_tag: title_tag = item.find('h2')
-                title = title_tag.text.strip() if title_tag else "Imóvel Sem Título"
-                
-                # Extract Price
-                price_tag = item.find('h3', {'class': lambda x: x and 'olx-adcard__price' in x})
-                if not price_tag: price_tag = item.find(string=lambda x: x and "R$" in x)
-                
-                price = 0.0
-                if price_tag:
-                    price_text = price_tag.text if hasattr(price_tag, 'text') else price_tag
-                    price_str = price_text.strip().replace('R$', '').replace('.', '').strip()
-                    if price_str.isdigit():
-                         price = float(price_str)
-                
-                # Extract Area (m²)
-                area = 0.0
-                # Look for details class
-                details = item.find_all(class_=lambda x: x and 'olx-adcard__detail' in x)
-                for detail in details:
-                    text = detail.text.strip()
-                    if "m²" in text:
-                         area_str = text.replace('m²', '').strip()
-                         if area_str.isdigit():
-                             area = float(area_str)
-                             break
-                
-                # Fallback Area
-                if area == 0:
-                     area_text = item.find(string=lambda x: x and "m²" in x)
-                     if area_text:
-                        area_str = area_text.replace('m²', '').strip()
-                        if area_str.isdigit():
-                            area = float(area_str)
+        logger.info(f"[SERPER] Searching: {query}")
 
-                # Extract Location (Bairro/City)
-                location_tag = item.find('p', {'class': lambda x: x and 'olx-adcard__location' in x})
-                location = location_tag.text if location_tag else "N/A"
-                
-                # Heuristic Type deduction
-                itype = "Outro"
-                title_lower = title.lower()
-                if "casa" in title_lower: itype = "Casa"
-                elif "apartamento" in title_lower or "apto" in title_lower: itype = "Apartamento"
-                elif "terreno" in title_lower or "lote" in title_lower: itype = "Terreno"
-                elif "chácara" in title_lower or "sítio" in title_lower: itype = "Sítio/Chácara"
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.post(
+                    self.base_url,
+                    headers={
+                        "X-API-KEY": self.api_key,
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "q": query,
+                        "gl": "br",
+                        "hl": "pt-br",
+                        "num": 20
+                    }
+                )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"[SERPER] API error: {e.response.status_code} - {e.response.text[:200]}")
+            return []
+        except Exception as e:
+            logger.error(f"[SERPER] Request failed: {e}")
+            return []
 
-                if price > 0 and area > 0:
-                     listings.append({
-                         'Cidade': city,
-                         'Imobiliária': 'OLX Aggregator',
-                         'Bairro': location.split('-')[0].strip(),
-                         'Tipo': itype,
-                         'Referência': link.split('-')[-1],
-                         'Área (m²)': area,
-                         'Valor Total': price,
-                         'Link': link
-                     })
+        agencies = []
+        seen_domains = set()
 
-            except Exception as e:
-                # logger.warning(f"Error parsing item: {e}")
+        for result in data.get("organic", []):
+            url = result.get("link", "")
+            if not url:
                 continue
-                
-        return listings
 
-class AgencyFinder:
+            domain = urlparse(url).netloc.replace("www.", "").lower()
+
+            if domain in seen_domains:
+                continue
+
+            if any(blocked in domain for blocked in BLOCKED_DOMAINS):
+                continue
+
+            seen_domains.add(domain)
+            agencies.append({
+                "name": result.get("title", domain).split(" - ")[0].split(" | ")[0].strip(),
+                "domain": domain,
+                "url": url
+            })
+
+        logger.info(f"[SERPER] Found {len(agencies)} agencies for '{city}'")
+        return agencies
+
+
+# ==================== STEP 2: SITE CRAWLING + LLM EXTRACTION ====================
+
+class AgencyCrawler:
     """
-    Finds agencies in a city to satisfy requirement of "identifying agencies".
+    Crawls real estate agency websites using Crawl4AI and extracts
+    structured listing data using Google Gemini LLM.
     """
-    def find_agencies(self, city):
-        query = f"imobiliárias em {city}"
-        # For MVP, returning a static list or mocked search results to avoid Google blocking
-        return [
-            {"name": f"Imobiliária {city} Central", "site": f"www.imob{city.lower()}1.com.br"},
-            {"name": "ReMax Top", "site": "www.remax.com.br"},
-            {"name": "Lopes", "site": "www.lopes.com.br"}
-        ]
+
+    def __init__(self):
+        self.gemini_api_key = os.getenv("GEMINI_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+
+    def _get_gemini_model(self):
+        """Initialize Gemini model (lazy load to avoid import-time side effects)"""
+        import google.generativeai as genai
+        genai.configure(api_key=self.gemini_api_key)
+        return genai.GenerativeModel("gemini-2.0-flash")
+
+    async def crawl_agency(self, agency: dict, city: str, max_pages: int = 3) -> list:
+        """
+        Crawl one agency site and extract structured listings.
+        Returns list of dicts matching the expected DataFrame schema.
+        """
+        from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode
+
+        base_url = agency["url"]
+        domain_root = f"https://{agency['domain']}"
+        all_listings = []
+
+        # Build candidate URLs
+        urls_to_try = [base_url]
+        for pattern in LISTING_URL_PATTERNS:
+            candidate = f"{domain_root}{pattern}"
+            if candidate != base_url:
+                urls_to_try.append(candidate)
+
+        config = CrawlerRunConfig(
+            cache_mode=CacheMode.BYPASS,
+            page_timeout=20000,
+            wait_until="domcontentloaded",
+        )
+
+        async with AsyncWebCrawler() as crawler:
+            pages_crawled = 0
+            for url in urls_to_try:
+                if pages_crawled >= max_pages:
+                    break
+
+                try:
+                    logger.info(f"[CRAWL] Fetching: {url}")
+                    result = await crawler.arun(url=url, config=config)
+
+                    if not result.success:
+                        logger.warning(f"[CRAWL] Failed: {url} - {getattr(result, 'error_message', 'unknown')}")
+                        continue
+
+                    markdown = result.markdown or ""
+                    if len(markdown) < 300:
+                        logger.info(f"[CRAWL] Skipping {url} - content too short ({len(markdown)} chars)")
+                        continue
+
+                    listings = await self._extract_with_gemini(markdown, city, agency["name"])
+                    if listings:
+                        all_listings.extend(listings)
+                        pages_crawled += 1
+                        logger.info(f"[CRAWL] Extracted {len(listings)} listings from {url}")
+                    else:
+                        logger.info(f"[CRAWL] No listings found on {url}")
+
+                except Exception as e:
+                    logger.warning(f"[CRAWL] Error crawling {url}: {e}")
+                    continue
+
+                await asyncio.sleep(1.0)
+
+        logger.info(f"[CRAWL] Total: {len(all_listings)} listings from {agency['name']}")
+        return all_listings
+
+    async def _extract_with_gemini(self, markdown_content: str, city: str, agency_name: str) -> list:
+        """
+        Send crawled markdown to Gemini and extract structured listing data.
+        """
+        if not self.gemini_api_key:
+            logger.error("[GEMINI] No API key configured (GEMINI_KEY or GEMINI_API_KEY)")
+            return []
+
+        # Truncate to avoid token limits
+        content = markdown_content[:15000]
+
+        prompt = f"""Analise o conteudo abaixo de um site de imobiliaria e extraia TODOS os imoveis a venda listados.
+
+Para cada imovel, extraia exatamente estes campos em JSON:
+- "Bairro": nome do bairro ou localizacao (string). Se nao encontrar, use "N/A"
+- "Tipo": tipo do imovel - deve ser exatamente um de: "Casa", "Apartamento", "Terreno", "Sitio/Chacara", "Comercial", "Outro" (string)
+- "Referencia": codigo de referencia do imovel se disponivel, senao string vazia (string)
+- "Area": area em metros quadrados, apenas o numero (float). Ex: 120.0
+- "Valor": valor total em reais, apenas o numero sem pontos de milhar (float). Ex: 350000.0
+- "Link": URL do anuncio se disponivel, senao string vazia (string)
+
+Regras OBRIGATORIAS:
+1. SOMENTE inclua imoveis que tenham Area > 0 E Valor > 0 (ambos obrigatorios)
+2. Se nao encontrar nenhum imovel valido, retorne: []
+3. Retorne APENAS o array JSON puro, sem texto adicional, sem markdown code blocks, sem explicacoes
+4. Considere apenas imoveis na cidade de {city} ou regiao proxima
+5. Converta valores como "R$ 350.000" para 350000.0 e "120 m2" para 120.0
+
+Conteudo do site da imobiliaria "{agency_name}":
+{content}"""
+
+        try:
+            model = self._get_gemini_model()
+            response = await asyncio.to_thread(model.generate_content, prompt)
+            text = response.text.strip()
+
+            # Clean up Gemini response (may wrap in code blocks)
+            if text.startswith("```"):
+                lines = text.split("\n")
+                text = "\n".join(lines[1:])
+                if text.endswith("```"):
+                    text = text[:-3]
+                text = text.strip()
+
+            if not text or text == "[]":
+                return []
+
+            listings_raw = json.loads(text)
+
+            if not isinstance(listings_raw, list):
+                return []
+
+            # Normalize to expected DataFrame schema
+            normalized = []
+            for item in listings_raw:
+                try:
+                    area = float(item.get("Area", 0))
+                    valor = float(item.get("Valor", 0))
+
+                    if area <= 0 or valor <= 0:
+                        continue
+
+                    normalized.append({
+                        "Cidade": city,
+                        "Imobiliaria": agency_name,
+                        "Bairro": str(item.get("Bairro", "N/A")).strip(),
+                        "Tipo": str(item.get("Tipo", "Outro")).strip(),
+                        "Referencia": str(item.get("Referencia", "")),
+                        "Area (m2)": area,
+                        "Valor Total": valor,
+                        "Link": str(item.get("Link", ""))
+                    })
+                except (ValueError, TypeError):
+                    continue
+
+            return normalized
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"[GEMINI] Invalid JSON from {agency_name}: {e}")
+            return []
+        except Exception as e:
+            logger.warning(f"[GEMINI] Extraction failed for {agency_name}: {e}")
+            return []
+
+    async def crawl_all_agencies(self, agencies: list, city: str, max_agencies: int = 8) -> list:
+        """
+        Crawl multiple agencies sequentially with rate limiting.
+        Returns combined list of all extracted listings.
+        """
+        all_listings = []
+
+        for i, agency in enumerate(agencies[:max_agencies]):
+            logger.info(f"[CRAWL] Agency {i+1}/{min(len(agencies), max_agencies)}: {agency['name']} ({agency['domain']})")
+
+            try:
+                listings = await self.crawl_agency(agency, city)
+                all_listings.extend(listings)
+            except Exception as e:
+                logger.error(f"[CRAWL] Agency '{agency['name']}' failed: {e}")
+                continue
+
+            # Rate limit between agencies
+            if i < min(len(agencies), max_agencies) - 1:
+                await asyncio.sleep(2.0)
+
+        logger.info(f"[CRAWL] Pipeline complete: {len(all_listings)} total listings from {len(agencies)} agencies")
+        return all_listings
+
+
+# ==================== STEP 3: ANALYSIS (unchanged) ====================
 
 def calculate_flipping_opportunity(df):
     """
     Pandas engine to process real estate data.
+    Calculates price/m2, sector average, and difference vs average.
     """
-    if df.empty: return df
-    
+    if df.empty:
+        return df
+
     # 1. Calculate Price/m2
-    df['Valor/m²'] = df['Valor Total'] / df['Área (m²)']
-    
+    df['Valor/m2'] = df['Valor Total'] / df['Area (m2)']
+
     # 2. Calculate Sector Mean (Grouping by Bairro + Tipo)
-    # Using 'transform' to map back to original rows
-    df['Média Setor (m²)'] = df.groupby(['Bairro', 'Tipo'])['Valor/m²'].transform('mean')
-    
+    df['Media Setor (m2)'] = df.groupby(['Bairro', 'Tipo'])['Valor/m2'].transform('mean')
+
     # 3. Calculate Diff vs Mean (%)
-    df['Dif vs Med (%)'] = ((df['Valor/m²'] - df['Média Setor (m²)']) / df['Média Setor (m²)']) * 100
-    
+    df['Dif vs Med (%)'] = ((df['Valor/m2'] - df['Media Setor (m2)']) / df['Media Setor (m2)']) * 100
+
     # Format for display
     df['Dif vs Med (%)'] = df['Dif vs Med (%)'].round(2)
-    df['Valor/m²'] = df['Valor/m²'].round(2)
-    df['Média Setor (m²)'] = df['Média Setor (m²)'].round(2)
-    
-    # Sort by 'Best Deal' (Most negative diff)
+    df['Valor/m2'] = df['Valor/m2'].round(2)
+    df['Media Setor (m2)'] = df['Media Setor (m2)'].round(2)
+
+    # Sort by 'Best Deal' (Most negative diff = best opportunity)
     df = df.sort_values('Dif vs Med (%)', ascending=True)
-    
+
     return df
