@@ -21,12 +21,30 @@
         </header>
 
         <main class="flex-1 overflow-y-auto p-6">
-            <!-- Info Banner -->
-            <div class="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-6">
-                <p class="text-primary text-sm">
-                    💡 <strong>Dados atualizados automaticamente a cada hora.</strong> Use os filtros abaixo para
-                    refinar sua busca.
-                </p>
+            <!-- Mode Toggle Banner -->
+            <div
+                class="bg-dark-800 border border-gray-700 rounded-xl p-4 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <p class="text-white font-bold text-base" id="mode-banner-title">Modo Planilha — Ranking Relativo
+                    </p>
+                    <p class="text-gray-400 text-sm" id="mode-banner-desc">Cada indicador é ranqueado globalmente. O
+                        menor somatório ponderado vence.</p>
+                </div>
+                <!-- Mode Toggle -->
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <span class="text-sm font-semibold" id="lbl-planilha"
+                        style="color: var(--color-primary, #6366f1);">📊 Planilha</span>
+                    <button id="mode-toggle-btn" onclick="toggleMode()"
+                        class="relative w-14 h-7 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary"
+                        style="background: linear-gradient(135deg, #6366f1, #7c3aed);"
+                        aria-label="Alternar modo de cálculo">
+                        <span id="mode-toggle-knob"
+                            class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center text-xs">
+                            📊
+                        </span>
+                    </button>
+                    <span class="text-sm font-semibold text-gray-500" id="lbl-teorico">🧪 Teórico</span>
+                </div>
             </div>
 
             <!-- Filters Row -->
@@ -89,9 +107,10 @@
             <!-- Strategy Selector + Ranking Area -->
             <div id="results-area" class="flex gap-5">
 
-                <!-- LEFT: 8 Strategy Cards -->
+                <!-- LEFT: Strategy Cards -->
                 <div class="w-56 flex-shrink-0">
-                    <p class="text-xs text-gray-500 uppercase font-semibold mb-3 px-1">Clique para gerar o ranking</p>
+                    <p id="sidebar-mode-label" class="text-xs text-gray-500 uppercase font-semibold mb-3 px-1">📊 Modo
+                        Planilha</p>
                     <div id="strategy-list" class="flex flex-col gap-2">
                         <!-- cards injected by JS -->
                     </div>
@@ -285,115 +304,81 @@
     </div>
 </div>
 
+<!-- JS Engine Modules (must load before main script) -->
+<script src="/static/js/calc_spreadsheet_mode.js"></script>
+<script src="/static/js/calc_real_mode.js"></script>
+
 <script>
-    let currentTab = 'greenblatt';
-    let allStocksData = [];
+    // ══════════════════════════════════════════════════════════════════════
+    // STATE
+    // ══════════════════════════════════════════════════════════════════════
+    let currentMode = 'planilha';   // 'planilha' | 'teorico'
+    let currentStrategy = null;
     let currentAnalysisText = '';
     let currentAudio = null;
     let currentModalTicker = '';
     let currentModalPrice = 0;
 
-    // ── Init ────────────────────────────────────────────────────────────────────
-    let currentStrategy = null;
+    // Active strategy list (switches on toggle)
+    let STRATEGIES = SPREADSHEET_STRATEGIES;
 
+    // ══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ══════════════════════════════════════════════════════════════════════
     window.addEventListener('DOMContentLoaded', () => {
         renderStrategyCards();
     });
 
-    function reloadCurrentStrategy() {
-        if (currentStrategy) {
-            loadData(currentStrategy);
+    // ══════════════════════════════════════════════════════════════════════
+    // MODE TOGGLE
+    // ══════════════════════════════════════════════════════════════════════
+    function toggleMode() {
+        currentMode = (currentMode === 'planilha') ? 'teorico' : 'planilha';
+        STRATEGIES = (currentMode === 'planilha') ? SPREADSHEET_STRATEGIES : TEORICO_STRATEGIES;
+
+        // Update toggle knob visuals
+        const knob = document.getElementById('mode-toggle-knob');
+        const btn = document.getElementById('mode-toggle-btn');
+        const lblP = document.getElementById('lbl-planilha');
+        const lblT = document.getElementById('lbl-teorico');
+        const title = document.getElementById('mode-banner-title');
+        const desc = document.getElementById('mode-banner-desc');
+        const sideLabel = document.getElementById('sidebar-mode-label');
+
+        if (currentMode === 'teorico') {
+            knob.style.transform = 'translateX(28px)';
+            knob.textContent = '🧪';
+            btn.style.background = 'linear-gradient(135deg, #0891b2, #0e7490)';
+            lblP.style.color = 'var(--tw-color-gray-500, #6b7280)';
+            lblP.style.opacity = '0.5';
+            lblT.style.color = '#22d3ee';
+            lblT.style.opacity = '1';
+            title.textContent = 'Modo Teórico — Fórmulas da Literatura';
+            desc.textContent = 'Filtros rígidos + fórmulas matemáticas absolutas (Graham, Bazin, Greenblatt…).';
+            sideLabel.textContent = '🧪 Modo Teórico';
+        } else {
+            knob.style.transform = 'translateX(0)';
+            knob.textContent = '📊';
+            btn.style.background = 'linear-gradient(135deg, #6366f1, #7c3aed)';
+            lblP.style.color = 'var(--color-primary, #6366f1)';
+            lblP.style.opacity = '1';
+            lblT.style.color = '#6b7280';
+            lblT.style.opacity = '0.5';
+            title.textContent = 'Modo Planilha — Ranking Relativo';
+            desc.textContent = 'Cada indicador é ranqueado globalmente. O menor somatório ponderado vence.';
+            sideLabel.textContent = '📊 Modo Planilha';
         }
-        // If no strategy selected yet, do nothing (user must click a card first)
+
+        // Reset selection and re-render cards
+        currentStrategy = null;
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('empty-state').classList.remove('hidden');
+        renderStrategyCards();
     }
 
-
-    // ── 9 Strategy definitions ──────────────────────────────────────────────────
-    const STRATEGIES = [
-        {
-            id: 'graham',
-            name: 'Graham',
-            icon: '📈',
-            desc: 'Menores múltiplos P/L e P/VP',
-            color: 'from-orange-600 to-red-700',
-            borderColor: 'border-orange-500',
-            columns: ['P/L', 'P/VP', 'DY %', 'V. Justo', 'Margem %']
-        },
-        {
-            id: 'bazin',
-            name: 'Bazin',
-            icon: '💵',
-            desc: 'Maior DY com menor endividamento',
-            color: 'from-green-600 to-emerald-700',
-            borderColor: 'border-green-500',
-            columns: ['DY %', 'Dív/Pat', 'P/L', 'P/VP', 'ROIC %']
-        },
-        {
-            id: 'greenblatt',
-            name: 'Greenblatt',
-            icon: '📗',
-            desc: 'Magic Formula: EV/EBIT + ROIC',
-            color: 'from-violet-600 to-purple-700',
-            borderColor: 'border-violet-500',
-            columns: ['EV/EBIT', 'ROIC %', 'P/L', 'P/VP', 'DY %']
-        },
-        {
-            id: 'dividendos',
-            name: 'Dividendos',
-            icon: '💰',
-            desc: 'Maior Dividend Yield',
-            color: 'from-emerald-600 to-green-700',
-            borderColor: 'border-emerald-500',
-            columns: ['DY %', 'P/L', 'P/VP', 'ROIC %', 'Margem %']
-        },
-        {
-            id: 'valor',
-            name: 'Valor',
-            icon: '🏷️',
-            desc: 'P/VP baixo + EV/EBIT baixo',
-            color: 'from-blue-600 to-indigo-700',
-            borderColor: 'border-blue-500',
-            columns: ['P/VP', 'EV/EBIT', 'P/L', 'DY %', 'ROIC %']
-        },
-        {
-            id: 'crescimento',
-            name: 'Crescimento',
-            icon: '🚀',
-            desc: 'CAGR Lucro alto + ROE alto',
-            color: 'from-cyan-600 to-teal-700',
-            borderColor: 'border-cyan-500',
-            columns: ['CAGR %', 'ROE %', 'P/L', 'P/VP', 'ROIC %']
-        },
-        {
-            id: 'rentabilidade',
-            name: 'Rentabilidade',
-            icon: '🏆',
-            desc: 'ROE + ROIC — foco em eficiência',
-            color: 'from-amber-600 to-yellow-700',
-            borderColor: 'border-amber-500',
-            columns: ['ROE %', 'ROIC %', 'P/L', 'P/VP', 'DY %']
-        },
-        {
-            id: 'preco_justo',
-            name: 'Preço Justo',
-            icon: '⚖️',
-            desc: 'P/L baixo + ROE alto',
-            color: 'from-pink-600 to-rose-700',
-            borderColor: 'border-pink-500',
-            columns: ['P/L', 'ROE %', 'P/VP', 'DY %', 'ROIC %']
-        },
-        {
-            id: 'small_caps',
-            name: 'Small Caps',
-            icon: '🔬',
-            desc: 'Menores empresas com EV/EBIT baixo',
-            color: 'from-lime-600 to-green-700',
-            borderColor: 'border-lime-500',
-            columns: ['Liquidez', 'EV/EBIT', 'P/L', 'P/VP', 'DY %']
-        },
-    ];
-
-    // ── Render strategy sidebar cards ──────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // STRATEGY CARDS
+    // ══════════════════════════════════════════════════════════════════════
     function renderStrategyCards() {
         const list = document.getElementById('strategy-list');
         list.innerHTML = STRATEGIES.map(s => `
@@ -412,34 +397,37 @@
         `).join('');
     }
 
-    // ── Select and load a strategy ─────────────────────────────────────────────
-    async function selectStrategy(strategyId) {
+    function selectStrategy(strategyId) {
         currentStrategy = strategyId;
         const strat = STRATEGIES.find(s => s.id === strategyId);
 
         // Highlight active card
         document.querySelectorAll('.strategy-card').forEach(c => {
-            c.classList.remove('border-primary', 'bg-primary/10', 'text-primary');
+            c.classList.remove('border-primary', 'bg-primary/10');
         });
         const activeCard = document.getElementById(`card-${strategyId}`);
-        if (activeCard) {
-            activeCard.classList.add('border-primary', 'bg-primary/10');
-        }
+        if (activeCard) activeCard.classList.add('border-primary', 'bg-primary/10');
 
         // Update column headers
-        if (strat && strat.columns.length === 5) {
-            document.getElementById('col-metric1').textContent = strat.columns[0];
-            document.getElementById('col-metric2').textContent = strat.columns[1];
-            document.getElementById('col-metric3').textContent = strat.columns[2];
-            document.getElementById('col-metric4').textContent = strat.columns[3];
-            document.getElementById('col-metric5').textContent = strat.columns[4];
+        if (strat && strat.columns.length >= 5) {
+            ['col-metric1', 'col-metric2', 'col-metric3', 'col-metric4', 'col-metric5']
+                .forEach((id, i) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = strat.columns[i];
+                });
         }
-
-        await loadData(strategyId);
+        loadData(strategyId);
     }
 
+    function reloadCurrentStrategy() {
+        if (currentStrategy) loadData(currentStrategy);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // DATA FETCH
+    // ══════════════════════════════════════════════════════════════════════
     async function loadData(strategyId) {
-        const sid = strategyId || currentStrategy || 'greenblatt';
+        const sid = strategyId || currentStrategy || STRATEGIES[0]?.id;
         const strat = STRATEGIES.find(s => s.id === sid);
 
         document.getElementById('loading').classList.remove('hidden');
@@ -450,12 +438,15 @@
         const market = document.getElementById('market-selector').value;
         const filterRisky = document.getElementById('filter-risky').checked;
         const minLiq = parseFloat(document.getElementById('min-liquidity').value) || 0;
-        let url = `/acoes/api/data?filter_risky=${filterRisky}&min_liq=${minLiq}&strategy=${sid}`;
+
+        // Choose the correct endpoint based on active mode
+        const endpoint = (currentMode === 'planilha') ? '/acoes/api/data' : '/acoes/api/data-teorico';
+        let url = `${endpoint}?filter_risky=${filterRisky}&min_liq=${minLiq}&strategy=${sid}`;
         if (market) url += `&market=${market}`;
 
         try {
-            const response = await fetch(url);
-            const data = await response.json();
+            const res = await fetch(url);
+            const data = await res.json();
 
             if (data.status === 'success') {
                 if (strat) {
@@ -464,15 +455,18 @@
                 }
                 document.getElementById('stock-count').textContent = data.total_count;
                 document.getElementById('rank-count').textContent = data.ranking.length;
+
                 renderRankingTable(data.ranking, sid);
+                renderCaveats(data.caveats || []);
+
                 document.getElementById('results').classList.remove('hidden');
                 const liqMsg = minLiq > 0 ? ` | Liq ≥ R$ ${minLiq.toLocaleString('pt-BR')}` : '';
-                showToast(`${strat?.name || sid}: ${data.ranking.length} empresas${liqMsg}`, 'success');
+                showToast(`${strat?.name || sid}: ${data.ranking.length} ativo(s)${liqMsg}`, 'success');
             } else {
                 showToast(data.message || 'Erro ao carregar dados', 'error');
                 document.getElementById('empty-state').classList.remove('hidden');
             }
-        } catch (error) {
+        } catch (err) {
             showToast('Erro ao carregar dados.', 'error');
             document.getElementById('empty-state').classList.remove('hidden');
         } finally {
@@ -481,13 +475,38 @@
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // CAVEATS PANEL
+    // ══════════════════════════════════════════════════════════════════════
+    function renderCaveats(caveats) {
+        let el = document.getElementById('caveats-panel');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'caveats-panel';
+            const resultsEl = document.getElementById('results');
+            resultsEl.insertAdjacentElement('beforeend', el);
+        }
+        if (!caveats || caveats.length === 0) {
+            el.innerHTML = '';
+            return;
+        }
+        el.className = 'mt-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg px-4 py-3';
+        el.innerHTML = `
+            <p class="text-yellow-400 text-xs font-semibold mb-1">⚠️ Notas do modelo:</p>
+            <ul class="list-disc list-inside space-y-0.5">
+                ${caveats.map(c => `<li class="text-yellow-300/80 text-xs">${c}</li>`).join('')}
+            </ul>`;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // FORMATTERS
+    // ══════════════════════════════════════════════════════════════════════
     function fmtNum(v, decimals = 2) {
         if (v === null || v === undefined) return '-';
         return Number(v).toFixed(decimals);
     }
     function fmtPct(v) {
         if (v === null || v === undefined) return '-';
-        // If value is fractional (0-1 range), multiply
         const num = Number(v);
         const display = Math.abs(num) < 5 ? num * 100 : num;
         return display.toFixed(1) + '%';
@@ -501,45 +520,23 @@
         return 'R$ ' + n.toFixed(0);
     }
 
-    // Dynamic column value getters — reads from strategy.columns definition
+    // ══════════════════════════════════════════════════════════════════════
+    // METRIC HELPERS — delegates to active mode module
+    // ══════════════════════════════════════════════════════════════════════
     function getMetricValue(stock, metricName) {
-        switch (metricName) {
-            case 'P/L': return fmtNum(stock.pl);
-            case 'P/VP': return fmtNum(stock.pvp);
-            case 'DY %': return fmtPct(stock.dy);
-            case 'ROIC %': return fmtPct(stock.roic);
-            case 'ROE %': return stock.lpa && stock.vpa && stock.vpa !== 0 ? fmtPct(stock.lpa / stock.vpa) : '-';
-            case 'EV/EBIT': return fmtNum(stock.ev_ebit);
-            case 'V. Justo': return stock.valor_justo ? `R$ ${fmtNum(stock.valor_justo)}` : '-';
-            case 'Margem %': return stock.margem ? fmtPct(stock.margem) : '-';
-            case 'Dív/Pat': return stock.div_pat != null ? fmtNum(stock.div_pat) : '-';
-            case 'CAGR %': return stock.cagr_lucros != null ? fmtPct(stock.cagr_lucros) : '-';
-            case 'Liquidez': return fmtLiq(stock.liquidezmediadiaria);
-            default: return '-';
-        }
+        return (currentMode === 'planilha')
+            ? spreadsheetMetricValue(stock, metricName)
+            : teoricoMetricValue(stock, metricName);
     }
     function getMetricColor(stock, metricName) {
-        if (metricName === 'Margem %') {
-            return stock.margem > 0 ? 'text-green-400' : (stock.margem < 0 ? 'text-red-400' : '');
-        }
-        if (metricName === 'DY %') {
-            return (stock.dy || 0) > 0.05 ? 'text-green-400' : '';
-        }
-        return '';
-    }
-    function getCol4(stock, sid) {
-        const strat = STRATEGIES.find(s => s.id === sid);
-        return strat ? getMetricValue(stock, strat.columns[3]) : '-';
-    }
-    function getCol5(stock, sid) {
-        const strat = STRATEGIES.find(s => s.id === sid);
-        return strat ? getMetricValue(stock, strat.columns[4]) : '-';
-    }
-    function getCol5Color(stock, sid) {
-        const strat = STRATEGIES.find(s => s.id === sid);
-        return strat ? getMetricColor(stock, strat.columns[4]) : '';
+        return (currentMode === 'planilha')
+            ? spreadsheetMetricColor(stock, metricName)
+            : teoricoMetricColor(stock, metricName);
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // RANKING TABLE
+    // ══════════════════════════════════════════════════════════════════════
     function renderRankingTable(stocks, sid) {
         const tbody = document.getElementById('ranking-tbody');
         if (!stocks || stocks.length === 0) {
@@ -547,6 +544,7 @@
                 Nenhuma ação encontrada para esta estratégia com os filtros atuais.</td></tr>`;
             return;
         }
+
         const strat = STRATEGIES.find(s => s.id === sid);
         const cols = strat ? strat.columns : ['P/L', 'P/VP', 'DY %', 'ROIC %', 'EV/EBIT'];
 
@@ -572,9 +570,9 @@
                 <td class="px-3 py-3 text-right text-gray-300 text-xs">
                     ${fmtLiq(stock.liquidezmediadiaria)}
                 </td>
-                <td class="px-3 py-3 text-right text-gray-300 text-xs ${getMetricColor(stock, cols[0])}">${getMetricValue(stock, cols[0])}</td>
-                <td class="px-3 py-3 text-right text-gray-300 text-xs ${getMetricColor(stock, cols[1])}">${getMetricValue(stock, cols[1])}</td>
-                <td class="px-3 py-3 text-right text-gray-300 text-xs ${getMetricColor(stock, cols[2])}">${getMetricValue(stock, cols[2])}</td>
+                <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[0])}">${getMetricValue(stock, cols[0])}</td>
+                <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[1])}">${getMetricValue(stock, cols[1])}</td>
+                <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[2])}">${getMetricValue(stock, cols[2])}</td>
                 <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[3])}">${getMetricValue(stock, cols[3])}</td>
                 <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[4])}">${getMetricValue(stock, cols[4])}</td>
                 <td class="px-3 py-3 text-center">
@@ -587,306 +585,186 @@
         }).join('');
     }
 
-
-    let searchTimeout = null;
-
+    // ══════════════════════════════════════════════════════════════════════
+    // SEARCH
+    // ══════════════════════════════════════════════════════════════════════
+    let searchTimeout;
     function onSearchInput() {
-        const q = document.getElementById('search-input').value.trim();
         clearTimeout(searchTimeout);
-
+        const q = document.getElementById('search-input').value.trim();
         if (q.length < 1) {
             document.getElementById('search-dropdown').classList.add('hidden');
             return;
         }
-
-        // Debounced server search for autocomplete
-        searchTimeout = setTimeout(async () => {
-            try {
-                const response = await fetch(`/acoes/api/search?q=${encodeURIComponent(q)}`);
-                const data = await response.json();
-                if (data.status === 'success' && data.results.length > 0) {
-                    showSearchDropdown(data.results);
-                } else {
-                    document.getElementById('search-dropdown').classList.add('hidden');
-                }
-            } catch (e) {
-                document.getElementById('search-dropdown').classList.add('hidden');
-            }
-        }, 300);
+        searchTimeout = setTimeout(() => performSearch(q), 300);
     }
 
-    function showSearchDropdown(results) {
-        const dropdown = document.getElementById('search-dropdown');
-        const typeEmoji = { 'stock': '📈', 'etf': '🌐', 'fii': '🏢' };
-        const typeLabel = { 'stock': 'Ação', 'etf': 'ETF', 'fii': 'FII' };
-        dropdown.innerHTML = results.map(r => `
-            <div class="flex items-center justify-between px-4 py-3 hover:bg-dark-600 cursor-pointer transition" 
-                 onclick="selectSearchResult('${r.ticker}', '${r.market}')">
-                <div class="flex items-center space-x-3">
-                    <span class="text-xl">${typeEmoji[r.asset_type] || '📊'}</span>
-                    <div>
-                        <p class="text-white font-semibold">${r.ticker}</p>
-                        <p class="text-xs text-gray-400">${r.empresa || ''}</p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <span class="text-xs px-2 py-0.5 rounded bg-dark-600 text-gray-300">${typeLabel[r.asset_type] || ''}</span>
-                    <span class="text-xs text-gray-500 ml-1">${r.market}</span>
-                    ${r.price ? `<p class="text-primary text-sm font-semibold">R$ ${r.price.toFixed(2)}</p>` : ''}
-                </div>
-            </div>
-        `).join('');
-        dropdown.classList.remove('hidden');
+    async function performSearch(q) {
+        try {
+            const res = await fetch(`/acoes/api/search?q=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+            const dd = document.getElementById('search-dropdown');
+            if (!data.results?.length) { dd.classList.add('hidden'); return; }
+            dd.innerHTML = data.results.map(r => `
+                <div onclick="analyzeStock('${r.ticker}')"
+                    class="px-4 py-2 hover:bg-dark-600 cursor-pointer flex justify-between items-center">
+                    <span class="text-white font-bold text-sm">${r.ticker}</span>
+                    <span class="text-gray-400 text-xs truncate max-w-[60%]">${r.empresa || ''}</span>
+                </div>`).join('');
+            dd.classList.remove('hidden');
+        } catch { }
     }
 
-    function selectSearchResult(ticker, market) {
-        document.getElementById('search-dropdown').classList.add('hidden');
-        document.getElementById('search-input').value = ticker;
-        analyzeStock(ticker);
-    }
-
-    // Close dropdown on click outside
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('#search-input') && !e.target.closest('#search-dropdown')) {
+        if (!e.target.closest('#search-input') && !e.target.closest('#search-dropdown'))
             document.getElementById('search-dropdown').classList.add('hidden');
-        }
     });
 
-    function showTab(tab) {
-        currentTab = tab;
-        ['graham', 'magic', 'all'].forEach(t => {
-            document.getElementById(`tab-${t}`).className = tab === t
-                ? 'px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary'
-                : 'px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600';
-            document.getElementById(`content-${t}`).classList.toggle('hidden', tab !== t);
-        });
-    }
-
+    // ══════════════════════════════════════════════════════════════════════
+    // ANALYSIS MODAL
+    // ══════════════════════════════════════════════════════════════════════
     async function analyzeStock(ticker) {
-        document.getElementById('modal-ticker').textContent = ticker;
-        document.getElementById('modal-empresa').textContent = 'Carregando...';
-        document.getElementById('modal-analysis').innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div><p class="text-gray-400 mt-2">Gerando análise IA...</p></div>';
-        document.getElementById('valuation-card').className = 'mb-6 rounded-xl p-5 border-2 border-gray-700 bg-dark-700';
-        document.getElementById('modal-data-grid').innerHTML = '';
-        document.getElementById('analysis-modal').classList.remove('hidden');
-        document.getElementById('portfolio-msg').classList.add('hidden');
-        currentAnalysisText = '';
         currentModalTicker = ticker;
-        currentModalPrice = 0;
-        loadWallets();
+        document.getElementById('modal-ticker').textContent = ticker;
+        document.getElementById('modal-empresa').textContent = '';
+        document.getElementById('modal-analysis').innerHTML = `
+            <div class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p class="text-gray-400 mt-2">Gerando análise IA...</p>
+            </div>`;
+        document.getElementById('analysis-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
 
         try {
-            const market = document.getElementById('market-selector').value || 'BR';
-            const investor = localStorage.getItem('investor_persona') || '';
-            const response = await fetch(`/acoes/api/decode/${ticker}?market=${market}&investor=${encodeURIComponent(investor)}`);
-            const data = await response.json();
-
+            const res = await fetch(`/acoes/api/decode/${ticker}`);
+            const data = await res.json();
             if (data.status === 'success') {
-                const stock = data.data || {};
-                const analysis = data.analysis || 'Análise não disponível';
-                currentAnalysisText = analysis;
-
-                // Header
-                document.getElementById('modal-empresa').textContent = stock.empresa || ticker;
-
-                // Valuation Card
-                const price = stock.price || 0;
-                currentModalPrice = price;
-                const fairValue = stock.valor_justo || 0;
-                const margin = fairValue > 0 && price > 0 ? ((fairValue / price) - 1) : 0;
-                const val = getValuationBadge(price, fairValue);
-
-                document.getElementById('modal-price').textContent = `R$ ${price.toFixed(2)}`;
-                document.getElementById('modal-fair-value').textContent = `R$ ${fairValue.toFixed(2)}`;
-                document.getElementById('valuation-badge').textContent = val.text;
-                document.getElementById('valuation-badge').className = `px-4 py-2 rounded-full font-bold text-sm ${val.class}`;
-
-                const barWidth = Math.min(Math.max((margin + 1) * 50, 5), 100);
-                const barColor = val.color === 'green' ? 'bg-green-500' : val.color === 'yellow' ? 'bg-yellow-500' : val.color === 'orange' ? 'bg-orange-500' : 'bg-red-500';
-                document.getElementById('valuation-bar').style.width = barWidth + '%';
-                document.getElementById('valuation-bar').className = `h-2 rounded-full transition-all duration-500 ${barColor}`;
-                document.getElementById('valuation-detail').textContent = `Margem de segurança: ${(margin * 100).toFixed(1)}%`;
-
-                const borderColor = val.color === 'green' ? 'border-green-500/50' : val.color === 'yellow' ? 'border-yellow-500/50' : 'border-red-500/50';
-                document.getElementById('valuation-card').className = `mb-6 rounded-xl p-5 border-2 ${borderColor} bg-dark-700`;
-
-                // Data Grid
-                const metrics = [
-                    { label: 'P/L', value: stock.pl?.toFixed(2) },
-                    { label: 'P/VP', value: stock.pvp?.toFixed(2) },
-                    { label: 'ROIC', value: stock.roic ? (stock.roic * 100).toFixed(1) + '%' : null },
-                    { label: 'EV/EBIT', value: stock.ev_ebit?.toFixed(2) },
-                    { label: 'LPA', value: stock.lpa ? 'R$ ' + stock.lpa.toFixed(2) : null },
-                    { label: 'VPA', value: stock.vpa ? 'R$ ' + stock.vpa.toFixed(2) : null },
-                    { label: 'DY', value: stock.dy ? (stock.dy * 100).toFixed(2) + '%' : null },
-                    { label: 'Liquidez', value: stock.liquidezmediadiaria ? 'R$ ' + (stock.liquidezmediadiaria / 1000000).toFixed(1) + 'M' : null },
-                ];
-                document.getElementById('modal-data-grid').innerHTML = metrics
-                    .filter(m => m.value)
-                    .map(m => `
-                        <div class="bg-dark-600 rounded-lg p-3">
-                            <p class="text-xs text-gray-400">${m.label}</p>
-                            <p class="text-white font-semibold">${m.value}</p>
-                        </div>
-                    `).join('');
-
-                // Analysis
-                document.getElementById('modal-analysis').textContent = analysis;
-            } else {
-                document.getElementById('modal-analysis').innerHTML = '<p class="text-red-400">Erro ao carregar análise. Tente novamente.</p>';
-            }
-        } catch (error) {
-            document.getElementById('modal-analysis').innerHTML = '<p class="text-red-400">Erro de conexão. Tente novamente.</p>';
-        }
-    }
-
-    async function speakAnalysis() {
-        if (!currentAnalysisText) return;
-        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-
-        const btn = document.getElementById('tts-btn');
-        btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div><span>Gerando...</span>';
-
-        try {
-            const response = await fetch('/api/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: currentAnalysisText, investor: localStorage.getItem('investor_persona') || '' })
-            });
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                currentAudio = new Audio(url);
-                currentAudio.play();
-                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg><span>Parar</span>';
-                currentAudio.onended = () => {
-                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
-                };
-            } else {
-                showToast('TTS não disponível', 'error');
-                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
+                const stock = data.data;
+                currentModalPrice = stock.price || 0;
+                document.getElementById('modal-empresa').textContent = stock.empresa || '';
+                renderModalData(stock);
+                currentAnalysisText = data.analysis || 'Análise não disponível';
+                document.getElementById('modal-analysis').innerHTML = `<p>${currentAnalysisText.replace(/\n/g, '<br>')}</p>`;
+                if (stock.price) document.getElementById('wallet-price').value = Number(stock.price).toFixed(2);
+                await loadWallets();
             }
         } catch (e) {
-            showToast('Erro ao gerar áudio', 'error');
-            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
+            document.getElementById('modal-analysis').textContent = 'Erro ao carregar análise.';
         }
+    }
+
+    function renderModalData(stock) {
+        const price = stock.price || 0;
+        const valorJusto = stock.valor_justo || 0;
+        const margem = stock.margem || 0;
+        const card = document.getElementById('valuation-card');
+        const badge = document.getElementById('valuation-badge');
+        const bar = document.getElementById('valuation-bar');
+
+        document.getElementById('modal-price').textContent = price ? `R$ ${fmtNum(price)}` : '-';
+        document.getElementById('modal-fair-value').textContent = valorJusto ? `R$ ${fmtNum(valorJusto)}` : '-';
+        document.getElementById('valuation-detail').textContent = valorJusto
+            ? (margem >= 0
+                ? `Margem de segurança: ${fmtPct(margem)} acima do preço Graham`
+                : `Preço ${fmtPct(-margem)} acima do valor justo Graham`)
+            : 'Valor justo não disponível';
+
+        if (valorJusto > 0 && price > 0) {
+            const pct = Math.min((price / valorJusto) * 100, 100);
+            bar.style.width = pct + '%';
+            if (margem >= 0.2) {
+                card.className = 'mb-6 rounded-xl p-5 border-2 border-green-500/50 bg-green-900/10';
+                badge.className = 'px-4 py-2 rounded-full font-bold text-sm bg-green-500/20 text-green-400';
+                badge.textContent = '✅ Abaixo do Justo';
+                bar.className = 'h-2 rounded-full bg-green-500 transition-all duration-500';
+            } else if (margem >= 0) {
+                card.className = 'mb-6 rounded-xl p-5 border-2 border-yellow-500/50 bg-yellow-900/10';
+                badge.className = 'px-4 py-2 rounded-full font-bold text-sm bg-yellow-500/20 text-yellow-400';
+                badge.textContent = '⚡ Próximo do Justo';
+                bar.className = 'h-2 rounded-full bg-yellow-500 transition-all duration-500';
+            } else {
+                card.className = 'mb-6 rounded-xl p-5 border-2 border-red-500/50 bg-red-900/10';
+                badge.className = 'px-4 py-2 rounded-full font-bold text-sm bg-red-500/20 text-red-400';
+                badge.textContent = '❌ Acima do Justo';
+                bar.className = 'h-2 rounded-full bg-red-500 transition-all duration-500';
+            }
+        } else {
+            card.className = 'mb-6 rounded-xl p-5 border-2 border-gray-600 bg-gray-900/10';
+            badge.textContent = '— Sem dado';
+            badge.className = 'px-4 py-2 rounded-full font-bold text-sm bg-gray-600/20 text-gray-400';
+        }
+
+        const grid = document.getElementById('modal-data-grid');
+        const items = [
+            { label: 'P/L', val: fmtNum(stock.pl) },
+            { label: 'P/VP', val: fmtNum(stock.pvp) },
+            { label: 'DY', val: fmtPct(stock.dy) },
+            { label: 'ROIC', val: fmtPct(stock.roic) },
+            { label: 'ROE', val: (stock.lpa && stock.vpa) ? fmtPct(stock.lpa / stock.vpa) : '-' },
+            { label: 'EV/EBIT', val: fmtNum(stock.ev_ebit) },
+            { label: 'Div/Pat', val: fmtNum(stock.div_pat) },
+            { label: 'CAGR L', val: fmtPct(stock.cagr_lucros) },
+        ];
+        grid.innerHTML = items.map(i => `
+            <div class="bg-dark-700 rounded-lg p-3 text-center">
+                <p class="text-gray-400 text-xs mb-1">${i.label}</p>
+                <p class="text-white font-bold text-sm">${i.val}</p>
+            </div>`).join('');
     }
 
     function closeModal() {
         document.getElementById('analysis-modal').classList.add('hidden');
+        document.body.style.overflow = '';
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     }
 
-    function showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`;
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+    function speakAnalysis() {
+        if (!currentAnalysisText) return;
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        const utt = new SpeechSynthesisUtterance(currentAnalysisText);
+        utt.lang = 'pt-BR';
+        speechSynthesis.speak(utt);
     }
 
-    // Wallet data cache: {name: id, ...}
-    let walletMap = {};
-
+    // ══════════════════════════════════════════════════════════════════════
+    // PORTFOLIO
+    // ══════════════════════════════════════════════════════════════════════
     async function loadWallets() {
-        // Set price to current stock price
-        if (currentModalPrice > 0) {
-            document.getElementById('wallet-price').value = currentModalPrice.toFixed(2);
-        }
-        // Set date to today
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('wallet-date').value = today;
-
         try {
-            const response = await fetch('/dashboard/api/wallets');
-            if (response.ok) {
-                const data = await response.json();
-                const datalist = document.getElementById('wallet-options');
-                const input = document.getElementById('wallet-input');
-                walletMap = {};
-
-                if (data.wallets && data.wallets.length > 0) {
-                    datalist.innerHTML = data.wallets.map(w => {
-                        walletMap[w.name] = w.id;
-                        return `<option value="${w.name}">`;
-                    }).join('');
-                    // Default to first wallet
-                    input.value = data.wallets[0].name;
-                } else {
-                    datalist.innerHTML = '';
-                    input.value = 'Principal';
-                }
+            const res = await fetch('/carteira/api/wallets');
+            const data = await res.json();
+            const opts = document.getElementById('wallet-options');
+            if (opts && data.wallets) {
+                opts.innerHTML = data.wallets.map(w => `<option value="${w.name}">`).join('');
             }
-        } catch (e) {
-            // User may not be logged in
-            document.getElementById('wallet-input').value = 'Principal';
-        }
+        } catch { }
     }
 
     async function addToPortfolio() {
         const btn = document.getElementById('add-portfolio-btn');
         const msg = document.getElementById('portfolio-msg');
-        const walletName = document.getElementById('wallet-input').value.trim();
+        const walletName = document.getElementById('wallet-input').value.trim() || 'Principal';
         const qty = parseFloat(document.getElementById('wallet-qty').value) || 1;
         const price = parseFloat(document.getElementById('wallet-price').value) || currentModalPrice;
-        const date = document.getElementById('wallet-date').value;
-
-        if (!currentModalTicker || price <= 0) {
-            msg.textContent = 'Dados do ativo não disponíveis';
-            msg.className = 'text-xs text-red-400 mt-2';
-            msg.classList.remove('hidden');
-            return;
-        }
-        if (!walletName) {
-            msg.textContent = 'Digite o nome da carteira';
-            msg.className = 'text-xs text-red-400 mt-2';
-            msg.classList.remove('hidden');
-            return;
-        }
+        const date = document.getElementById('wallet-date').value || new Date().toISOString().split('T')[0];
 
         btn.disabled = true;
-        btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>';
+        btn.innerHTML = '<div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>';
 
         try {
-            let walletId = walletMap[walletName];
-
-            // If wallet doesn't exist, create it
-            if (!walletId) {
-                const createResp = await fetch('/dashboard/api/wallet/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: walletName })
-                });
-                if (createResp.ok) {
-                    const createData = await createResp.json();
-                    walletId = createData.wallet_id;
-                    if (walletId) walletMap[walletName] = walletId;
-                }
-                if (!walletId) {
-                    msg.textContent = 'Erro ao criar carteira. Faça login primeiro.';
-                    msg.className = 'text-xs text-red-400 mt-2';
-                    msg.classList.remove('hidden');
-                    btn.disabled = false;
-                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg><span>Adicionar</span>';
-                    return;
-                }
-            }
-
-            const response = await fetch('/dashboard/api/wallet/add-json', {
+            const res = await fetch('/carteira/api/add-asset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    wallet_name: walletName,
                     ticker: currentModalTicker,
                     quantity: qty,
-                    price: price,
-                    wallet_id: parseInt(walletId),
-                    date: date
-                })
+                    purchase_price: price,
+                    purchase_date: date,
+                }),
             });
-
-            const data = await response.json();
-
-            if (response.ok && data.success) {
+            const data = await res.json();
+            if (res.ok && data.success) {
                 msg.textContent = `${currentModalTicker} adicionado à carteira "${walletName}"!`;
                 msg.className = 'text-xs text-green-400 mt-2';
                 showToast(`${currentModalTicker} adicionado à carteira!`, 'success');
@@ -903,6 +781,25 @@
             btn.disabled = false;
             btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg><span>Adicionar</span>';
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // TOAST
+    // ══════════════════════════════════════════════════════════════════════
+    function showToast(msg, type = 'info') {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-2';
+            document.body.appendChild(container);
+        }
+        const colors = { success: 'bg-green-800 border-green-600', error: 'bg-red-800 border-red-600', info: 'bg-dark-700 border-gray-600' };
+        const toast = document.createElement('div');
+        toast.className = `${colors[type] || colors.info} border rounded-lg px-4 py-3 text-white text-sm shadow-xl flex items-center gap-2 max-w-xs animate-pulse`;
+        toast.textContent = msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
     }
 </script>
 {% endblock %}

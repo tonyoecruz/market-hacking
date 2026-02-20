@@ -33,6 +33,12 @@ class StockDB(Base):
     magic_rank = Column(Float)
     cagr_lucros = Column(Float)      # CAGR Lucros 5 anos (lucpidasNet5Years via StatusInvest)
     liq_corrente = Column(Float)     # Liquidez Corrente (liquidezCorrente via StatusInvest)
+    # ── NEW: Hybrid Screener V2.0 columns ────────────────────────────────────
+    margem_liquida  = Column(Float)  # Margem Líquida %  (margemLiquida via StatusInvest)
+    ev_ebitda       = Column(Float)  # EV/EBITDA         (eV_Ebitda via StatusInvest)
+    payout          = Column(Float)  # Payout %          (payout via StatusInvest)
+    valor_mercado   = Column(Float)  # Valor de Mercado  (valordemercado via StatusInvest)
+    div_liq_ebitda  = Column(Float)  # Dív.Líq/EBIT      (dividaLiquidaEbit via StatusInvest)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     __table_args__ = (
@@ -61,7 +67,11 @@ class StockDB(Base):
             'magic_rank': self.magic_rank,
             'cagr_lucros': getattr(self, 'cagr_lucros', None),
             'liq_corrente': getattr(self, 'liq_corrente', None),
-            'queda_maximo': None,  # not yet in DB
+            'margem_liquida':  getattr(self, 'margem_liquida', None),
+            'ev_ebitda':       getattr(self, 'ev_ebitda', None),
+            'payout':          getattr(self, 'payout', None),
+            'valor_mercado':   getattr(self, 'valor_mercado', None),
+            'div_liq_ebitda':  getattr(self, 'div_liq_ebitda', None),
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 

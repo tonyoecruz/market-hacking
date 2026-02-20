@@ -157,6 +157,12 @@ def get_br_stocks_statusinvest():
             'lucpidasNet5Years': 'cagr_lucros',  # CAGR Lucros 5 anos
             'companyname': 'empresa',
             'sectorname': 'setor',
+            # ── NEW columns (Hybrid Screener V2.0) ──────────────────────────
+            'margemLiquida': 'margem_liquida',          # Margem Líquida %
+            'eV_Ebitda': 'ev_ebitda',                   # EV/EBITDA
+            'payout': 'payout',                         # Payout %
+            'valordemercado': 'valor_mercado',          # Valor de Mercado R$
+            'dividaLiquidaEbit': 'div_liq_ebitda',      # Dívida Líquida/EBIT proxy
         }
 
         # Filter only existing columns just in case
@@ -165,7 +171,8 @@ def get_br_stocks_statusinvest():
 
         # Normalize Data Types
         numeric_cols = ['price', 'pl', 'pvp', 'ev_ebit', 'roic', 'dy', 'liquidezmediadiaria',
-                        'lpa', 'vpa', 'div_pat', 'liq_corrente', 'cagr_lucros', 'roe_raw']
+                        'lpa', 'vpa', 'div_pat', 'liq_corrente', 'cagr_lucros', 'roe_raw',
+                        'margem_liquida', 'ev_ebitda', 'payout', 'valor_mercado', 'div_liq_ebitda']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -182,6 +189,11 @@ def get_br_stocks_statusinvest():
             # Store ROE as ratio too; rename to roe
             df['roe_raw'] = df['roe_raw'] / 100.0
             df.rename(columns={'roe_raw': 'roe_si'}, inplace=True)
+
+        # Normalize new percentage columns (StatusInvest returns as whole numbers)
+        for pct_col in ['margem_liquida', 'payout']:
+            if pct_col in df.columns:
+                df[pct_col] = df[pct_col] / 100.0
 
         return df
 
