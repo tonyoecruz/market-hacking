@@ -31,9 +31,8 @@ class StockDB(Base):
     valor_justo = Column(Float)
     margem = Column(Float)           # Margem de segurança Graham
     magic_rank = Column(Float)
-    cagr_lucros = Column(Float)      # CAGR Lucros 5 anos (lucpidasNet5Years do StatusInvest)
-    liq_corrente = Column(Float)     # Liquidez Corrente (liquidezCorrente do StatusInvest)
-    # queda_maximo not yet available from any data source
+    cagr_lucros = Column(Float)      # CAGR Lucros 5 anos (lucpidasNet5Years via StatusInvest)
+    liq_corrente = Column(Float)     # Liquidez Corrente (liquidezCorrente via StatusInvest)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     __table_args__ = (

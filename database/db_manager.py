@@ -125,7 +125,7 @@ class DatabaseManager:
                 'ticker', 'market', 'empresa', 'setor', 'price', 'lpa', 'vpa',
                 'pl', 'pvp', 'roic', 'ev_ebit', 'dy', 'liquidezmediadiaria', 'div_pat',
                 'valor_justo', 'margem', 'magic_rank',
-                'cagr_lucros', 'liq_corrente',  # new fields from StatusInvest
+                'cagr_lucros', 'liq_corrente',  # ✅ columns confirmed in Supabase
                 'ValorJusto', 'Margem', 'MagicRank'
             ]
             
