@@ -15,91 +15,102 @@ templates = Jinja2Templates(directory="templates")
 logger = logging.getLogger(__name__)
 
 # ════════════════════════════════════════════════════════════════════════════
-# MODEL PRESETS — backend configuration for each ranking strategy.
-# Each tuple: (db_column, ascending, weight)
+# 9 MODEL PRESETS — backend configuration for each ranking strategy.
+#
+# Each criterion tuple: (db_column, ascending, weight)
 #   ascending=True  → "Menor" (lowest value = rank 1)
 #   ascending=False → "Maior" (highest value = rank 1)
 #   weight          → multiplier for the rank position
 #
-# Algorithm:  rank(indicator) × weight  →  sum all  →  sort ascending
+# Algorithm:
+#   Step A  — For each indicator, rank ALL stocks (ties get same position)
+#   Step B  — Multiply rank × weight
+#   Step C  — Sum all weighted ranks = Score
+#   Step D  — Sort ascending (lowest Score = best)
 # ════════════════════════════════════════════════════════════════════════════
 MODEL_PRESETS = {
-    'magic': {
-        'name': 'Magic',
-        'criteria': [
-            ('ev_ebit', True,  21),   # EV/EBIT  Menor  peso 21
-            ('roic',    False, 30),   # ROIC     Maior  peso 30
-        ],
-        'filter_positive': ['ev_ebit', 'roic'],
-    },
-    'magic_lucros': {
-        'name': 'MagicLucros',
-        'criteria': [
-            ('ev_ebit',     True,  21),  # EV/EBIT          Menor  peso 21
-            ('roic',        False, 30),  # ROIC             Maior  peso 30
-            ('cagr_lucros', False, 35),  # CAGR Lucros 5a   Maior  peso 35
-        ],
-        'filter_positive': ['ev_ebit', 'roic'],
-        'exclude_sectors': [
-            'Utilidade Pública', 'Utility', 'Energia Elétrica',
-            'Financeiro', 'Bancos', 'Seguros', 'Previdência e Seguros',
-            'Intermediários Financeiros', 'Serviços Financeiros',
-        ],
-    },
-    'baratas': {
-        'name': 'Baratas',
-        'criteria': [
-            ('queda_maximo', False, 12),  # Queda do Máximo  Maior  peso 12
-            ('pl',           True,  14),  # P/L              Menor  peso 14
-            ('pvp',          False, 15),  # P/VP             Maior  peso 15
-        ],
-        'filter_positive': ['pl'],
-    },
-    'solidas': {
-        'name': 'Sólidas',
-        'criteria': [
-            ('liq_corrente', False, 27),  # Liq. Corrente    Maior  peso 27
-            ('div_pat',      True,  23),  # Div.Liq./Patri.  Menor  peso 23
-            ('cagr_lucros',  False, 35),  # CAGR Lucros 5a   Maior  peso 35
-        ],
-        'require_cols': ['div_pat'],
-    },
-    'mix': {
-        'name': 'Mix',
-        'criteria': [
-            ('pl',           True,  14),  # P/L              Menor  peso 14
-            ('pvp',          False, 15),  # P/VP             Maior  peso 15
-            ('liq_corrente', False, 27),  # Liq. Corrente    Maior  peso 27
-            ('roe',          False, 28),  # ROE              Maior  peso 28
-            ('cagr_lucros',  False, 35),  # CAGR Lucros 5a   Maior  peso 35
-        ],
-        'filter_positive': ['pl'],
-    },
-    'dividendos': {
-        'name': 'Dividendos',
-        'criteria': [
-            ('dy',          False, 13),  # DY               Maior  peso 13
-            ('cagr_lucros', False, 35),  # CAGR Lucros 5a   Maior  peso 35
-        ],
-        'filter_positive': ['dy'],
-    },
+    # ── 1. Graham ──────────────────────────────────────────────────────────
     'graham': {
         'name': 'Graham',
         'criteria': [
-            ('dy',  False, 13),  # DY    Maior  peso 13
-            ('pl',  True,  14),  # P/L   Menor  peso 14
-            ('pvp', False, 15),  # P/VP  Maior  peso 15
+            ('pl',  True, 1),   # P/L   Menor  peso 1
+            ('pvp', True, 1),   # P/VP  Menor  peso 1
         ],
         'filter_positive': ['pl', 'pvp'],
     },
-    'greenblatt': {
-        'name': 'GreenBla',
+    # ── 2. Bazin ───────────────────────────────────────────────────────────
+    'bazin': {
+        'name': 'Bazin',
         'criteria': [
-            ('ev_ebit', True,  21),  # EV/EBIT  Menor  peso 21
-            ('roic',    False, 30),  # ROIC     Maior  peso 30
+            ('dy',      False, 2),  # DY                Maior  peso 2
+            ('div_pat', True,  1),  # Dív.Bruta/Patri.  Menor  peso 1
+        ],
+        'filter_positive': ['dy'],
+    },
+    # ── 3. Greenblatt (Magic Formula) ──────────────────────────────────────
+    'greenblatt': {
+        'name': 'Greenblatt',
+        'criteria': [
+            ('ev_ebit', True,  1),  # EV/EBIT  Menor  peso 1
+            ('roic',    False, 1),  # ROIC     Maior  peso 1
         ],
         'filter_positive': ['ev_ebit', 'roic'],
-        'liquidity_filter': 'below_median',  # GreenBla = Magic but less-liquid
+    },
+    # ── 4. Dividendos ─────────────────────────────────────────────────────
+    'dividendos': {
+        'name': 'Dividendos',
+        'criteria': [
+            ('dy', False, 1),  # DY  Maior  peso 1
+            # Payout not in DB yet — skipped gracefully
+        ],
+        'filter_positive': ['dy'],
+    },
+    # ── 5. Valor ──────────────────────────────────────────────────────────
+    'valor': {
+        'name': 'Valor',
+        'criteria': [
+            ('pvp',      True, 2),  # P/VP      Menor  peso 2
+            ('ev_ebit',  True, 1),  # EV/EBITDA Menor  peso 1 (using ev_ebit as proxy)
+        ],
+        'filter_positive': ['pvp'],
+    },
+    # ── 6. Crescimento ────────────────────────────────────────────────────
+    'crescimento': {
+        'name': 'Crescimento',
+        'criteria': [
+            ('cagr_lucros', False, 2),  # CAGR Lucro    Maior  peso 2
+            # cagr_receita not in DB — skipped gracefully
+            ('roe',         False, 1),  # ROE           Maior  peso 1
+        ],
+    },
+    # ── 7. Rentabilidade ──────────────────────────────────────────────────
+    'rentabilidade': {
+        'name': 'Rentabilidade',
+        'criteria': [
+            ('roe',  False, 1),  # ROE             Maior  peso 1
+            ('roic', False, 1),  # ROIC            Maior  peso 1
+            # margem_liquida not in DB — skipped gracefully
+        ],
+    },
+    # ── 8. Preço Justo ────────────────────────────────────────────────────
+    'preco_justo': {
+        'name': 'Preço Justo',
+        'criteria': [
+            ('pl',  True,  1),  # P/L  Menor  peso 1
+            ('roe', False, 1),  # ROE  Maior  peso 1
+        ],
+        'filter_positive': ['pl'],
+    },
+    # ── 9. Small Caps ─────────────────────────────────────────────────────
+    'small_caps': {
+        'name': 'Small Caps',
+        'criteria': [
+            # valor_mercado not in DB — using liquidezmediadiaria as size proxy
+            ('liquidezmediadiaria', True,  2),  # Menor  peso 2 (smaller = more "small cap")
+            ('ev_ebit',             True,  1),  # EV/EBIT  Menor  peso 1
+        ],
+        'filter_positive': ['ev_ebit'],
+        'filter_min_liquidity': 100000,  # Guarantee some minimum liquidity
     },
 }
 
@@ -109,27 +120,31 @@ MODEL_PRESETS = {
 # ════════════════════════════════════════════════════════════════════════════
 def weighted_rank(df_in, criteria):
     """
-    Weighted-rank scoring algorithm.
+    Weighted-rank scoring algorithm (replicates the spreadsheet logic).
 
     For each criterion (column, ascending, weight):
-      Step A — rank all rows by the column value
-      Step B — multiply rank position × weight
-      Step C — sum all weighted ranks = Score
+      Step A — Rank all rows by the column (ties: same position, skip next)
+      Step B — Multiply rank position × weight
+      Step C — Sum all weighted ranks = Score
 
-    Step D — sort ascending (lowest score = best).
+    Step D — Sort ascending (lowest score = best).
 
     Columns that are missing or entirely null are gracefully skipped.
     """
     df_r = df_in.copy()
     df_r['_score'] = 0.0
+
     for col, asc, weight in criteria:
         if col not in df_r.columns or df_r[col].isna().all():
             continue  # gracefully skip missing / all-null columns
-        # Step A: individual rank
-        rank_col = df_r[col].rank(ascending=asc, na_option='bottom')
-        # Step B: multiply by weight
+
+        # Step A: Rank — use method='min' for tie-breaking (1,2,2,4...)
+        rank_col = df_r[col].rank(ascending=asc, method='min', na_option='bottom')
+
+        # Step B: Multiply by weight
         df_r['_score'] += rank_col * weight
-    # Step D: sort ascending
+
+    # Step D: Sort ascending (lowest total score = best)
     return df_r.sort_values('_score', ascending=True)
 
 
@@ -142,10 +157,10 @@ async def acoes_page(request: Request, user: dict = Depends(get_optional_user)):
 @router.get("/api/data")
 async def get_acoes_data(
     market: str = None,
-    min_liq: float = 0,
+    min_liq: float = 500000,   # ← Default: R$ 500.000,00
     filter_units: bool = False,
     filter_risky: bool = False,
-    strategy: str = 'magic'
+    strategy: str = 'greenblatt'
 ):
     try:
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -169,7 +184,7 @@ async def get_acoes_data(
         numeric_cols = [
             'liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank',
             'price', 'valor_justo', 'roic', 'ev_ebit', 'pl', 'pvp', 'dy',
-            'div_pat', 'cagr_lucros', 'liq_corrente', 'queda_maximo'
+            'div_pat', 'cagr_lucros', 'liq_corrente'
         ]
         for col in numeric_cols:
             if col in df.columns:
@@ -195,30 +210,31 @@ async def get_acoes_data(
         if preset:
             df_r = df_universe.copy()
 
-            # Require non-null columns (if specified)
-            require_cols = preset.get('require_cols', [])
-            if require_cols:
-                df_r = df_r.dropna(subset=require_cols)
+            # ── Step 1: Remove nulls in active indicator columns ────────
+            active_cols = [col for col, asc, w in preset['criteria']
+                          if col in df_r.columns]
+            if active_cols:
+                df_r = df_r.dropna(subset=active_cols)
 
-            # Filter positive values (if specified)
+            # Filter positive values where required
             filter_pos = preset.get('filter_positive', [])
             for col in filter_pos:
                 if col in df_r.columns:
-                    df_r = df_r[df_r[col].fillna(0) > 0]
+                    df_r = df_r[df_r[col] > 0]
 
-            # Sector exclusions (for MagicLucros)
+            # Small Caps: minimum liquidity floor
+            min_liq_floor = preset.get('filter_min_liquidity', 0)
+            if min_liq_floor > 0:
+                df_r = df_r[
+                    df_r['liquidezmediadiaria'].fillna(0) >= min_liq_floor
+                ]
+
+            # Sector exclusions (if any)
             exclude_sectors = preset.get('exclude_sectors', [])
             if exclude_sectors:
                 df_r = df_r[~df_r['setor'].fillna('').isin(exclude_sectors)]
 
-            # GreenBla: filter to below-median liquidity
-            if preset.get('liquidity_filter') == 'below_median':
-                median_liq = df_universe['liquidezmediadiaria'].median()
-                df_small = df_r[df_r['liquidezmediadiaria'].fillna(0) <= median_liq]
-                if len(df_small) >= 10:
-                    df_r = df_small
-
-            # ── Execute the weighted-rank algorithm ─────────────────────
+            # ── Steps A-D: Execute the weighted-rank algorithm ──────────
             df_ranked = weighted_rank(df_r, preset['criteria'])
 
         else:

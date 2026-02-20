@@ -46,10 +46,10 @@
                     <!-- Liquidity Filter -->
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">💧 Liquidez Mínima (R$)</label>
-                        <input type="number" id="min-liquidity" placeholder="Ex: 500000" min="0" step="100000"
-                            onchange="reloadCurrentStrategy()"
+                        <input type="number" id="min-liquidity" value="500000" placeholder="Ex: 500000" min="0"
+                            step="100000" onchange="reloadCurrentStrategy()"
                             class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary">
-                        <p class="text-xs text-gray-500 mt-1">Filtra TOP 10 Graham e Magic</p>
+                        <p class="text-xs text-gray-500 mt-1">Padrão: R$ 500.000 — altere se desejar</p>
                     </div>
 
                     <!-- Search Field -->
@@ -286,7 +286,7 @@
 </div>
 
 <script>
-    let currentTab = 'graham';
+    let currentTab = 'greenblatt';
     let allStocksData = [];
     let currentAnalysisText = '';
     let currentAudio = null;
@@ -308,79 +308,88 @@
     }
 
 
-    // ── Strategy definitions ───────────────────────────────────────────────────
+    // ── 9 Strategy definitions ──────────────────────────────────────────────────
     const STRATEGIES = [
-        {
-            id: 'magic',
-            name: 'Magic',
-            icon: '✨',
-            desc: 'Magic Formula: ROIC alto + EV/EBIT baixo',
-            color: 'from-violet-600 to-purple-700',
-            borderColor: 'border-violet-500',
-            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'EV/EBIT']
-        },
-        {
-            id: 'magic_lucros',
-            name: 'MagicLucros',
-            icon: '💡',
-            desc: 'Magic sem Util. Pública e Financeiro',
-            color: 'from-blue-600 to-indigo-700',
-            borderColor: 'border-blue-500',
-            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'EV/EBIT']
-        },
-        {
-            id: 'baratas',
-            name: 'Baratas',
-            icon: '🏷️',
-            desc: 'Maior desconto vs. valor Graham',
-            color: 'from-green-600 to-emerald-700',
-            borderColor: 'border-green-500',
-            columns: ['P/L', 'P/VP', 'DY %', 'V. Justo', 'Margem %']
-        },
-        {
-            id: 'solidas',
-            name: 'Sólidas',
-            icon: '🏛️',
-            desc: 'ROE alto + PVP baixo (fórmula provisória)',
-            color: 'from-amber-600 to-yellow-700',
-            borderColor: 'border-amber-500',
-            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'Margem %']
-        },
-        {
-            id: 'mix',
-            name: 'Mix',
-            icon: '🎯',
-            desc: 'Combina ranking Graham + Magic',
-            color: 'from-cyan-600 to-teal-700',
-            borderColor: 'border-cyan-500',
-            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'V. Justo']
-        },
-        {
-            id: 'dividendos',
-            name: 'Dividendos',
-            icon: '💰',
-            desc: 'Maior Dividend Yield (empresas lucrativas)',
-            color: 'from-emerald-600 to-green-700',
-            borderColor: 'border-emerald-500',
-            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'Margem %']
-        },
         {
             id: 'graham',
             name: 'Graham',
             icon: '📈',
-            desc: '√(22.5 × LPA × VPA) — maior margem seg.',
+            desc: 'Menores múltiplos P/L e P/VP',
             color: 'from-orange-600 to-red-700',
             borderColor: 'border-orange-500',
             columns: ['P/L', 'P/VP', 'DY %', 'V. Justo', 'Margem %']
         },
         {
+            id: 'bazin',
+            name: 'Bazin',
+            icon: '💵',
+            desc: 'Maior DY com menor endividamento',
+            color: 'from-green-600 to-emerald-700',
+            borderColor: 'border-green-500',
+            columns: ['DY %', 'Dív/Pat', 'P/L', 'P/VP', 'ROIC %']
+        },
+        {
             id: 'greenblatt',
-            name: 'GreenBla',
+            name: 'Greenblatt',
             icon: '📗',
-            desc: 'Magic em empresas com menor liquidez',
+            desc: 'Magic Formula: EV/EBIT + ROIC',
+            color: 'from-violet-600 to-purple-700',
+            borderColor: 'border-violet-500',
+            columns: ['EV/EBIT', 'ROIC %', 'P/L', 'P/VP', 'DY %']
+        },
+        {
+            id: 'dividendos',
+            name: 'Dividendos',
+            icon: '💰',
+            desc: 'Maior Dividend Yield',
+            color: 'from-emerald-600 to-green-700',
+            borderColor: 'border-emerald-500',
+            columns: ['DY %', 'P/L', 'P/VP', 'ROIC %', 'Margem %']
+        },
+        {
+            id: 'valor',
+            name: 'Valor',
+            icon: '🏷️',
+            desc: 'P/VP baixo + EV/EBIT baixo',
+            color: 'from-blue-600 to-indigo-700',
+            borderColor: 'border-blue-500',
+            columns: ['P/VP', 'EV/EBIT', 'P/L', 'DY %', 'ROIC %']
+        },
+        {
+            id: 'crescimento',
+            name: 'Crescimento',
+            icon: '🚀',
+            desc: 'CAGR Lucro alto + ROE alto',
+            color: 'from-cyan-600 to-teal-700',
+            borderColor: 'border-cyan-500',
+            columns: ['CAGR %', 'ROE %', 'P/L', 'P/VP', 'ROIC %']
+        },
+        {
+            id: 'rentabilidade',
+            name: 'Rentabilidade',
+            icon: '🏆',
+            desc: 'ROE + ROIC — foco em eficiência',
+            color: 'from-amber-600 to-yellow-700',
+            borderColor: 'border-amber-500',
+            columns: ['ROE %', 'ROIC %', 'P/L', 'P/VP', 'DY %']
+        },
+        {
+            id: 'preco_justo',
+            name: 'Preço Justo',
+            icon: '⚖️',
+            desc: 'P/L baixo + ROE alto',
+            color: 'from-pink-600 to-rose-700',
+            borderColor: 'border-pink-500',
+            columns: ['P/L', 'ROE %', 'P/VP', 'DY %', 'ROIC %']
+        },
+        {
+            id: 'small_caps',
+            name: 'Small Caps',
+            icon: '🔬',
+            desc: 'Menores empresas com EV/EBIT baixo',
             color: 'from-lime-600 to-green-700',
             borderColor: 'border-lime-500',
-            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'EV/EBIT']
+            columns: ['Liquidez', 'EV/EBIT', 'P/L', 'P/VP', 'DY %']
         },
     ];
 
@@ -430,7 +439,7 @@
     }
 
     async function loadData(strategyId) {
-        const sid = strategyId || currentStrategy || 'magic';
+        const sid = strategyId || currentStrategy || 'greenblatt';
         const strat = STRATEGIES.find(s => s.id === sid);
 
         document.getElementById('loading').classList.remove('hidden');
@@ -492,28 +501,43 @@
         return 'R$ ' + n.toFixed(0);
     }
 
-    function getCol4(stock, sid) {
-        // The 4th strategy column
-        if (['baratas', 'graham', 'mix'].includes(sid)) {
-            return stock.valor_justo ? `R$ ${fmtNum(stock.valor_justo)}` : '-';
+    // Dynamic column value getters — reads from strategy.columns definition
+    function getMetricValue(stock, metricName) {
+        switch (metricName) {
+            case 'P/L': return fmtNum(stock.pl);
+            case 'P/VP': return fmtNum(stock.pvp);
+            case 'DY %': return fmtPct(stock.dy);
+            case 'ROIC %': return fmtPct(stock.roic);
+            case 'ROE %': return stock.lpa && stock.vpa && stock.vpa !== 0 ? fmtPct(stock.lpa / stock.vpa) : '-';
+            case 'EV/EBIT': return fmtNum(stock.ev_ebit);
+            case 'V. Justo': return stock.valor_justo ? `R$ ${fmtNum(stock.valor_justo)}` : '-';
+            case 'Margem %': return stock.margem ? fmtPct(stock.margem) : '-';
+            case 'Dív/Pat': return stock.div_pat != null ? fmtNum(stock.div_pat) : '-';
+            case 'CAGR %': return stock.cagr_lucros != null ? fmtPct(stock.cagr_lucros) : '-';
+            case 'Liquidez': return fmtLiq(stock.liquidezmediadiaria);
+            default: return '-';
         }
-        return stock.roic ? fmtPct(stock.roic) : '-';
+    }
+    function getMetricColor(stock, metricName) {
+        if (metricName === 'Margem %') {
+            return stock.margem > 0 ? 'text-green-400' : (stock.margem < 0 ? 'text-red-400' : '');
+        }
+        if (metricName === 'DY %') {
+            return (stock.dy || 0) > 0.05 ? 'text-green-400' : '';
+        }
+        return '';
+    }
+    function getCol4(stock, sid) {
+        const strat = STRATEGIES.find(s => s.id === sid);
+        return strat ? getMetricValue(stock, strat.columns[3]) : '-';
     }
     function getCol5(stock, sid) {
-        // The 5th strategy column
-        if (['magic', 'magic_lucros', 'greenblatt'].includes(sid)) {
-            return fmtNum(stock.ev_ebit);
-        }
-        if (['baratas', 'graham', 'solidas', 'dividendos', 'mix'].includes(sid)) {
-            return stock.margem ? fmtPct(stock.margem) : '-';
-        }
-        return '-';
+        const strat = STRATEGIES.find(s => s.id === sid);
+        return strat ? getMetricValue(stock, strat.columns[4]) : '-';
     }
     function getCol5Color(stock, sid) {
-        if (!['baratas', 'graham', 'mix', 'solidas', 'dividendos'].includes(sid)) return '';
-        const m = stock.margem;
-        if (!m) return '';
-        return m > 0 ? 'text-green-400' : 'text-red-400';
+        const strat = STRATEGIES.find(s => s.id === sid);
+        return strat ? getMetricColor(stock, strat.columns[4]) : '';
     }
 
     function renderRankingTable(stocks, sid) {
@@ -523,10 +547,12 @@
                 Nenhuma ação encontrada para esta estratégia com os filtros atuais.</td></tr>`;
             return;
         }
+        const strat = STRATEGIES.find(s => s.id === sid);
+        const cols = strat ? strat.columns : ['P/L', 'P/VP', 'DY %', 'ROIC %', 'EV/EBIT'];
+
         tbody.innerHTML = stocks.map((stock, idx) => {
             const pos = idx + 1;
             const posColor = pos <= 3 ? 'text-amber-400 font-bold' : 'text-gray-500';
-            const dyColor = (stock.dy || 0) > 0.05 ? 'text-green-400' : 'text-gray-300';
 
             return `
             <tr class="hover:bg-dark-700/60 transition-colors cursor-pointer" onclick="analyzeStock('${stock.ticker}')">
@@ -546,11 +572,11 @@
                 <td class="px-3 py-3 text-right text-gray-300 text-xs">
                     ${fmtLiq(stock.liquidezmediadiaria)}
                 </td>
-                <td class="px-3 py-3 text-right text-gray-300 text-xs">${fmtNum(stock.pl)}</td>
-                <td class="px-3 py-3 text-right text-gray-300 text-xs">${fmtNum(stock.pvp)}</td>
-                <td class="px-3 py-3 text-right ${dyColor} text-xs">${fmtPct(stock.dy)}</td>
-                <td class="px-3 py-3 text-right text-xs">${getCol4(stock, sid)}</td>
-                <td class="px-3 py-3 text-right text-xs ${getCol5Color(stock, sid)}">${getCol5(stock, sid)}</td>
+                <td class="px-3 py-3 text-right text-gray-300 text-xs ${getMetricColor(stock, cols[0])}">${getMetricValue(stock, cols[0])}</td>
+                <td class="px-3 py-3 text-right text-gray-300 text-xs ${getMetricColor(stock, cols[1])}">${getMetricValue(stock, cols[1])}</td>
+                <td class="px-3 py-3 text-right text-gray-300 text-xs ${getMetricColor(stock, cols[2])}">${getMetricValue(stock, cols[2])}</td>
+                <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[3])}">${getMetricValue(stock, cols[3])}</td>
+                <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[4])}">${getMetricValue(stock, cols[4])}</td>
                 <td class="px-3 py-3 text-center">
                     <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')"
                         class="px-3 py-1 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 text-xs font-medium transition">
