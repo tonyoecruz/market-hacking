@@ -27,10 +27,13 @@ class StockDB(Base):
     ev_ebit = Column(Float)
     dy = Column(Float)
     liquidezmediadiaria = Column(Float)
-    div_pat = Column(Float)
+    div_pat = Column(Float)          # Dívida Líquida / Patrimônio
     valor_justo = Column(Float)
-    margem = Column(Float)
+    margem = Column(Float)           # Margem de segurança Graham
     magic_rank = Column(Float)
+    cagr_lucros = Column(Float)      # CAGR Lucros 5 anos (%)
+    liq_corrente = Column(Float)     # Liquidez Corrente (Ativo Circ. / Passivo Circ.)
+    queda_maximo = Column(Float)     # % queda do preço máximo histórico / 52 semanas
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     __table_args__ = (
@@ -57,6 +60,9 @@ class StockDB(Base):
             'valor_justo': self.valor_justo,
             'margem': self.margem,
             'magic_rank': self.magic_rank,
+            'cagr_lucros': self.cagr_lucros,
+            'liq_corrente': self.liq_corrente,
+            'queda_maximo': self.queda_maximo,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 

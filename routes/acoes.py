@@ -21,68 +21,183 @@ async def acoes_page(request: Request, user: dict = Depends(get_optional_user)):
     })
 
 @router.get("/api/data")
-async def get_acoes_data(market: str = None, min_liq: float = 0, filter_units: bool = False, filter_risky: bool = False):
+async def get_acoes_data(
+    market: str = None,
+    min_liq: float = 0,
+    filter_units: bool = False,
+    filter_risky: bool = False,
+    strategy: str = 'magic'
+):
     try:
         stocks = db.get_stocks(market=market, min_liq=min_liq)
         if not stocks:
             return JSONResponse({
                 'status': 'success',
                 'total_count': 0,
-                'graham': [],
-                'magic': [],
-                'all_stocks': []
+                'ranking': [],
+                'strategy': strategy
             })
 
         df = pd.DataFrame(stocks)
 
         # Force numeric columns
-        numeric_cols = ['liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank',
-                        'price', 'valor_justo', 'roic', 'ev_ebit', 'pl', 'pvp', 'dy']
+        numeric_cols = [
+            'liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank',
+            'price', 'valor_justo', 'roic', 'ev_ebit', 'pl', 'pvp', 'dy',
+            'div_pat', 'cagr_lucros', 'liq_corrente', 'queda_maximo'
+        ]
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
+            else:
+                df[col] = float('nan')  # ensure column always exists
 
-        # Liquidity filter (only apply if min_liq > 0)
+        # Derived field: ROE = LPA / VPA
+        df['roe'] = df['lpa'] / df['vpa'].replace(0, float('nan'))
+
+        # Base filter: price > 0
+        df_base = df[df['price'].fillna(0) > 0].copy()
+
+        # Liquidity filter
         if min_liq > 0:
-            df_filtered = df[df['liquidezmediadiaria'].fillna(0) > min_liq].copy()
-        else:
-            df_filtered = df[df['price'].fillna(0) > 0].copy()
+            df_base = df_base[df_base['liquidezmediadiaria'].fillna(0) >= min_liq].copy()
 
         if filter_units:
-            df_filtered = df_filtered[df_filtered['ticker'].str.endswith('11')]
+            df_base = df_base[df_base['ticker'].str.endswith('11')]
 
-        # Risk filter (judicial recovery, massive debt, etc.)
         if filter_risky:
-            df_filtered = data_utils.filter_risky_stocks(df_filtered)
-        
-        # Graham: LPA > 0, VPA > 0 (sorted by margin descending - biggest bargain first)
-        df_graham = df_filtered[
-            (df_filtered['lpa'].fillna(0) > 0) & 
-            (df_filtered['vpa'].fillna(0) > 0)
-        ].sort_values('margem', ascending=False).head(10)
-        
-        # Magic Formula: magic_rank must exist and be > 0
-        df_magic = df_filtered.dropna(subset=['magic_rank'])
-        df_magic = df_magic[df_magic['magic_rank'] > 0].sort_values('magic_rank', ascending=True).head(10)
-        
-        # All stocks (sorted by liquidity, top 200 for performance)
-        df_all = df_filtered.sort_values('liquidezmediadiaria', ascending=False).head(200)
-        
-        # NaN safety for JSON serialization
-        df_graham = df_graham.replace({float('nan'): None})
-        df_magic = df_magic.replace({float('nan'): None})
-        df_all = df_all.replace({float('nan'): None})
+            df_base = data_utils.filter_risky_stocks(df_base)
+
+        # ── Combined-rank helper ────────────────────────────────────────────────
+        # criteria = list of (column, ascending)
+        #   ascending=True  → Menor (lowest value = rank 1)
+        #   ascending=False → Maior (highest value = rank 1)
+        def combined_rank(df_in, criteria):
+            """Sum pandas ranks for each criterion, return df sorted by total rank."""
+            df_r = df_in.copy()
+            df_r['_rank_total'] = 0.0
+            for col, asc in criteria:
+                if col not in df_r.columns or df_r[col].isna().all():
+                    continue  # skip missing field gracefully
+                df_r['_rank_total'] += df_r[col].rank(ascending=asc, na_option='bottom')
+            return df_r.sort_values('_rank_total', ascending=True)
+
+        # ── Sector exclusions for MagicLucros ──────────────────────────────────
+        EXCLUDE_SECTORS = [
+            'Utilidade Pública', 'Utility', 'Energia Elétrica',
+            'Financeiro', 'Bancos', 'Seguros', 'Previdência e Seguros',
+            'Intermediários Financeiros', 'Serviços Financeiros',
+        ]
+
+        # ── 8 strategies ───────────────────────────────────────────────────────
+
+        if strategy == 'magic':
+            # EV/EBIT Menor + ROIC Maior
+            df_r = df_base.dropna(subset=['ev_ebit', 'roic'])
+            df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
+            df_ranked = combined_rank(df_r, [
+                ('ev_ebit', True),   # Menor
+                ('roic',    False),  # Maior
+            ]).head(100)
+
+        elif strategy == 'magic_lucros':
+            # EV/EBIT Menor + ROIC Maior + CAGR Lucros 5a Maior
+            # Excluding Utility & Financial sectors
+            df_r = df_base.dropna(subset=['ev_ebit', 'roic'])
+            df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
+            df_r = df_r[~df_r['setor'].fillna('').isin(EXCLUDE_SECTORS)]
+            df_ranked = combined_rank(df_r, [
+                ('ev_ebit',    True),   # Menor
+                ('roic',       False),  # Maior
+                ('cagr_lucros', False), # Maior (skipped gracefully if not in DB)
+            ]).head(100)
+
+        elif strategy == 'baratas':
+            # Queda do Máximo Maior + P/L Menor + P/VP Maior
+            df_r = df_base.dropna(subset=['pl', 'pvp'])
+            df_r = df_r[df_r['pl'] > 0]
+            df_ranked = combined_rank(df_r, [
+                ('queda_maximo', False),  # Maior (bigger fall from high = more beaten)
+                ('pl',           True),   # Menor
+                ('pvp',          False),  # Maior
+            ]).head(100)
+
+        elif strategy == 'solidas':
+            # Liq. Corrente Maior + Div. Liq./Patri. Menor + CAGR Lucros 5a Maior
+            df_r = df_base.dropna(subset=['div_pat'])
+            df_ranked = combined_rank(df_r, [
+                ('liq_corrente', False),  # Maior
+                ('div_pat',      True),   # Menor
+                ('cagr_lucros',  False),  # Maior
+            ]).head(100)
+
+        elif strategy == 'mix':
+            # P/L Menor + P/VP Maior + Liq. Corrente Maior + ROE Maior + CAGR Lucros Maior
+            df_r = df_base.dropna(subset=['pl', 'pvp'])
+            df_r = df_r[df_r['pl'] > 0]
+            df_ranked = combined_rank(df_r, [
+                ('pl',           True),   # Menor
+                ('pvp',          False),  # Maior
+                ('liq_corrente', False),  # Maior
+                ('roe',          False),  # Maior
+                ('cagr_lucros',  False),  # Maior
+            ]).head(100)
+
+        elif strategy == 'dividendos':
+            # DY Maior + CAGR Lucros 5a Maior
+            df_r = df_base.dropna(subset=['dy'])
+            df_r = df_r[df_r['dy'] > 0]
+            df_ranked = combined_rank(df_r, [
+                ('dy',          False),  # Maior
+                ('cagr_lucros', False),  # Maior
+            ]).head(100)
+
+        elif strategy == 'graham':
+            # DY Maior + P/L Menor + P/VP Maior
+            df_r = df_base.dropna(subset=['pl', 'pvp'])
+            df_r = df_r[(df_r['pl'] > 0) & (df_r['pvp'] > 0)]
+            df_ranked = combined_rank(df_r, [
+                ('dy',   False),  # Maior
+                ('pl',   True),   # Menor
+                ('pvp',  False),  # Maior
+            ]).head(100)
+
+        elif strategy == 'greenblatt':
+            # GreenBlatt = same as Magic (EV/EBIT Menor + ROIC Maior)
+            # Applied to less-liquid companies (Greenblatt's original universe was small-caps)
+            df_r = df_base.dropna(subset=['ev_ebit', 'roic'])
+            df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
+            median_liq = df_base['liquidezmediadiaria'].median()
+            df_small = df_r[df_r['liquidezmediadiaria'].fillna(0) <= median_liq]
+            if len(df_small) < 10:
+                df_small = df_r
+            df_ranked = combined_rank(df_small, [
+                ('ev_ebit', True),   # Menor
+                ('roic',    False),  # Maior
+            ]).head(100)
+
+        else:
+            df_ranked = df_base.sort_values('liquidezmediadiaria', ascending=False).head(100)
+
+        # ── Drop internal rank column & NaN safety ─────────────────────────────
+        if '_rank_total' in df_ranked.columns:
+            df_ranked = df_ranked.drop(columns=['_rank_total'])
+        if 'roe' in df_ranked.columns:
+            df_ranked = df_ranked.drop(columns=['roe'])  # computed field, avoid clutter
+
+        df_ranked = df_ranked.replace({float('nan'): None})
 
         return JSONResponse({
             'status': 'success',
-            'total_count': len(df_filtered),
-            'graham': df_graham.to_dict('records'),
-            'magic': df_magic.to_dict('records'),
-            'all_stocks': df_all.to_dict('records')
+            'total_count': len(df_base),
+            'ranking': df_ranked.to_dict('records'),
+            'strategy': strategy
         })
     except Exception as e:
         logger.error(f"ERRO API ACOES: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @router.get("/api/search")
 async def search_acoes(q: str = '', limit: int = 15):

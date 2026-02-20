@@ -85,119 +85,82 @@
                 </div>
             </div>
 
-            <!-- Methodologies Info -->
-            <div class="bg-dark-800 rounded-lg p-6 mb-6">
-                <h2 class="text-xl font-bold text-white mb-4">💡 Metodologias</h2>
-                <ul class="space-y-2 text-gray-300">
-                    <li><strong>Graham:</strong> Valor intrínseco = √(22.5 × LPA × VPA)</li>
-                    <li><strong>Magic Formula:</strong> Ranking por ROIC (alto) + EV/EBIT (baixo)</li>
-                </ul>
-            </div>
+            <!-- Strategy Selector + Ranking Area -->
+            <div id="results-area" class="flex gap-5">
 
-            <!-- Loading -->
-            <div id="loading" class="hidden text-center py-12">
-                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p class="text-gray-400 mt-4">Carregando dados...</p>
-            </div>
-
-            <!-- Results Tabs -->
-            <div id="results" class="hidden">
-                <div class="flex space-x-4 mb-6">
-                    <button onclick="showTab('graham')" id="tab-graham"
-                        class="px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary">
-                        📈 Graham (Top 10)
-                    </button>
-                    <button onclick="showTab('magic')" id="tab-magic"
-                        class="px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600">
-                        ✨ Magic Formula (Top 10)
-                    </button>
-                    <button onclick="showTab('all')" id="tab-all"
-                        class="px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600">
-                        📋 Todas as Ações
-                    </button>
-                </div>
-
-                <!-- Graham Table -->
-                <div id="content-graham" class="bg-dark-800 rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-dark-700">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Ticker
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                        Empresa</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Preço
-                                    </th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Valor
-                                        Justo</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Margem</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">
-                                        Valuation</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="graham-tbody" class="divide-y divide-gray-700"></tbody>
-                        </table>
+                <!-- LEFT: 8 Strategy Cards -->
+                <div class="w-56 flex-shrink-0">
+                    <p class="text-xs text-gray-500 uppercase font-semibold mb-3 px-1">Clique para gerar o ranking</p>
+                    <div id="strategy-list" class="flex flex-col gap-2">
+                        <!-- cards injected by JS -->
                     </div>
                 </div>
 
-                <!-- Magic Table -->
-                <div id="content-magic" class="hidden bg-dark-800 rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-dark-700">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Ticker
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                        Empresa</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">ROIC
-                                    </th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        EV/EBIT</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Rank
-                                    </th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="magic-tbody" class="divide-y divide-gray-700"></tbody>
-                        </table>
+                <!-- RIGHT: Loading + Ranking Table -->
+                <div class="flex-1 min-w-0">
+                    <!-- Loading -->
+                    <div id="loading" class="hidden text-center py-20">
+                        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                        <p class="text-gray-400 mt-4">Calculando ranking...</p>
                     </div>
-                </div>
 
-                <!-- All Stocks Table -->
-                <div id="content-all" class="hidden bg-dark-800 rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-dark-700">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Ticker
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                        Empresa</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Preço
-                                    </th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">P/L
-                                    </th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">ROIC
-                                    </th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">
-                                        Valuation</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="all-tbody" class="divide-y divide-gray-700"></tbody>
-                        </table>
+                    <!-- Empty state -->
+                    <div id="empty-state" class="text-center py-20 text-gray-500">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <p class="text-lg">Selecione uma estratégia ao lado para gerar o ranking</p>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="results" class="hidden">
+                        <!-- Strategy header -->
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 id="strategy-title" class="text-xl font-bold text-white"></h2>
+                                <p id="strategy-desc" class="text-xs text-gray-400 mt-0.5"></p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm text-gray-400">Ativos: <strong id="stock-count"
+                                        class="text-primary">0</strong></span>
+                                <span class="text-sm text-gray-400">Exibindo: <strong id="rank-count"
+                                        class="text-white">0</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Ranking Table -->
+                        <div class="bg-dark-800 rounded-xl overflow-hidden border border-gray-700/50">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-dark-700 text-gray-400 uppercase text-xs">
+                                        <tr>
+                                            <th class="px-3 py-3 text-center w-10">#</th>
+                                            <th class="px-3 py-3 text-left">Ticker</th>
+                                            <th class="px-3 py-3 text-left">Empresa</th>
+                                            <th class="px-3 py-3 text-left">Setor</th>
+                                            <th class="px-3 py-3 text-right">R$ Atual</th>
+                                            <th class="px-3 py-3 text-right">Liquidez Diária</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric1">P/L</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric2">P/VP</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric3">DY</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric4">ROIC</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric5">Margem</th>
+                                            <th class="px-3 py-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ranking-tbody" class="divide-y divide-gray-700/50">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
+
 </div>
 
 <!-- Analysis Modal -->
@@ -329,20 +292,147 @@
     let currentModalTicker = '';
     let currentModalPrice = 0;
 
-    // Auto-load data on page load
+    // ── Init ────────────────────────────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
-        loadData();
+        renderStrategyCards();
     });
 
-    async function loadData() {
+    let currentStrategy = null;
+
+    // ── Strategy definitions ───────────────────────────────────────────────────
+    const STRATEGIES = [
+        {
+            id: 'magic',
+            name: 'Magic',
+            icon: '✨',
+            desc: 'Magic Formula: ROIC alto + EV/EBIT baixo',
+            color: 'from-violet-600 to-purple-700',
+            borderColor: 'border-violet-500',
+            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'EV/EBIT']
+        },
+        {
+            id: 'magic_lucros',
+            name: 'MagicLucros',
+            icon: '💡',
+            desc: 'Magic sem Util. Pública e Financeiro',
+            color: 'from-blue-600 to-indigo-700',
+            borderColor: 'border-blue-500',
+            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'EV/EBIT']
+        },
+        {
+            id: 'baratas',
+            name: 'Baratas',
+            icon: '🏷️',
+            desc: 'Maior desconto vs. valor Graham',
+            color: 'from-green-600 to-emerald-700',
+            borderColor: 'border-green-500',
+            columns: ['P/L', 'P/VP', 'DY %', 'V. Justo', 'Margem %']
+        },
+        {
+            id: 'solidas',
+            name: 'Sólidas',
+            icon: '🏛️',
+            desc: 'ROE alto + PVP baixo (fórmula provisória)',
+            color: 'from-amber-600 to-yellow-700',
+            borderColor: 'border-amber-500',
+            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'Margem %']
+        },
+        {
+            id: 'mix',
+            name: 'Mix',
+            icon: '🎯',
+            desc: 'Combina ranking Graham + Magic',
+            color: 'from-cyan-600 to-teal-700',
+            borderColor: 'border-cyan-500',
+            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'V. Justo']
+        },
+        {
+            id: 'dividendos',
+            name: 'Dividendos',
+            icon: '💰',
+            desc: 'Maior Dividend Yield (empresas lucrativas)',
+            color: 'from-emerald-600 to-green-700',
+            borderColor: 'border-emerald-500',
+            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'Margem %']
+        },
+        {
+            id: 'graham',
+            name: 'Graham',
+            icon: '📈',
+            desc: '√(22.5 × LPA × VPA) — maior margem seg.',
+            color: 'from-orange-600 to-red-700',
+            borderColor: 'border-orange-500',
+            columns: ['P/L', 'P/VP', 'DY %', 'V. Justo', 'Margem %']
+        },
+        {
+            id: 'greenblatt',
+            name: 'GreenBla',
+            icon: '📗',
+            desc: 'Magic em empresas com menor liquidez',
+            color: 'from-lime-600 to-green-700',
+            borderColor: 'border-lime-500',
+            columns: ['P/L', 'P/VP', 'DY %', 'ROIC %', 'EV/EBIT']
+        },
+    ];
+
+    // ── Render strategy sidebar cards ──────────────────────────────────────────
+    function renderStrategyCards() {
+        const list = document.getElementById('strategy-list');
+        list.innerHTML = STRATEGIES.map(s => `
+            <button id="card-${s.id}" onclick="selectStrategy('${s.id}')"
+                class="strategy-card w-full text-left px-4 py-3 rounded-xl border border-gray-700 bg-dark-800
+                       hover:border-gray-500 transition-all group">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xl">${s.icon}</span>
+                    <span class="font-bold text-white text-sm group-hover:text-primary transition-colors">${s.name}</span>
+                    <svg class="w-4 h-4 ml-auto text-gray-600 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+                <p class="text-xs text-gray-500 mt-1 leading-tight">${s.desc}</p>
+            </button>
+        `).join('');
+    }
+
+    // ── Select and load a strategy ─────────────────────────────────────────────
+    async function selectStrategy(strategyId) {
+        currentStrategy = strategyId;
+        const strat = STRATEGIES.find(s => s.id === strategyId);
+
+        // Highlight active card
+        document.querySelectorAll('.strategy-card').forEach(c => {
+            c.classList.remove('border-primary', 'bg-primary/10', 'text-primary');
+        });
+        const activeCard = document.getElementById(`card-${strategyId}`);
+        if (activeCard) {
+            activeCard.classList.add('border-primary', 'bg-primary/10');
+        }
+
+        // Update column headers
+        if (strat && strat.columns.length === 5) {
+            document.getElementById('col-metric1').textContent = strat.columns[0];
+            document.getElementById('col-metric2').textContent = strat.columns[1];
+            document.getElementById('col-metric3').textContent = strat.columns[2];
+            document.getElementById('col-metric4').textContent = strat.columns[3];
+            document.getElementById('col-metric5').textContent = strat.columns[4];
+        }
+
+        await loadData(strategyId);
+    }
+
+    async function loadData(strategyId) {
+        const sid = strategyId || currentStrategy || 'magic';
+        const strat = STRATEGIES.find(s => s.id === sid);
+
         document.getElementById('loading').classList.remove('hidden');
         document.getElementById('results').classList.add('hidden');
+        document.getElementById('empty-state').classList.add('hidden');
         document.getElementById('refresh-btn').disabled = true;
 
         const market = document.getElementById('market-selector').value;
         const filterRisky = document.getElementById('filter-risky').checked;
         const minLiq = parseFloat(document.getElementById('min-liquidity').value) || 0;
-        let url = `/acoes/api/data?filter_risky=${filterRisky}&min_liq=${minLiq}`;
+        let url = `/acoes/api/data?filter_risky=${filterRisky}&min_liq=${minLiq}&strategy=${sid}`;
         if (market) url += `&market=${market}`;
 
         try {
@@ -350,115 +440,118 @@
             const data = await response.json();
 
             if (data.status === 'success') {
-                allStocksData = data.all_stocks || [];
-                renderGrahamTable(data.graham);
-                renderMagicTable(data.magic);
-                renderAllTable(allStocksData);
+                if (strat) {
+                    document.getElementById('strategy-title').textContent = `${strat.icon} ${strat.name}`;
+                    document.getElementById('strategy-desc').textContent = strat.desc;
+                }
                 document.getElementById('stock-count').textContent = data.total_count;
+                document.getElementById('rank-count').textContent = data.ranking.length;
+                renderRankingTable(data.ranking, sid);
                 document.getElementById('results').classList.remove('hidden');
-                const liqMsg = minLiq > 0 ? ` (liquidez ≥ R$ ${minLiq.toLocaleString('pt-BR')})` : '';
-                showToast(`Carregados ${data.total_count} ativos${liqMsg}`, 'success');
+                const liqMsg = minLiq > 0 ? ` | Liq ≥ R$ ${minLiq.toLocaleString('pt-BR')}` : '';
+                showToast(`${strat?.name || sid}: ${data.ranking.length} empresas${liqMsg}`, 'success');
             } else {
                 showToast(data.message || 'Erro ao carregar dados', 'error');
+                document.getElementById('empty-state').classList.remove('hidden');
             }
         } catch (error) {
-            showToast('Erro ao carregar dados. Aguarde a atualização automática.', 'error');
+            showToast('Erro ao carregar dados.', 'error');
+            document.getElementById('empty-state').classList.remove('hidden');
         } finally {
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('refresh-btn').disabled = false;
         }
     }
 
-    function getValuationBadge(price, fairValue) {
-        if (!price || !fairValue || fairValue <= 0) return { text: 'N/A', class: 'bg-gray-600 text-gray-300', color: 'gray' };
-        const margin = ((fairValue / price) - 1) * 100;
-        if (margin > 30) return { text: '💰 MUITO BARATA', class: 'bg-green-500/20 text-green-400 border border-green-500/50', color: 'green' };
-        if (margin > 10) return { text: '✅ BARATA', class: 'bg-green-500/10 text-green-400 border border-green-500/30', color: 'green' };
-        if (margin > -10) return { text: '⚖️ JUSTA', class: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30', color: 'yellow' };
-        if (margin > -30) return { text: '⚠️ CARA', class: 'bg-orange-500/10 text-orange-400 border border-orange-500/30', color: 'orange' };
-        return { text: '🔴 MUITO CARA', class: 'bg-red-500/10 text-red-400 border border-red-500/30', color: 'red' };
+    function fmtNum(v, decimals = 2) {
+        if (v === null || v === undefined) return '-';
+        return Number(v).toFixed(decimals);
+    }
+    function fmtPct(v) {
+        if (v === null || v === undefined) return '-';
+        // If value is fractional (0-1 range), multiply
+        const num = Number(v);
+        const display = Math.abs(num) < 5 ? num * 100 : num;
+        return display.toFixed(1) + '%';
+    }
+    function fmtLiq(v) {
+        if (!v) return '-';
+        const n = Number(v);
+        if (n >= 1e9) return 'R$ ' + (n / 1e9).toFixed(2) + 'B';
+        if (n >= 1e6) return 'R$ ' + (n / 1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return 'R$ ' + (n / 1e3).toFixed(0) + 'K';
+        return 'R$ ' + n.toFixed(0);
     }
 
-    function getValuationBadgeSmall(price, fairValue) {
-        if (!price || !fairValue || fairValue <= 0) return '<span class="text-gray-500 text-xs">N/A</span>';
-        const margin = ((fairValue / price) - 1) * 100;
-        if (margin > 10) return '<span class="px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">Barata</span>';
-        if (margin > -10) return '<span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">Justa</span>';
-        return '<span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">Cara</span>';
+    function getCol4(stock, sid) {
+        // The 4th strategy column
+        if (['baratas', 'graham', 'mix'].includes(sid)) {
+            return stock.valor_justo ? `R$ ${fmtNum(stock.valor_justo)}` : '-';
+        }
+        return stock.roic ? fmtPct(stock.roic) : '-';
+    }
+    function getCol5(stock, sid) {
+        // The 5th strategy column
+        if (['magic', 'magic_lucros', 'greenblatt'].includes(sid)) {
+            return fmtNum(stock.ev_ebit);
+        }
+        if (['baratas', 'graham', 'solidas', 'dividendos', 'mix'].includes(sid)) {
+            return stock.margem ? fmtPct(stock.margem) : '-';
+        }
+        return '-';
+    }
+    function getCol5Color(stock, sid) {
+        if (!['baratas', 'graham', 'mix', 'solidas', 'dividendos'].includes(sid)) return '';
+        const m = stock.margem;
+        if (!m) return '';
+        return m > 0 ? 'text-green-400' : 'text-red-400';
     }
 
-    function renderGrahamTable(stocks) {
-        const tbody = document.getElementById('graham-tbody');
+    function renderRankingTable(stocks, sid) {
+        const tbody = document.getElementById('ranking-tbody');
         if (!stocks || stocks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nenhuma ação encontrada com critérios Graham (LPA > 0 e VPA > 0)</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="12" class="px-4 py-10 text-center text-gray-400">
+                Nenhuma ação encontrada para esta estratégia com os filtros atuais.</td></tr>`;
             return;
         }
-        tbody.innerHTML = stocks.map(stock => `
-            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeStock('${stock.ticker}')">
-                <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
-                <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
-                <td class="px-4 py-3 text-right text-white">R$ ${stock.price?.toFixed(2) || '-'}</td>
-                <td class="px-4 py-3 text-right text-primary">R$ ${stock.valor_justo?.toFixed(2) || '-'}</td>
-                <td class="px-4 py-3 text-right ${stock.margem > 0 ? 'text-green-400' : 'text-red-400'}">
-                    ${stock.margem ? (stock.margem * 100).toFixed(1) + '%' : '-'}
+        tbody.innerHTML = stocks.map((stock, idx) => {
+            const pos = idx + 1;
+            const posColor = pos <= 3 ? 'text-amber-400 font-bold' : 'text-gray-500';
+            const dyColor = (stock.dy || 0) > 0.05 ? 'text-green-400' : 'text-gray-300';
+
+            return `
+            <tr class="hover:bg-dark-700/60 transition-colors cursor-pointer" onclick="analyzeStock('${stock.ticker}')">
+                <td class="px-3 py-3 text-center ${posColor} text-sm">${pos}</td>
+                <td class="px-3 py-3">
+                    <span class="font-bold text-white text-sm">${stock.ticker}</span>
                 </td>
-                <td class="px-4 py-3 text-center">${getValuationBadgeSmall(stock.price, stock.valor_justo)}</td>
-                <td class="px-4 py-3 text-right">
-                    <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')" 
-                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
+                <td class="px-3 py-3 text-gray-300 text-xs max-w-[160px] truncate" title="${stock.empresa || ''}">
+                    ${stock.empresa || '-'}
+                </td>
+                <td class="px-3 py-3 text-gray-400 text-xs max-w-[120px] truncate" title="${stock.setor || ''}">
+                    ${stock.setor || '-'}
+                </td>
+                <td class="px-3 py-3 text-right text-white font-medium text-sm">
+                    ${stock.price ? `R$ ${fmtNum(stock.price)}` : '-'}
+                </td>
+                <td class="px-3 py-3 text-right text-gray-300 text-xs">
+                    ${fmtLiq(stock.liquidezmediadiaria)}
+                </td>
+                <td class="px-3 py-3 text-right text-gray-300 text-xs">${fmtNum(stock.pl)}</td>
+                <td class="px-3 py-3 text-right text-gray-300 text-xs">${fmtNum(stock.pvp)}</td>
+                <td class="px-3 py-3 text-right ${dyColor} text-xs">${fmtPct(stock.dy)}</td>
+                <td class="px-3 py-3 text-right text-xs">${getCol4(stock, sid)}</td>
+                <td class="px-3 py-3 text-right text-xs ${getCol5Color(stock, sid)}">${getCol5(stock, sid)}</td>
+                <td class="px-3 py-3 text-center">
+                    <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')"
+                        class="px-3 py-1 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 text-xs font-medium transition">
                         Analisar
                     </button>
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
     }
 
-    function renderMagicTable(stocks) {
-        const tbody = document.getElementById('magic-tbody');
-        if (!stocks || stocks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Aguardando cálculo Magic Formula (necessita EV/EBIT > 0 e ROIC > 0)</td></tr>';
-            return;
-        }
-        tbody.innerHTML = stocks.map(stock => `
-            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeStock('${stock.ticker}')">
-                <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
-                <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
-                <td class="px-4 py-3 text-right text-green-400">${stock.roic ? (stock.roic * 100).toFixed(1) + '%' : '-'}</td>
-                <td class="px-4 py-3 text-right text-white">${stock.ev_ebit?.toFixed(2) || '-'}</td>
-                <td class="px-4 py-3 text-right text-primary font-bold">#${stock.magic_rank?.toFixed(0) || '-'}</td>
-                <td class="px-4 py-3 text-right">
-                    <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')" 
-                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
-                        Analisar
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    function renderAllTable(stocks) {
-        const tbody = document.getElementById('all-tbody');
-        if (!stocks || stocks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nenhuma ação encontrada</td></tr>';
-            return;
-        }
-        tbody.innerHTML = stocks.slice(0, 50).map(stock => `
-            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeStock('${stock.ticker}')">
-                <td class="px-4 py-3 text-white font-semibold">${stock.ticker}</td>
-                <td class="px-4 py-3 text-gray-300">${stock.empresa || '-'}</td>
-                <td class="px-4 py-3 text-right text-white">R$ ${stock.price?.toFixed(2) || '-'}</td>
-                <td class="px-4 py-3 text-right text-gray-300">${stock.pl?.toFixed(2) || '-'}</td>
-                <td class="px-4 py-3 text-right text-green-400">${stock.roic ? (stock.roic * 100).toFixed(1) + '%' : '-'}</td>
-                <td class="px-4 py-3 text-center">${getValuationBadgeSmall(stock.price, stock.valor_justo)}</td>
-                <td class="px-4 py-3 text-right">
-                    <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')" 
-                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
-                        Analisar
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-    }
 
     let searchTimeout = null;
 
@@ -468,18 +561,8 @@
 
         if (q.length < 1) {
             document.getElementById('search-dropdown').classList.add('hidden');
-            // Also filter local table
-            if (currentTab === 'all') renderAllTable(allStocksData);
             return;
         }
-
-        // Also filter local table immediately
-        const filtered = allStocksData.filter(s =>
-            s.ticker?.toUpperCase().includes(q.toUpperCase()) ||
-            (s.empresa || '').toUpperCase().includes(q.toUpperCase())
-        );
-        if (currentTab !== 'all') showTab('all');
-        renderAllTable(filtered);
 
         // Debounced server search for autocomplete
         searchTimeout = setTimeout(async () => {
