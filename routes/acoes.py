@@ -14,6 +14,125 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 logger = logging.getLogger(__name__)
 
+# ════════════════════════════════════════════════════════════════════════════
+# MODEL PRESETS — backend configuration for each ranking strategy.
+# Each tuple: (db_column, ascending, weight)
+#   ascending=True  → "Menor" (lowest value = rank 1)
+#   ascending=False → "Maior" (highest value = rank 1)
+#   weight          → multiplier for the rank position
+#
+# Algorithm:  rank(indicator) × weight  →  sum all  →  sort ascending
+# ════════════════════════════════════════════════════════════════════════════
+MODEL_PRESETS = {
+    'magic': {
+        'name': 'Magic',
+        'criteria': [
+            ('ev_ebit', True,  21),   # EV/EBIT  Menor  peso 21
+            ('roic',    False, 30),   # ROIC     Maior  peso 30
+        ],
+        'filter_positive': ['ev_ebit', 'roic'],
+    },
+    'magic_lucros': {
+        'name': 'MagicLucros',
+        'criteria': [
+            ('ev_ebit',     True,  21),  # EV/EBIT          Menor  peso 21
+            ('roic',        False, 30),  # ROIC             Maior  peso 30
+            ('cagr_lucros', False, 35),  # CAGR Lucros 5a   Maior  peso 35
+        ],
+        'filter_positive': ['ev_ebit', 'roic'],
+        'exclude_sectors': [
+            'Utilidade Pública', 'Utility', 'Energia Elétrica',
+            'Financeiro', 'Bancos', 'Seguros', 'Previdência e Seguros',
+            'Intermediários Financeiros', 'Serviços Financeiros',
+        ],
+    },
+    'baratas': {
+        'name': 'Baratas',
+        'criteria': [
+            ('queda_maximo', False, 12),  # Queda do Máximo  Maior  peso 12
+            ('pl',           True,  14),  # P/L              Menor  peso 14
+            ('pvp',          False, 15),  # P/VP             Maior  peso 15
+        ],
+        'filter_positive': ['pl'],
+    },
+    'solidas': {
+        'name': 'Sólidas',
+        'criteria': [
+            ('liq_corrente', False, 27),  # Liq. Corrente    Maior  peso 27
+            ('div_pat',      True,  23),  # Div.Liq./Patri.  Menor  peso 23
+            ('cagr_lucros',  False, 35),  # CAGR Lucros 5a   Maior  peso 35
+        ],
+        'require_cols': ['div_pat'],
+    },
+    'mix': {
+        'name': 'Mix',
+        'criteria': [
+            ('pl',           True,  14),  # P/L              Menor  peso 14
+            ('pvp',          False, 15),  # P/VP             Maior  peso 15
+            ('liq_corrente', False, 27),  # Liq. Corrente    Maior  peso 27
+            ('roe',          False, 28),  # ROE              Maior  peso 28
+            ('cagr_lucros',  False, 35),  # CAGR Lucros 5a   Maior  peso 35
+        ],
+        'filter_positive': ['pl'],
+    },
+    'dividendos': {
+        'name': 'Dividendos',
+        'criteria': [
+            ('dy',          False, 13),  # DY               Maior  peso 13
+            ('cagr_lucros', False, 35),  # CAGR Lucros 5a   Maior  peso 35
+        ],
+        'filter_positive': ['dy'],
+    },
+    'graham': {
+        'name': 'Graham',
+        'criteria': [
+            ('dy',  False, 13),  # DY    Maior  peso 13
+            ('pl',  True,  14),  # P/L   Menor  peso 14
+            ('pvp', False, 15),  # P/VP  Maior  peso 15
+        ],
+        'filter_positive': ['pl', 'pvp'],
+    },
+    'greenblatt': {
+        'name': 'GreenBla',
+        'criteria': [
+            ('ev_ebit', True,  21),  # EV/EBIT  Menor  peso 21
+            ('roic',    False, 30),  # ROIC     Maior  peso 30
+        ],
+        'filter_positive': ['ev_ebit', 'roic'],
+        'liquidity_filter': 'below_median',  # GreenBla = Magic but less-liquid
+    },
+}
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# RANKING ENGINE
+# ════════════════════════════════════════════════════════════════════════════
+def weighted_rank(df_in, criteria):
+    """
+    Weighted-rank scoring algorithm.
+
+    For each criterion (column, ascending, weight):
+      Step A — rank all rows by the column value
+      Step B — multiply rank position × weight
+      Step C — sum all weighted ranks = Score
+
+    Step D — sort ascending (lowest score = best).
+
+    Columns that are missing or entirely null are gracefully skipped.
+    """
+    df_r = df_in.copy()
+    df_r['_score'] = 0.0
+    for col, asc, weight in criteria:
+        if col not in df_r.columns or df_r[col].isna().all():
+            continue  # gracefully skip missing / all-null columns
+        # Step A: individual rank
+        rank_col = df_r[col].rank(ascending=asc, na_option='bottom')
+        # Step B: multiply by weight
+        df_r['_score'] += rank_col * weight
+    # Step D: sort ascending
+    return df_r.sort_values('_score', ascending=True)
+
+
 @router.get("/", response_class=HTMLResponse)
 async def acoes_page(request: Request, user: dict = Depends(get_optional_user)):
     return templates.TemplateResponse("pages/acoes.html", {
@@ -30,11 +149,12 @@ async def get_acoes_data(
 ):
     try:
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # IMPORTANT: Fetch ALL stocks — NO liquidity filter at DB level.
-        # Rankings must be computed on the FULL universe first, matching
-        # the spreadsheet behavior.  Liquidity filter is applied AFTER.
+        # Fetch ALL stocks — NO liquidity filter at DB level.
+        # Ranking is computed on the FULL universe first, then
+        # the liquidity filter is applied AFTER to preserve global
+        # rank positions (matching the spreadsheet behavior).
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        stocks = db.get_stocks(market=market)  # NO min_liq here!
+        stocks = db.get_stocks(market=market)
         if not stocks:
             return JSONResponse({
                 'status': 'success',
@@ -60,7 +180,7 @@ async def get_acoes_data(
         # Derived field: ROE = LPA / VPA
         df['roe'] = df['lpa'] / df['vpa'].replace(0, float('nan'))
 
-        # ── Full universe: price > 0 (ranking computed on THIS set) ──
+        # ── Full universe: price > 0 ────────────────────────────────────
         df_universe = df[df['price'].fillna(0) > 0].copy()
 
         if filter_units:
@@ -69,128 +189,57 @@ async def get_acoes_data(
         if filter_risky:
             df_universe = data_utils.filter_risky_stocks(df_universe)
 
-        # ── Combined-rank helper (equal weight, simple sum) ─────────────
-        # Matches the spreadsheet: simple sum of rank positions.
-        # criteria = list of (column, ascending)
-        #   ascending=True  → Menor (lowest value = rank 1)
-        #   ascending=False → Maior (highest value = rank 1)
-        def combined_rank(df_in, criteria):
-            """Sum of pandas ranks per criterion. Lowest total = best."""
-            df_r = df_in.copy()
-            df_r['_rank_total'] = 0.0
-            for col, asc in criteria:
-                if col not in df_r.columns or df_r[col].isna().all():
-                    continue  # gracefully skip missing/all-null columns
-                df_r['_rank_total'] += df_r[col].rank(ascending=asc, na_option='bottom')
-            return df_r.sort_values('_rank_total', ascending=True)
+        # ── Get model preset ────────────────────────────────────────────
+        preset = MODEL_PRESETS.get(strategy)
 
-        # ── Sector exclusions for MagicLucros ──────────────────────────
-        EXCLUDE_SECTORS = [
-            'Utilidade Pública', 'Utility', 'Energia Elétrica',
-            'Financeiro', 'Bancos', 'Seguros', 'Previdência e Seguros',
-            'Intermediários Financeiros', 'Serviços Financeiros',
-        ]
+        if preset:
+            df_r = df_universe.copy()
 
-        # ── 8 strategies (all ranked on FULL universe) ─────────────────
+            # Require non-null columns (if specified)
+            require_cols = preset.get('require_cols', [])
+            if require_cols:
+                df_r = df_r.dropna(subset=require_cols)
 
-        if strategy == 'magic':
-            # EV/EBIT (Menor) + ROIC (Maior)
-            df_r = df_universe.dropna(subset=['ev_ebit', 'roic'])
-            df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
-            df_ranked = combined_rank(df_r, [
-                ('ev_ebit', True),   # Menor
-                ('roic',    False),  # Maior
-            ])
+            # Filter positive values (if specified)
+            filter_pos = preset.get('filter_positive', [])
+            for col in filter_pos:
+                if col in df_r.columns:
+                    df_r = df_r[df_r[col].fillna(0) > 0]
 
-        elif strategy == 'magic_lucros':
-            # EV/EBIT + ROIC + CAGR — exclude Util. Pública & Financeiro
-            df_r = df_universe.dropna(subset=['ev_ebit', 'roic'])
-            df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
-            df_r = df_r[~df_r['setor'].fillna('').isin(EXCLUDE_SECTORS)]
-            df_ranked = combined_rank(df_r, [
-                ('ev_ebit',     True),   # Menor
-                ('roic',        False),  # Maior
-                ('cagr_lucros', False),  # Maior
-            ])
+            # Sector exclusions (for MagicLucros)
+            exclude_sectors = preset.get('exclude_sectors', [])
+            if exclude_sectors:
+                df_r = df_r[~df_r['setor'].fillna('').isin(exclude_sectors)]
 
-        elif strategy == 'baratas':
-            # Queda do Máximo + P/L + P/VP
-            df_r = df_universe.dropna(subset=['pl', 'pvp'])
-            df_r = df_r[df_r['pl'] > 0]
-            df_ranked = combined_rank(df_r, [
-                ('queda_maximo', False),  # Maior
-                ('pl',          True),   # Menor
-                ('pvp',         True),   # Menor (cheaper = lower P/VP)
-            ])
+            # GreenBla: filter to below-median liquidity
+            if preset.get('liquidity_filter') == 'below_median':
+                median_liq = df_universe['liquidezmediadiaria'].median()
+                df_small = df_r[df_r['liquidezmediadiaria'].fillna(0) <= median_liq]
+                if len(df_small) >= 10:
+                    df_r = df_small
 
-        elif strategy == 'solidas':
-            # Liq.Corrente + Div.Liq./Patri. + CAGR
-            df_r = df_universe.dropna(subset=['div_pat'])
-            df_ranked = combined_rank(df_r, [
-                ('liq_corrente', False),  # Maior
-                ('div_pat',      True),   # Menor
-                ('cagr_lucros',  False),  # Maior
-            ])
-
-        elif strategy == 'mix':
-            # P/L + P/VP + Liq.Corrente + ROE + CAGR
-            df_r = df_universe.dropna(subset=['pl', 'pvp'])
-            df_r = df_r[df_r['pl'] > 0]
-            df_ranked = combined_rank(df_r, [
-                ('pl',           True),   # Menor
-                ('pvp',          True),   # Menor
-                ('liq_corrente', False),  # Maior
-                ('roe',          False),  # Maior
-                ('cagr_lucros',  False),  # Maior
-            ])
-
-        elif strategy == 'dividendos':
-            # DY + CAGR
-            df_r = df_universe.dropna(subset=['dy'])
-            df_r = df_r[df_r['dy'] > 0]
-            df_ranked = combined_rank(df_r, [
-                ('dy',          False),  # Maior
-                ('cagr_lucros', False),  # Maior
-            ])
-
-        elif strategy == 'graham':
-            # DY + P/L + P/VP
-            df_r = df_universe.dropna(subset=['pl', 'pvp'])
-            df_r = df_r[(df_r['pl'] > 0) & (df_r['pvp'] > 0)]
-            df_ranked = combined_rank(df_r, [
-                ('dy',  False),  # Maior
-                ('pl',  True),   # Menor
-                ('pvp', True),   # Menor
-            ])
-
-        elif strategy == 'greenblatt':
-            # Same as Magic but filtered to less-liquid companies
-            df_r = df_universe.dropna(subset=['ev_ebit', 'roic'])
-            df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
-            median_liq = df_universe['liquidezmediadiaria'].median()
-            df_small = df_r[df_r['liquidezmediadiaria'].fillna(0) <= median_liq]
-            if len(df_small) < 10:
-                df_small = df_r
-            df_ranked = combined_rank(df_small, [
-                ('ev_ebit', True),   # Menor
-                ('roic',    False),  # Maior
-            ])
+            # ── Execute the weighted-rank algorithm ─────────────────────
+            df_ranked = weighted_rank(df_r, preset['criteria'])
 
         else:
-            df_ranked = df_universe.sort_values('liquidezmediadiaria', ascending=False)
+            # Fallback: sort by liquidity
+            df_ranked = df_universe.sort_values(
+                'liquidezmediadiaria', ascending=False
+            )
 
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # Apply liquidity filter AFTER ranking — preserving global rank
-        # positions exactly like the spreadsheet does.
+        # Apply liquidity filter AFTER ranking (preserves global ranks)
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if min_liq > 0:
-            df_ranked = df_ranked[df_ranked['liquidezmediadiaria'].fillna(0) >= min_liq]
+            df_ranked = df_ranked[
+                df_ranked['liquidezmediadiaria'].fillna(0) >= min_liq
+            ]
 
-        # Take top 100 results
+        # Take top 100
         df_ranked = df_ranked.head(100)
 
-        # ── Drop internal / temp columns ────────────────────────────────
-        for drop_col in ['_rank_total', 'roe']:
+        # Drop internal columns
+        for drop_col in ['_score', 'roe']:
             if drop_col in df_ranked.columns:
                 df_ranked = df_ranked.drop(columns=[drop_col])
 
@@ -215,7 +264,6 @@ async def search_acoes(q: str = '', limit: int = 15):
         return JSONResponse({'status': 'success', 'results': []})
     try:
         results = db.search_assets(q, limit=limit)
-        # Simplify for autocomplete
         simplified = []
         for r in results:
             simplified.append({
@@ -235,35 +283,29 @@ async def decode_acao(ticker: str, market: str = 'BR', investor: str = ''):
     try:
         stock = db.get_stock_by_ticker(ticker, market)
         if not stock:
-            # Try the other market
             other = 'US' if market == 'BR' else 'BR'
             stock = db.get_stock_by_ticker(ticker, other)
 
         if not stock:
             raise HTTPException(status_code=404, detail='Ticker nao encontrado')
 
-        # Get additional details from Fundamentus
         details = data_utils.get_stock_details(ticker)
 
-        # Determine Graham/Magic pass status for AI analysis
         price = stock.get('price', 0) or 0
         valor_justo = stock.get('valor_justo', 0) or 0
         graham_ok = valor_justo > price if price > 0 else False
         magic_rank = stock.get('magic_rank')
         magic_ok = magic_rank is not None and magic_rank > 0 and magic_rank <= 50
 
-        # Merge empresa from details if not in stock
         if details.get('Empresa') and not stock.get('empresa'):
             stock['empresa'] = details.get('Empresa')
 
-        # Fetch investor style_prompt if specified
         investor_style_prompt = None
         if investor:
             inv = db.get_investor_by_name(investor)
             if inv and inv.get('style_prompt'):
                 investor_style_prompt = inv['style_prompt']
 
-        # AI Analysis with Graham/Magic context
         analysis = data_utils.get_sniper_analysis(
             ticker,
             price,
