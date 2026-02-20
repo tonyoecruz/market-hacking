@@ -1,268 +1,241 @@
 """
-MODO PLANILHA — Weighted-Rank Engine
-=====================================
-Implements the spreadsheet-style relative ranking algorithm.
+MODO PLANILHA — Spreadsheet Rank Engine (1:1 com a aba Screener)
+===============================================================
 
-Algorithm (mirrors the user's spreadsheet exactly):
-  1. Apply liquidity filter FIRST (defines the ranking universe)
-  2. Apply sector exclusions (e.g. Financeiro, Utilities excluded from Magic)
-  3. Require positive values in key columns
-  4. For each indicator, rank the FILTERED universe (method='min')
-  5. Multiply rank position × weight → Sum → _score
-  6. Sort ascending (lowest Score = best)
+Este engine replica o comportamento do "Screener" do Excel/Google Sheets:
 
-Note: The liquidity filter is applied BEFORE ranking. This matches the
-spreadsheet behaviour — only liquid stocks compete against each other.
+- As "macros" só ligam/desligam checkboxes; a inteligência real é:
+  1) Para cada critério ativo:
+      - Se "Menor é melhor": transforma em 1/valor
+      - Se "Maior é melhor": usa valor original
+  2) Calcula rank descendente (maior valor transformado = rank 1)
+  3) Soma os ranks de todos os critérios ativos => score
+  4) Penalidade de liquidez:
+      se liquidez <= min_liq => score += 1000
+  5) Ordena pelo menor score (ASC)
+
+Observações importantes (igual planilha):
+- NÃO filtra universo por valores positivos.
+  (Se o indicador é 0/NaN/erro, ele só rankeia mal, mas NÃO remove o ativo.)
+- Desempate: rank + rank/10000 (como na planilha)
 """
 
-import pandas as pd
+from __future__ import annotations
+
 import logging
+from typing import Dict, List, Tuple, Optional
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# SECTOR GROUPS
-# ══════════════════════════════════════════════════════════════════════════════
-# Sectors to exclude from value/quality models (like the original spreadsheet)
-# Exact names from StatusInvest's sectorname field:
-FINANCIAL_SECTORS = [
-    'Financeiro e Outros',   # exact StatusInvest name
-    'Financeiro',
-    'Bancos',
-    'Seguros',
-    'Previdência',
-    'Intermediários Financeiros',
-]
-UTILITY_SECTORS = [
-    'Utilidade Pública',     # exact StatusInvest name
-    'Utility',
-]
-FINANCIAL_OR_UTILITY = FINANCIAL_SECTORS + UTILITY_SECTORS
+# -----------------------------------------------------------------------------
+# Config
+# -----------------------------------------------------------------------------
+LIQ_COL = "liquidezmediadiaria"
+DEFAULT_MIN_LIQ = 500_000
+LIQ_PENALTY = 1000.0
 
+# Cada critério: (db_column, is_lower_better)
+# is_lower_better=True  => "Menor"  => usa 1/valor
+# is_lower_better=False => "Maior"  => usa valor
+Criterion = Tuple[str, bool]
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PLANILHA MODEL PRESETS
-# Each criterion: (db_column, ascending, weight)
-#   ascending=True  → Menor (lower value = rank 1)
-#   ascending=False → Maior (higher value = rank 1)
-#
-# Keys:
-#   criteria          — list of (col, ascending, weight)
-#   require_positive  — column values must be > 0 (filter before ranking)
-#   exclude_sectors   — list of sector names to exclude before ranking
-#   derive            — computed columns {new_col: (op, source_col)}
-# ══════════════════════════════════════════════════════════════════════════════
-SPREADSHEET_PRESETS = {
-
-    # ── 1. Magic ─────────────────────────────────────────────────────────────
-    # Magic Formula clássica: EV/EBIT baixo + ROIC alto
-    # Exclui Financeiro e Utilidade Pública
-    # NOTA: Não requer EV/EBIT > 0 ou ROIC > 0 (segue planilha original)
-    'magic': {
-        'name': 'Magic',
-        'criteria': [
-            ('ev_ebit', True,  1),  # EV/EBIT  Menor  peso 1
-            ('roic',    False, 1),  # ROIC     Maior  peso 1
-        ],
-        # No require_positive — matches spreadsheet behaviour (ranks all stocks)
-        'exclude_sectors': FINANCIAL_OR_UTILITY,
-    },
-
-    # ── 2. MagicLucros ───────────────────────────────────────────────────────
-    # Magic + crescimento de lucros
-    'magic_lucros': {
-        'name': 'MagicLucros',
-        'criteria': [
-            ('ev_ebit',     True,  1),  # EV/EBIT        Menor  peso 1
-            ('roic',        False, 1),  # ROIC           Maior  peso 1
-            ('cagr_lucros', False, 2),  # CAGR Lucros 5a Maior  peso 2
-        ],
-        'require_positive': ['cagr_lucros'],  # only filter stocks with no growth data
-        'exclude_sectors': FINANCIAL_OR_UTILITY,
-    },
-
-    # ── 3. Baratas ───────────────────────────────────────────────────────────
-    # Deep value: P/VP baixo + P/L baixo + EV/EBITDA baixo
-    'baratas': {
-        'name': 'Baratas',
-        'criteria': [
-            ('pvp',      True, 2),  # P/VP      Menor  peso 2
-            ('pl',       True, 1),  # P/L       Menor  peso 1
-            ('ev_ebitda', True, 1), # EV/EBITDA Menor  peso 1
-        ],
-        'require_positive': ['pvp', 'pl'],
-    },
-
-    # ── 4. Sólidas ───────────────────────────────────────────────────────────
-    # Quality: ROE alto + Margem Líquida alta + alavancagem baixa
-    'solidas': {
-        'name': 'Sólidas',
-        'criteria': [
-            ('roe',            False, 2),  # ROE             Maior   peso 2
-            ('margem_liquida', False, 1),  # Margem Líquida  Maior   peso 1
-            ('div_liq_ebitda', True,  2),  # Dív.Líq/EBIT    Menor   peso 2
+# -----------------------------------------------------------------------------
+# Estratégias (iguais às macros da planilha)
+# -----------------------------------------------------------------------------
+# IMPORTANTE:
+# - Os nomes das colunas abaixo precisam existir no seu DF (mesmo lugar que você já usa).
+# - Direções ("Menor"/"Maior") aqui seguem o que você mostrou na planilha.
+SPREADSHEET_PRESETS: Dict[str, Dict[str, object]] = {
+    # Magic: EV/EBIT baixo + ROIC alto
+    "magic": {
+        "name": "Magic",
+        "criteria": [
+            ("ev_ebit", True),   # Menor
+            ("roic", False),     # Maior
         ],
     },
 
-    # ── 5. Mix ───────────────────────────────────────────────────────────────
-    # Balanceado: P/L + DY + ROE
-    'mix': {
-        'name': 'Mix',
-        'criteria': [
-            ('pl',  True,  1),  # P/L  Menor  peso 1
-            ('dy',  False, 1),  # DY   Maior  peso 1
-            ('roe', False, 1),  # ROE  Maior  peso 1
+    # MagicLucros: Magic + CAGR Lucros 5 anos alto
+    "magic_lucros": {
+        "name": "MagicLucros",
+        "criteria": [
+            ("ev_ebit", True),      # Menor
+            ("roic", False),        # Maior
+            ("cagr_lucros", False), # Maior
         ],
-        'require_positive': ['pl'],
     },
 
-    # ── 6. Dividendos ────────────────────────────────────────────────────────
-    # Renda: DY alto + Payout sustentável
-    'dividendos': {
-        'name': 'Dividendos',
-        'criteria': [
-            ('dy',     False, 3),  # DY     Maior  peso 3
-            ('payout', True,  1),  # Payout Menor  peso 1 (menor = mais sustentável)
+    # Baratas (macro liga D19, D21, D22)
+    # Queda do Máximo = Maior (como estava no seu dropdown)
+    # P/L = Menor
+    # P/VP = (na sua planilha estava como "Maior" — mantido p/ bater 1:1)
+    "baratas": {
+        "name": "Baratas",
+        "criteria": [
+            ("queda_do_maximo", False),  # Maior
+            ("pl", True),               # Menor
+            ("pvp", False),             # Maior (como planilha)
         ],
-        'require_positive': ['dy'],
     },
 
-    # ── 7. Graham ────────────────────────────────────────────────────────────
-    # Graham puro: menores P/L e P/VP
-    'graham': {
-        'name': 'Graham',
-        'criteria': [
-            ('pl',  True, 1),  # P/L   Menor  peso 1
-            ('pvp', True, 1),  # P/VP  Menor  peso 1
+    # Sólidas (macro liga D30, D34, D42)
+    # Div. Líq / Patri = Menor
+    # ROE = Maior
+    # CAGR Lucros = Maior
+    "solidas": {
+        "name": "Sólidas",
+        "criteria": [
+            ("div_liq_patri", True),    # Menor
+            ("roe", False),             # Maior
+            ("cagr_lucros", False),     # Maior
         ],
-        'require_positive': ['pl', 'pvp'],
     },
 
-    # ── 8. GreenBla ──────────────────────────────────────────────────────────
-    # Variação pura Greenblatt: Earnings Yield alto + ROIC alto
-    # EarningsYield = EBIT/EV = 1/(EV/EBIT) — calculado inline
-    'greenblatt': {
-        'name': 'GreenBla',
-        'criteria': [
-            ('earnings_yield', False, 1),  # EY = 1/EV_EBIT  Maior  peso 1
-            ('roic',           False, 1),  # ROIC            Maior  peso 1
+    # Mix (macro liga D21, D22, D34, D35, D42)
+    # P/L = Menor
+    # P/VP = Maior (como planilha)
+    # ROE = Maior
+    # ROA = Maior
+    # CAGR Lucros = Maior
+    "mix": {
+        "name": "Mix",
+        "criteria": [
+            ("pl", True),               # Menor
+            ("pvp", False),             # Maior (como planilha)
+            ("roe", False),             # Maior
+            ("roa", False),             # Maior
+            ("cagr_lucros", False),     # Maior
         ],
-        'require_positive': ['ev_ebit', 'roic'],
-        'exclude_sectors': FINANCIAL_OR_UTILITY,
-        'derive': {'earnings_yield': ('reciprocal', 'ev_ebit')},
+    },
+
+    # Dividendos (macro liga D20, D42)
+    "dividendos": {
+        "name": "Dividendos",
+        "criteria": [
+            ("dy", False),              # Maior
+            ("cagr_lucros", False),     # Maior
+        ],
+    },
+
+    # Graham (macro não reseta tudo, mas na prática liga P/L e P/VP
+    # (mantemos direção conforme dropdown da planilha -> P/VP = Maior)
+    "graham": {
+        "name": "Graham",
+        "criteria": [
+            ("pl", True),               # Menor
+            ("pvp", False),             # Maior (como planilha)
+        ],
+    },
+
+    # GreenBla (macro idêntica ao Magic)
+    "greenblatt": {
+        "name": "GreenBla",
+        "criteria": [
+            ("ev_ebit", True),
+            ("roic", False),
+        ],
     },
 }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# DERIVED FIELDS HELPER
-# ══════════════════════════════════════════════════════════════════════════════
-def _apply_derived_fields(df: pd.DataFrame, preset: dict) -> pd.DataFrame:
-    """Compute derived columns specified in preset['derive']."""
-    for new_col, (op, source_col) in preset.get('derive', {}).items():
-        if source_col in df.columns:
-            if op == 'reciprocal':
-                df[new_col] = 1.0 / df[source_col].replace(0, float('nan'))
-    return df
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# CORE RANKING ENGINE
-# ══════════════════════════════════════════════════════════════════════════════
-def weighted_rank(df_in: pd.DataFrame, criteria: list) -> pd.DataFrame:
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+def _transform_for_ranking(series: pd.Series, is_lower_better: bool) -> pd.Series:
     """
-    Step A: Rank all rows per indicator (method='min' → ties: 1,2,2,4…)
-    Step B: Multiply rank × weight
-    Step C: Sum → _score
-    Step D: Sort ascending (lowest score = best)
-    """
-    df_r = df_in.copy()
-    df_r['_score'] = 0.0
+    Transformação igual planilha:
+    - Menor é melhor => 1/valor
+    - Maior é melhor => valor
 
-    for col, ascending, weight in criteria:
-        if col not in df_r.columns or df_r[col].isna().all():
-            logger.debug(f"[spreadsheet] skipping column '{col}' — missing or all-null")
+    Regras de robustez:
+    - Para divisão: valores <= 0 viram NaN (vão para o fim do rank)
+    - NaNs ficam no fim do rank
+    """
+    s = pd.to_numeric(series, errors="coerce")
+
+    if is_lower_better:
+        # Planilha: 1/valor. Evitar 1/0 e 1/negativo.
+        s = s.where(s > 0, pd.NA)
+        return 1.0 / s.astype("float64")
+    else:
+        return s.astype("float64")
+
+
+def _rank_desc_with_tiebreak(values: pd.Series) -> pd.Series:
+    """
+    Rank descendente (maior = rank 1) + desempate rank/10000 igual planilha.
+    """
+    ranks = values.rank(ascending=False, method="min", na_option="bottom")
+    return ranks + (ranks / 10000.0)
+
+
+def _compute_score(df: pd.DataFrame, criteria: List[Criterion], min_liq: float) -> Tuple[pd.DataFrame, List[str]]:
+    """
+    Calcula score = soma de ranks dos critérios + penalidade de liquidez.
+    Retorna df com coluna _score e lista de caveats.
+    """
+    caveats: List[str] = []
+    out = df.copy()
+
+    out["_score"] = 0.0
+
+    for col, is_lower_better in criteria:
+        if col not in out.columns:
+            caveats.append(f"Indicador sem coluna no DF: {col}")
             continue
-        ranks = df_r[col].rank(ascending=ascending, method='min', na_option='bottom')
-        df_r['_score'] += ranks * weight
 
-    return df_r.sort_values('_score', ascending=True)
+        vals = _transform_for_ranking(out[col], is_lower_better)
+
+        # Se tudo NaN, adiciona caveat e ignora (igual "sem dados")
+        if vals.isna().all():
+            caveats.append(f"Indicador sem dados úteis (tudo vazio/0): {col}")
+            continue
+
+        ranks = _rank_desc_with_tiebreak(vals)
+        out["_score"] += ranks
+
+    # Penalidade de liquidez (igual planilha)
+    if LIQ_COL in out.columns:
+        liq = pd.to_numeric(out[LIQ_COL], errors="coerce").fillna(0)
+        out.loc[liq <= float(min_liq), "_score"] += LIQ_PENALTY
+    else:
+        caveats.append(f"Coluna de liquidez não encontrada: {LIQ_COL} (penalidade não aplicada)")
+
+    return out, caveats
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PUBLIC API
-# ══════════════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------------
+# Public API
+# -----------------------------------------------------------------------------
 def apply_spreadsheet_mode(
     df_universe: pd.DataFrame,
     strategy: str,
-    min_liq: float = 500_000,
-) -> tuple[pd.DataFrame, list[str]]:
+    min_liq: float = DEFAULT_MIN_LIQ,
+    top_n: int = 100,
+) -> Tuple[pd.DataFrame, List[str]]:
     """
-    Apply the Planilha weighted-rank engine.
+    Aplica ranking modo planilha.
+
+    Args:
+        df_universe: DataFrame com o universo de ativos e indicadores.
+        strategy: chave da estratégia (magic, magic_lucros, baratas, solidas, mix, dividendos, graham, greenblatt).
+        min_liq: liquidez mínima para não tomar penalidade (+1000 se <= min_liq).
+        top_n: quantos itens retornar.
 
     Returns:
         (df_ranked, caveats)
-        df_ranked — sorted DataFrame (top 100)
-        caveats   — list of human-readable notes about missing data
     """
-    caveats: list[str] = []
     preset = SPREADSHEET_PRESETS.get(strategy)
-
     if not preset:
-        logger.warning(f"[spreadsheet] unknown strategy '{strategy}'")
-        return df_universe.head(100), [f"Estratégia '{strategy}' não encontrada."]
+        return df_universe.head(top_n), [f"Estratégia '{strategy}' não encontrada."]
 
-    df = df_universe.copy()
+    criteria: List[Criterion] = preset["criteria"]  # type: ignore[assignment]
 
-    # ── STEP 1: Apply liquidity filter BEFORE ranking ─────────────────────────
-    # This matches the spreadsheet behaviour: only liquid stocks form the
-    # ranking universe. Applying it after would let illiquid micro-caps rank
-    # #1 globally and then "survive" the post-filter.
-    if min_liq > 0 and 'liquidezmediadiaria' in df.columns:
-        before_liq = len(df)
-        df = df[df['liquidezmediadiaria'].fillna(0) >= min_liq]
-        removed_liq = before_liq - len(df)
-        if removed_liq > 0:
-            logger.debug(f"[spreadsheet] liquidity filter removed {removed_liq} stocks")
+    df_scored, caveats = _compute_score(df_universe, criteria, min_liq=min_liq)
 
-    # ── STEP 2: Sector exclusions ─────────────────────────────────────────────
-    exclude_sectors = preset.get('exclude_sectors', [])
-    if exclude_sectors and 'setor' in df.columns:
-        before_sect = len(df)
-        df = df[~df['setor'].fillna('').isin(exclude_sectors)]
-        removed_sect = before_sect - len(df)
-        if removed_sect > 0:
-            caveats.append(f"{removed_sect} ativo(s) de setores excluídos (Financeiro/Utilidade Pública).")
+    # Ordena igual planilha: menor score primeiro
+    df_ranked = df_scored.sort_values("_score", ascending=True, kind="mergesort")
 
-    # ── STEP 3: Derive computed columns ───────────────────────────────────────
-    df = _apply_derived_fields(df, preset)
-
-    # ── STEP 4: Require positive values in key columns ────────────────────────
-    for col in preset.get('require_positive', []):
-        if col in df.columns:
-            df = df[df[col] > 0]
-
-    # ── STEP 5: Drop rows with null in ALL active indicator columns ───────────
-    active_cols = [
-        col for col, _, _ in preset['criteria']
-        if col in df.columns and not df[col].isna().all()
-    ]
-    if active_cols:
-        before = len(df)
-        df = df.dropna(subset=active_cols)
-        dropped = before - len(df)
-        if dropped > 0:
-            caveats.append(f"{dropped} ativo(s) removido(s) por dados ausentes.")
-
-    # ── Note any still-missing DB columns ────────────────────────────────────
-    missing = [
-        col for col, _, _ in preset['criteria']
-        if col not in df.columns or df[col].isna().all()
-    ]
-    if missing:
-        caveats.append(f"Indicador(es) sem dados: {', '.join(missing)}.")
-
-    # ── STEP 6: Rank × Weight → Score → Sort ─────────────────────────────────
-    df_ranked = weighted_rank(df, preset['criteria'])
-
-    return df_ranked.head(100), caveats
+    return df_ranked.head(top_n), caveats
