@@ -147,11 +147,14 @@ def get_br_stocks_statusinvest():
             'p_vp': 'pvp',
             'ev_ebit': 'ev_ebit',
             'roic': 'roic',
+            'roe': 'roe_raw',           # raw ROE (from StatusInvest, percentage)
             'dy': 'dy',
             'liquidezmediadiaria': 'liquidezmediadiaria',
             'lpa': 'lpa',
             'vpa': 'vpa',
             'dividaliquidapatrimonioliquido': 'div_pat',
+            'liquidezCorrente': 'liq_corrente',
+            'lucpidasNet5Years': 'cagr_lucros',  # CAGR Lucros 5 anos
             'companyname': 'empresa',
             'sectorname': 'setor',
         }
@@ -161,7 +164,8 @@ def get_br_stocks_statusinvest():
         df.rename(columns=cols_to_rename, inplace=True)
 
         # Normalize Data Types
-        numeric_cols = ['price', 'pl', 'pvp', 'ev_ebit', 'roic', 'dy', 'liquidezmediadiaria', 'lpa', 'vpa', 'div_pat']
+        numeric_cols = ['price', 'pl', 'pvp', 'ev_ebit', 'roic', 'dy', 'liquidezmediadiaria',
+                        'lpa', 'vpa', 'div_pat', 'liq_corrente', 'cagr_lucros', 'roe_raw']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -174,6 +178,10 @@ def get_br_stocks_statusinvest():
         if 'roic' in df.columns:
             df['roic'] = pd.to_numeric(df['roic'], errors='coerce').fillna(0)
             df['roic'] = df['roic'] / 100.0
+        if 'roe_raw' in df.columns:
+            # Store ROE as ratio too; rename to roe
+            df['roe_raw'] = df['roe_raw'] / 100.0
+            df.rename(columns={'roe_raw': 'roe_si'}, inplace=True)
 
         return df
 

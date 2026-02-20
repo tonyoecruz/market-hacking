@@ -31,11 +31,10 @@ class StockDB(Base):
     valor_justo = Column(Float)
     margem = Column(Float)           # Margem de segurança Graham
     magic_rank = Column(Float)
-    # NOTE: cagr_lucros, liq_corrente, queda_maximo are NOT yet in Supabase.
-    # They are accessed via getattr in to_dict() so ranking code won't crash.
-    # Add these columns to Supabase and then uncomment:
-    # cagr_lucros = Column(Float)    # CAGR Lucros 5 anos (%)
-    # liq_corrente = Column(Float)   # Liquidez Corrente
+    roe_si = Column(Float)           # ROE direto do StatusInvest (ratio)
+    cagr_lucros = Column(Float)      # CAGR Lucros 5 anos (lucpidasNet5Years do StatusInvest)
+    liq_corrente = Column(Float)     # Liquidez Corrente (liquidezCorrente do StatusInvest)
+    # queda_maximo not yet available from any source
     # queda_maximo = Column(Float)   # % queda do máximo 52 semanas
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
@@ -63,9 +62,10 @@ class StockDB(Base):
             'valor_justo': self.valor_justo,
             'margem': self.margem,
             'magic_rank': self.magic_rank,
+            'roe_si': getattr(self, 'roe_si', None),
             'cagr_lucros': getattr(self, 'cagr_lucros', None),
             'liq_corrente': getattr(self, 'liq_corrente', None),
-            'queda_maximo': getattr(self, 'queda_maximo', None),
+            'queda_maximo': None,  # not yet in DB
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 

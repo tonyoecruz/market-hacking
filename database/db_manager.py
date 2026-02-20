@@ -72,6 +72,9 @@ def init_database():
     _migrate_columns = [
         ("stocks", "dy", "FLOAT"),
         ("stocks", "div_pat", "FLOAT"),
+        ("stocks", "roe_si", "FLOAT"),          # ROE direto do StatusInvest
+        ("stocks", "cagr_lucros", "FLOAT"),     # CAGR Lucros 5 anos
+        ("stocks", "liq_corrente", "FLOAT"),    # Liquidez Corrente
         ("investor_personas", "voice_id", "VARCHAR(100) DEFAULT 'pt-BR-AntonioNeural'"),
     ]
     with engine.connect() as conn:
@@ -122,7 +125,9 @@ class DatabaseManager:
             valid_columns = [
                 'ticker', 'market', 'empresa', 'setor', 'price', 'lpa', 'vpa',
                 'pl', 'pvp', 'roic', 'ev_ebit', 'dy', 'liquidezmediadiaria', 'div_pat',
-                'valor_justo', 'margem', 'magic_rank', 'ValorJusto', 'Margem', 'MagicRank'
+                'valor_justo', 'margem', 'magic_rank',
+                'roe_si', 'cagr_lucros', 'liq_corrente',  # new fields from StatusInvest
+                'ValorJusto', 'Margem', 'MagicRank'
             ]
             
             # 2. Get existing tickers for this market (Bulk Query)

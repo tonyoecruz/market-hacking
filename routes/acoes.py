@@ -52,8 +52,11 @@ async def get_acoes_data(
             else:
                 df[col] = float('nan')  # ensure column always exists
 
-        # Derived field: ROE = LPA / VPA
-        df['roe'] = df['lpa'] / df['vpa'].replace(0, float('nan'))
+        # Derived field: ROE — prefer direct roe_si from StatusInvest, fallback to LPA/VPA
+        if 'roe_si' in df.columns and df['roe_si'].fillna(0).abs().sum() > 0:
+            df['roe'] = pd.to_numeric(df['roe_si'], errors='coerce')
+        else:
+            df['roe'] = df['lpa'] / df['vpa'].replace(0, float('nan'))
 
         # Base filter: price > 0
         df_base = df[df['price'].fillna(0) > 0].copy()
@@ -92,38 +95,36 @@ async def get_acoes_data(
         # ── 8 strategies ───────────────────────────────────────────────────────
 
         if strategy == 'magic':
-            # EV/EBIT Menor + ROIC Maior
-            df_r = df_base.dropna(subset=['ev_ebit', 'roic'])
-            df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
-            df_ranked = combined_rank(df_r, [
-                ('ev_ebit', True),   # Menor
-                ('roic',    False),  # Maior
-            ]).head(100)
+            # ✅ Use pre-computed magic_rank (matches spreadsheet: D28=ROIC + D37=EV/EBIT)
+            # magic_rank = rank(R_EV asc + R_ROIC desc) computed at data-save time
+            df_r = df_base.dropna(subset=['magic_rank'])
+            df_r = df_r[df_r['magic_rank'] > 0]
+            df_ranked = df_r.sort_values('magic_rank', ascending=True).head(100)
 
         elif strategy == 'magic_lucros':
-            # EV/EBIT Menor + ROIC Maior + CAGR Lucros 5a Maior
-            # Excluding Utility & Financial sectors
+            # D28(ROIC) + D37(EV/EBIT) + D42(CAGR) — exclude Util. Pública & Financeiro
+            # Re-rank within filtered set (cagr adds a dimension not in magic_rank)
             df_r = df_base.dropna(subset=['ev_ebit', 'roic'])
             df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
             df_r = df_r[~df_r['setor'].fillna('').isin(EXCLUDE_SECTORS)]
             df_ranked = combined_rank(df_r, [
                 ('ev_ebit',    True),   # Menor
                 ('roic',       False),  # Maior
-                ('cagr_lucros', False), # Maior (skipped gracefully if not in DB)
+                ('cagr_lucros', False), # Maior (gracefully skipped if not in DB)
             ]).head(100)
 
         elif strategy == 'baratas':
-            # Queda do Máximo Maior + P/L Menor + P/VP Maior
+            # D19(Queda Máximo) + D21(P/L) + D22(P/VP)
             df_r = df_base.dropna(subset=['pl', 'pvp'])
             df_r = df_r[df_r['pl'] > 0]
             df_ranked = combined_rank(df_r, [
-                ('queda_maximo', False),  # Maior (bigger fall from high = more beaten)
+                ('queda_maximo', False),  # Maior (gracefully skipped if not in DB)
                 ('pl',           True),   # Menor
                 ('pvp',          False),  # Maior
             ]).head(100)
 
         elif strategy == 'solidas':
-            # Liq. Corrente Maior + Div. Liq./Patri. Menor + CAGR Lucros 5a Maior
+            # D30(Liq.Corrente) + D34(Div.Liq./Patri.) + D42(CAGR)
             df_r = df_base.dropna(subset=['div_pat'])
             df_ranked = combined_rank(df_r, [
                 ('liq_corrente', False),  # Maior
@@ -132,19 +133,19 @@ async def get_acoes_data(
             ]).head(100)
 
         elif strategy == 'mix':
-            # P/L Menor + P/VP Maior + Liq. Corrente Maior + ROE Maior + CAGR Lucros Maior
+            # D21(P/L) + D22(P/VP) + D34(Div.Liq./Patri. or ROE?) + D35(ROE) + D42(CAGR)
             df_r = df_base.dropna(subset=['pl', 'pvp'])
             df_r = df_r[df_r['pl'] > 0]
             df_ranked = combined_rank(df_r, [
                 ('pl',           True),   # Menor
                 ('pvp',          False),  # Maior
-                ('liq_corrente', False),  # Maior
-                ('roe',          False),  # Maior
-                ('cagr_lucros',  False),  # Maior
+                ('liq_corrente', False),  # Maior  (D34)
+                ('roe',          False),  # Maior  (D35)
+                ('cagr_lucros',  False),  # Maior  (D42)
             ]).head(100)
 
         elif strategy == 'dividendos':
-            # DY Maior + CAGR Lucros 5a Maior
+            # D20(DY) + D42(CAGR)
             df_r = df_base.dropna(subset=['dy'])
             df_r = df_r[df_r['dy'] > 0]
             df_ranked = combined_rank(df_r, [
@@ -153,37 +154,34 @@ async def get_acoes_data(
             ]).head(100)
 
         elif strategy == 'graham':
-            # DY Maior + P/L Menor + P/VP Maior
+            # D21(P/L) + D22(P/VP) — no D28/D37/D42
             df_r = df_base.dropna(subset=['pl', 'pvp'])
             df_r = df_r[(df_r['pl'] > 0) & (df_r['pvp'] > 0)]
             df_ranked = combined_rank(df_r, [
-                ('dy',   False),  # Maior
+                ('dy',   False),  # Maior  (DY bonus)
                 ('pl',   True),   # Menor
                 ('pvp',  False),  # Maior
             ]).head(100)
 
         elif strategy == 'greenblatt':
-            # GreenBlatt = same as Magic (EV/EBIT Menor + ROIC Maior)
-            # Applied to less-liquid companies (Greenblatt's original universe was small-caps)
-            df_r = df_base.dropna(subset=['ev_ebit', 'roic'])
-            df_r = df_r[(df_r['ev_ebit'] > 0) & (df_r['roic'] > 0)]
+            # ✅ Same as Magic (D28+D37) but applied to LESS liquid companies
+            # Use magic_rank for consistency; filter to below-median liquidity
+            df_r = df_base.dropna(subset=['magic_rank'])
+            df_r = df_r[df_r['magic_rank'] > 0]
             median_liq = df_base['liquidezmediadiaria'].median()
             df_small = df_r[df_r['liquidezmediadiaria'].fillna(0) <= median_liq]
             if len(df_small) < 10:
                 df_small = df_r
-            df_ranked = combined_rank(df_small, [
-                ('ev_ebit', True),   # Menor
-                ('roic',    False),  # Maior
-            ]).head(100)
+            df_ranked = df_small.sort_values('magic_rank', ascending=True).head(100)
 
         else:
             df_ranked = df_base.sort_values('liquidezmediadiaria', ascending=False).head(100)
 
-        # ── Drop internal rank column & NaN safety ─────────────────────────────
-        if '_rank_total' in df_ranked.columns:
-            df_ranked = df_ranked.drop(columns=['_rank_total'])
-        if 'roe' in df_ranked.columns:
-            df_ranked = df_ranked.drop(columns=['roe'])  # computed field, avoid clutter
+        # ── Drop internal rank & temp columns ──────────────────────────────────
+        for drop_col in ['_rank_total', 'roe']:
+            if drop_col in df_ranked.columns:
+                df_ranked = df_ranked.drop(columns=[drop_col])
+
 
         df_ranked = df_ranked.replace({float('nan'): None})
 
