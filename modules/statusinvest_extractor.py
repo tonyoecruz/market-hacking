@@ -15,7 +15,7 @@ HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
 }
 
-PAGE_SIZE = 500
+PAGE_SIZE = 1000  # StatusInvest returns up to ~616 stocks, request 1000 to get all in one shot
 
 # Full search filter with all ranges set to null = no filter = return everything
 # StatusInvest requires explicit structure to return ALL results (not just a subset)
@@ -125,6 +125,7 @@ def get_br_stocks_statusinvest():
     Returns: DataFrame with standardized columns (ticker, price, pl, pvp, etc.)
     """
     try:
+        # Use SEARCH_FILTER_STOCKS to get all columns including sectorname.
         data = _fetch_paginated(category_type=1, label="BR stocks", search_filter=SEARCH_FILTER_STOCKS)
 
         if not data:
@@ -133,13 +134,20 @@ def get_br_stocks_statusinvest():
 
         df = pd.DataFrame(data)
 
+        # Deduplicate: StatusInvest sometimes returns totalResults > actual unique count,
+        # causing the paginator to re-fetch the same rows on subsequent pages.
+        before_dedup = len(df)
+        df = df.drop_duplicates(subset=['ticker'], keep='first')
+        if len(df) < before_dedup:
+            logger.info(f"StatusInvest: Removed {before_dedup - len(df)} duplicate rows")
+
         # Log actual columns for debugging
         logger.info(f"StatusInvest Stocks columns: {sorted(df.columns.tolist())}")
 
         # MAPPING STATUS INVEST TO APP SCHEMA
-        # StatusInvest paginated API returns lowercase keys:
-        # ticker, price, p_l, p_vp, ev_ebit, roic, dy, liquidezmediadiaria, lpa, vpa,
-        # dividaliquidapatrimonioliquido, companyname, sectorname, subsectorname, segmentname
+        # StatusInvest paginated API returns ALL LOWERCASE keys:
+        # verified from live API probe: sectorname, margemliquida, lucros_cagr5,
+        # valormercado, dividaliquidaebit, liquidezcorrente, roic, dy, etc.
         rename_map = {
             'ticker': 'ticker',
             'price': 'price',
@@ -147,22 +155,22 @@ def get_br_stocks_statusinvest():
             'p_vp': 'pvp',
             'ev_ebit': 'ev_ebit',
             'roic': 'roic',
-            'roe': 'roe_raw',           # raw ROE (from StatusInvest, percentage)
+            'roe': 'roe',              # ROE already as ratio (0-1?) — checked below
             'dy': 'dy',
             'liquidezmediadiaria': 'liquidezmediadiaria',
             'lpa': 'lpa',
             'vpa': 'vpa',
             'dividaliquidapatrimonioliquido': 'div_pat',
-            'liquidezCorrente': 'liq_corrente',
-            'lucpidasNet5Years': 'cagr_lucros',  # CAGR Lucros 5 anos
+            'liquidezcorrente': 'liq_corrente',       # ✅ correct key
+            'lucros_cagr5': 'cagr_lucros',            # ✅ correct key (not lucpidasNet5Years)
             'companyname': 'empresa',
             'sectorname': 'setor',
             # ── NEW columns (Hybrid Screener V2.0) ──────────────────────────
-            'margemLiquida': 'margem_liquida',          # Margem Líquida %
-            'eV_Ebitda': 'ev_ebitda',                   # EV/EBITDA
-            'payout': 'payout',                         # Payout %
-            'valordemercado': 'valor_mercado',          # Valor de Mercado R$
-            'dividaLiquidaEbit': 'div_liq_ebitda',      # Dívida Líquida/EBIT proxy
+            'margemliquida': 'margem_liquida',        # ✅ correct key (lowercase)
+            'valormercado': 'valor_mercado',           # ✅ correct key (lowercase)
+            'dividaliquidaebit': 'div_liq_ebitda',    # ✅ correct key (lowercase)
+            # Note: ev_ebitda and payout not in StatusInvest paginated API
+            # They will stay null until API adds them
         }
 
         # Filter only existing columns just in case
@@ -171,8 +179,8 @@ def get_br_stocks_statusinvest():
 
         # Normalize Data Types
         numeric_cols = ['price', 'pl', 'pvp', 'ev_ebit', 'roic', 'dy', 'liquidezmediadiaria',
-                        'lpa', 'vpa', 'div_pat', 'liq_corrente', 'cagr_lucros', 'roe_raw',
-                        'margem_liquida', 'ev_ebitda', 'payout', 'valor_mercado', 'div_liq_ebitda']
+                        'lpa', 'vpa', 'div_pat', 'liq_corrente', 'cagr_lucros', 'roe',
+                        'margem_liquida', 'valor_mercado', 'div_liq_ebitda']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -185,15 +193,19 @@ def get_br_stocks_statusinvest():
         if 'roic' in df.columns:
             df['roic'] = pd.to_numeric(df['roic'], errors='coerce').fillna(0)
             df['roic'] = df['roic'] / 100.0
-        if 'roe_raw' in df.columns:
-            # Store ROE as ratio too; rename to roe
-            df['roe_raw'] = df['roe_raw'] / 100.0
-            df.rename(columns={'roe_raw': 'roe_si'}, inplace=True)
+        if 'roe' in df.columns:
+            df['roe'] = pd.to_numeric(df['roe'], errors='coerce').fillna(0)
+            # StatusInvest returns ROE as whole number (17.0 = 17%)
+            df['roe'] = df['roe'] / 100.0
 
         # Normalize new percentage columns (StatusInvest returns as whole numbers)
-        for pct_col in ['margem_liquida', 'payout']:
+        for pct_col in ['margem_liquida']:
             if pct_col in df.columns:
                 df[pct_col] = df[pct_col] / 100.0
+
+        # cagr_lucros: StatusInvest returns as whole number (e.g. -43.98 = -43.98%)
+        if 'cagr_lucros' in df.columns:
+            df['cagr_lucros'] = df['cagr_lucros'] / 100.0
 
         return df
 

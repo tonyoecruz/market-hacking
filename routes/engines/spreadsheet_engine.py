@@ -3,13 +3,16 @@ MODO PLANILHA — Weighted-Rank Engine
 =====================================
 Implements the spreadsheet-style relative ranking algorithm.
 
-Algorithm:
-  1. For each indicator, rank ALL stocks globally (method='min' handles ties: 1,2,2,4...)
-  2. Multiply rank position × weight
-  3. Sum weighted ranks → Score
-  4. Sort ascending (lowest Score = best)
+Algorithm (mirrors the user's spreadsheet exactly):
+  1. Apply liquidity filter FIRST (defines the ranking universe)
+  2. Apply sector exclusions (e.g. Financeiro, Utilities excluded from Magic)
+  3. Require positive values in key columns
+  4. For each indicator, rank the FILTERED universe (method='min')
+  5. Multiply rank position × weight → Sum → _score
+  6. Sort ascending (lowest Score = best)
 
-No absolute value filters — only relative positions matter.
+Note: The liquidity filter is applied BEFORE ranking. This matches the
+spreadsheet behaviour — only liquid stocks compete against each other.
 """
 
 import pandas as pd
@@ -18,34 +21,64 @@ import logging
 logger = logging.getLogger(__name__)
 
 # ══════════════════════════════════════════════════════════════════════════════
+# SECTOR GROUPS
+# ══════════════════════════════════════════════════════════════════════════════
+# Sectors to exclude from value/quality models (like the original spreadsheet)
+# Exact names from StatusInvest's sectorname field:
+FINANCIAL_SECTORS = [
+    'Financeiro e Outros',   # exact StatusInvest name
+    'Financeiro',
+    'Bancos',
+    'Seguros',
+    'Previdência',
+    'Intermediários Financeiros',
+]
+UTILITY_SECTORS = [
+    'Utilidade Pública',     # exact StatusInvest name
+    'Utility',
+]
+FINANCIAL_OR_UTILITY = FINANCIAL_SECTORS + UTILITY_SECTORS
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PLANILHA MODEL PRESETS
 # Each criterion: (db_column, ascending, weight)
 #   ascending=True  → Menor (lower value = rank 1)
 #   ascending=False → Maior (higher value = rank 1)
+#
+# Keys:
+#   criteria          — list of (col, ascending, weight)
+#   require_positive  — column values must be > 0 (filter before ranking)
+#   exclude_sectors   — list of sector names to exclude before ranking
+#   derive            — computed columns {new_col: (op, source_col)}
 # ══════════════════════════════════════════════════════════════════════════════
 SPREADSHEET_PRESETS = {
 
     # ── 1. Magic ─────────────────────────────────────────────────────────────
     # Magic Formula clássica: EV/EBIT baixo + ROIC alto
+    # Exclui Financeiro e Utilidade Pública
+    # NOTA: Não requer EV/EBIT > 0 ou ROIC > 0 (segue planilha original)
     'magic': {
         'name': 'Magic',
         'criteria': [
             ('ev_ebit', True,  1),  # EV/EBIT  Menor  peso 1
             ('roic',    False, 1),  # ROIC     Maior  peso 1
         ],
-        'require_positive': ['ev_ebit', 'roic'],
+        # No require_positive — matches spreadsheet behaviour (ranks all stocks)
+        'exclude_sectors': FINANCIAL_OR_UTILITY,
     },
 
     # ── 2. MagicLucros ───────────────────────────────────────────────────────
-    # Magic + crescimento de lucros (exclui setores sem CAGR)
+    # Magic + crescimento de lucros
     'magic_lucros': {
         'name': 'MagicLucros',
         'criteria': [
-            ('ev_ebit',    True,  1),  # EV/EBIT        Menor  peso 1
-            ('roic',       False, 1),  # ROIC           Maior  peso 1
-            ('cagr_lucros',False, 2),  # CAGR Lucros 5a Maior  peso 2
+            ('ev_ebit',     True,  1),  # EV/EBIT        Menor  peso 1
+            ('roic',        False, 1),  # ROIC           Maior  peso 1
+            ('cagr_lucros', False, 2),  # CAGR Lucros 5a Maior  peso 2
         ],
-        'require_positive': ['ev_ebit', 'roic'],
+        'require_positive': ['cagr_lucros'],  # only filter stocks with no growth data
+        'exclude_sectors': FINANCIAL_OR_UTILITY,
     },
 
     # ── 3. Baratas ───────────────────────────────────────────────────────────
@@ -55,7 +88,7 @@ SPREADSHEET_PRESETS = {
         'criteria': [
             ('pvp',      True, 2),  # P/VP      Menor  peso 2
             ('pl',       True, 1),  # P/L       Menor  peso 1
-            ('ev_ebitda',True, 1),  # EV/EBITDA Menor  peso 1 ✅ dado real
+            ('ev_ebitda', True, 1), # EV/EBITDA Menor  peso 1
         ],
         'require_positive': ['pvp', 'pl'],
     },
@@ -65,9 +98,9 @@ SPREADSHEET_PRESETS = {
     'solidas': {
         'name': 'Sólidas',
         'criteria': [
-            ('roe',           False, 2),  # ROE              Maior   peso 2
-            ('margem_liquida',False, 1),  # Margem Líquida   Maior   peso 1 ✅ dado real
-            ('div_liq_ebitda',True,  2),  # Dív.Líq/EBIT     Menor   peso 2 ✅ dado real
+            ('roe',            False, 2),  # ROE             Maior   peso 2
+            ('margem_liquida', False, 1),  # Margem Líquida  Maior   peso 1
+            ('div_liq_ebitda', True,  2),  # Dív.Líq/EBIT    Menor   peso 2
         ],
     },
 
@@ -84,12 +117,12 @@ SPREADSHEET_PRESETS = {
     },
 
     # ── 6. Dividendos ────────────────────────────────────────────────────────
-    # Renda: DY alto + Payout razoável
+    # Renda: DY alto + Payout sustentável
     'dividendos': {
         'name': 'Dividendos',
         'criteria': [
             ('dy',     False, 3),  # DY     Maior  peso 3
-            ('payout', True,  1),  # Payout Menor  peso 1 ✅ dado real (menor payout = mais sustentável)
+            ('payout', True,  1),  # Payout Menor  peso 1 (menor = mais sustentável)
         ],
         'require_positive': ['dy'],
     },
@@ -115,6 +148,7 @@ SPREADSHEET_PRESETS = {
             ('roic',           False, 1),  # ROIC            Maior  peso 1
         ],
         'require_positive': ['ev_ebit', 'roic'],
+        'exclude_sectors': FINANCIAL_OR_UTILITY,
         'derive': {'earnings_yield': ('reciprocal', 'ev_ebit')},
     },
 }
@@ -168,7 +202,7 @@ def apply_spreadsheet_mode(
 
     Returns:
         (df_ranked, caveats)
-        df_ranked — sorted DataFrame (top 100, post-liquidity filter)
+        df_ranked — sorted DataFrame (top 100)
         caveats   — list of human-readable notes about missing data
     """
     caveats: list[str] = []
@@ -180,10 +214,35 @@ def apply_spreadsheet_mode(
 
     df = df_universe.copy()
 
-    # ── Derive computed columns (e.g. earnings_yield = 1/ev_ebit) ────────────
+    # ── STEP 1: Apply liquidity filter BEFORE ranking ─────────────────────────
+    # This matches the spreadsheet behaviour: only liquid stocks form the
+    # ranking universe. Applying it after would let illiquid micro-caps rank
+    # #1 globally and then "survive" the post-filter.
+    if min_liq > 0 and 'liquidezmediadiaria' in df.columns:
+        before_liq = len(df)
+        df = df[df['liquidezmediadiaria'].fillna(0) >= min_liq]
+        removed_liq = before_liq - len(df)
+        if removed_liq > 0:
+            logger.debug(f"[spreadsheet] liquidity filter removed {removed_liq} stocks")
+
+    # ── STEP 2: Sector exclusions ─────────────────────────────────────────────
+    exclude_sectors = preset.get('exclude_sectors', [])
+    if exclude_sectors and 'setor' in df.columns:
+        before_sect = len(df)
+        df = df[~df['setor'].fillna('').isin(exclude_sectors)]
+        removed_sect = before_sect - len(df)
+        if removed_sect > 0:
+            caveats.append(f"{removed_sect} ativo(s) de setores excluídos (Financeiro/Utilidade Pública).")
+
+    # ── STEP 3: Derive computed columns ───────────────────────────────────────
     df = _apply_derived_fields(df, preset)
 
-    # ── Remove rows with null in ALL active indicator columns ─────────────────
+    # ── STEP 4: Require positive values in key columns ────────────────────────
+    for col in preset.get('require_positive', []):
+        if col in df.columns:
+            df = df[df[col] > 0]
+
+    # ── STEP 5: Drop rows with null in ALL active indicator columns ───────────
     active_cols = [
         col for col, _, _ in preset['criteria']
         if col in df.columns and not df[col].isna().all()
@@ -195,12 +254,7 @@ def apply_spreadsheet_mode(
         if dropped > 0:
             caveats.append(f"{dropped} ativo(s) removido(s) por dados ausentes.")
 
-    # ── Require positive values in key columns ────────────────────────────────
-    for col in preset.get('require_positive', []):
-        if col in df.columns:
-            df = df[df[col] > 0]
-
-    # ── Note missing DB columns ───────────────────────────────────────────────
+    # ── Note any still-missing DB columns ────────────────────────────────────
     missing = [
         col for col, _, _ in preset['criteria']
         if col not in df.columns or df[col].isna().all()
@@ -208,11 +262,7 @@ def apply_spreadsheet_mode(
     if missing:
         caveats.append(f"Indicador(es) sem dados: {', '.join(missing)}.")
 
-    # ── Rank × Weight → Score → Sort ─────────────────────────────────────────
+    # ── STEP 6: Rank × Weight → Score → Sort ─────────────────────────────────
     df_ranked = weighted_rank(df, preset['criteria'])
-
-    # ── Post-hoc liquidity filter (preserves global rank positions) ───────────
-    if min_liq > 0 and 'liquidezmediadiaria' in df_ranked.columns:
-        df_ranked = df_ranked[df_ranked['liquidezmediadiaria'].fillna(0) >= min_liq]
 
     return df_ranked.head(100), caveats

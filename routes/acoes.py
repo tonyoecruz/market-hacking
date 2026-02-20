@@ -42,7 +42,9 @@ def _build_universe(market: str | None, filter_risky: bool) -> pd.DataFrame | No
     numeric_cols = [
         'liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank',
         'price', 'valor_justo', 'roic', 'ev_ebit', 'pl', 'pvp', 'dy',
-        'div_pat', 'cagr_lucros', 'liq_corrente'
+        'div_pat', 'cagr_lucros', 'liq_corrente',
+        # ── New Hybrid Screener V2.0 columns ──
+        'margem_liquida', 'ev_ebitda', 'payout', 'valor_mercado', 'div_liq_ebitda',
     ]
     for col in numeric_cols:
         if col in df.columns:
@@ -50,8 +52,16 @@ def _build_universe(market: str | None, filter_risky: bool) -> pd.DataFrame | No
         else:
             df[col] = float('nan')
 
-    # Derived: ROE = LPA / VPA
-    df['roe'] = df['lpa'] / df['vpa'].replace(0, float('nan'))
+    # Derived: ROE = LPA / VPA (fallback if 'roe' not already in DB)
+    if 'roe' not in df.columns or df['roe'].isna().all():
+        df['roe'] = df['lpa'] / df['vpa'].replace(0, float('nan'))
+    else:
+        # roe comes from StatusInvest as ratio (already divided by 100 in extractor)
+        df['roe'] = pd.to_numeric(df['roe'], errors='coerce')
+        # Fill nulls with LPA/VPA proxy
+        mask = df['roe'].isna()
+        if mask.any():
+            df.loc[mask, 'roe'] = df.loc[mask, 'lpa'] / df.loc[mask, 'vpa'].replace(0, float('nan'))
 
     # Universe: price > 0
     df = df[df['price'].fillna(0) > 0].copy()
