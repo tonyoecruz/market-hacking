@@ -166,6 +166,7 @@ def get_br_stocks_statusinvest():
             'companyname': 'empresa',
             'sectorname': 'setor',
             # ── NEW columns (Hybrid Screener V2.0) ──────────────────────────
+            'roa': 'roa',                              # ✅ ROA (whole number from API)
             'margemliquida': 'margem_liquida',        # ✅ correct key (lowercase)
             'valormercado': 'valor_mercado',           # ✅ correct key (lowercase)
             'dividaliquidaebit': 'div_liq_ebitda',    # ✅ correct key (lowercase)
@@ -179,7 +180,7 @@ def get_br_stocks_statusinvest():
 
         # Normalize Data Types
         numeric_cols = ['price', 'pl', 'pvp', 'ev_ebit', 'roic', 'dy', 'liquidezmediadiaria',
-                        'lpa', 'vpa', 'div_pat', 'liq_corrente', 'cagr_lucros', 'roe',
+                        'lpa', 'vpa', 'div_pat', 'liq_corrente', 'cagr_lucros', 'roe', 'roa',
                         'margem_liquida', 'valor_mercado', 'div_liq_ebitda']
         for col in numeric_cols:
             if col in df.columns:
@@ -199,7 +200,7 @@ def get_br_stocks_statusinvest():
             df['roe'] = df['roe'] / 100.0
 
         # Normalize new percentage columns (StatusInvest returns as whole numbers)
-        for pct_col in ['margem_liquida']:
+        for pct_col in ['margem_liquida', 'roa']:
             if pct_col in df.columns:
                 df[pct_col] = df[pct_col] / 100.0
 

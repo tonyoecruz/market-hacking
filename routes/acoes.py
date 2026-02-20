@@ -43,8 +43,8 @@ def _build_universe(market: str | None, filter_risky: bool) -> pd.DataFrame | No
         'liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank',
         'price', 'valor_justo', 'roic', 'ev_ebit', 'pl', 'pvp', 'dy',
         'div_pat', 'cagr_lucros', 'liq_corrente',
-        # ── New Hybrid Screener V2.0 columns ──
-        'margem_liquida', 'ev_ebitda', 'payout', 'valor_mercado', 'div_liq_ebitda',
+        # ── Hybrid Screener V2.0 columns ──
+        'roe', 'roa', 'margem_liquida', 'ev_ebitda', 'payout', 'valor_mercado', 'div_liq_ebitda',
     ]
     for col in numeric_cols:
         if col in df.columns:
@@ -134,6 +134,52 @@ async def get_acoes_data(
         logger.error(f"[api/data] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# API ENDPOINT — DEBUG RANKING (returns _score + _r_* rank columns)
+# ══════════════════════════════════════════════════════════════════════════════
+@router.get("/api/debug-ranking")
+async def debug_ranking(
+    market: str = "BR",
+    min_liq: float = 500_000,
+    strategy: str = 'magic',
+    top_n: int = 50,
+):
+    """
+    Debug endpoint: returns ranking with _score and per-criterion _r_* columns
+    visible, not stripped by _clean_for_response.
+    """
+    try:
+        df_universe = _build_universe(market, filter_risky=False)
+        if df_universe is None or df_universe.empty:
+            return JSONResponse({'status': 'error', 'message': 'No data'})
+
+        total = len(df_universe)
+        df_ranked, caveats = apply_spreadsheet_mode(df_universe, strategy, min_liq, top_n=top_n)
+
+        # Keep internal columns for debugging — only replace NaN
+        df_debug = df_ranked.replace({float('nan'): None})
+
+        # Select columns to return: ticker, _score, _r_* columns, plus key metrics
+        rank_cols = sorted([c for c in df_debug.columns if c.startswith('_r_')])
+        display_cols = ['ticker', 'empresa', 'setor', 'price', 'liquidezmediadiaria',
+                        '_score'] + rank_cols
+        available_cols = [c for c in display_cols if c in df_debug.columns]
+
+        return JSONResponse({
+            'status': 'success',
+            'strategy': strategy,
+            'market': market,
+            'min_liq': min_liq,
+            'total_universe': total,
+            'ranked_count': len(df_debug),
+            'caveats': caveats,
+            'ranking': df_debug[available_cols].to_dict('records'),
+        })
+
+    except Exception as e:
+        logger.error(f"[api/debug-ranking] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ══════════════════════════════════════════════════════════════════════════════
 # API ENDPOINT 2 — MODO TEÓRICO (Absolute Formulas)

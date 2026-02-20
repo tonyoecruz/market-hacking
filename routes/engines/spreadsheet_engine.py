@@ -30,9 +30,9 @@ SPREADSHEET_PRESETS: Dict[str, Dict[str, object]] = {
 
     "baratas": {
         "criteria": [
-            ("queda_do_maximo", False),
+            ("ev_ebit", True),
             ("pl", True),
-            ("pvp", False),
+            ("pvp", True),
         ],
     },
 
@@ -47,7 +47,7 @@ SPREADSHEET_PRESETS: Dict[str, Dict[str, object]] = {
     "mix": {
         "criteria": [
             ("pl", True),
-            ("pvp", False),
+            ("pvp", True),
             ("roe", False),
             ("roa", False),
             ("cagr_lucros", False),
@@ -64,7 +64,7 @@ SPREADSHEET_PRESETS: Dict[str, Dict[str, object]] = {
     "graham": {
         "criteria": [
             ("pl", True),
-            ("pvp", False),
+            ("pvp", True),
         ],
     },
 
@@ -90,21 +90,33 @@ def _rank(values: pd.Series) -> pd.Series:
     return r + (r / 10000.0)
 
 
-def _compute(df: pd.DataFrame, criteria: List[Criterion], min_liq: float):
+def _compute(df: pd.DataFrame, criteria: List[Criterion], min_liq: float, strategy: str = ""):
     out = df.copy()
     out["_score"] = 0.0
+    rank_cols_added = []
 
     for col, lower in criteria:
         if col not in out.columns:
+            logger.warning(f"[spreadsheet][{strategy}] column '{col}' NOT in DataFrame — skipped")
             continue
         vals = _transform(out[col], lower)
         if vals.isna().all():
+            logger.warning(f"[spreadsheet][{strategy}] column '{col}' is ALL NaN after transform — skipped")
             continue
-        out["_score"] += _rank(vals)
+
+        ranks = _rank(vals)
+        rank_col_name = f"_r_{col}"
+        out[rank_col_name] = ranks
+        rank_cols_added.append(rank_col_name)
+        out["_score"] += ranks
+        logger.debug(f"[spreadsheet][{strategy}] criterion '{col}' (lower={lower}): "
+                      f"non-null={vals.notna().sum()}, rank range=[{ranks.min():.1f}, {ranks.max():.1f}]")
 
     if LIQ_COL in out.columns:
         liq = pd.to_numeric(out[LIQ_COL], errors="coerce").fillna(0)
+        penalized = (liq <= float(min_liq)).sum()
         out.loc[liq <= float(min_liq), "_score"] += LIQ_PENALTY
+        logger.debug(f"[spreadsheet][{strategy}] liquidity penalty applied to {penalized} stocks (liq <= {min_liq})")
 
     return out
 
@@ -117,15 +129,26 @@ def apply_spreadsheet_mode(
 ):
     preset = SPREADSHEET_PRESETS.get(strategy)
     if not preset:
+        logger.warning(f"[spreadsheet] unknown strategy '{strategy}'")
         return df_universe.head(top_n), ["Estratégia não encontrada"]
 
     # 🔥 PATCH CRÍTICO: FILTRAR SOMENTE B3 IGUAL PLANILHA
     if "market" in df_universe.columns:
         df_universe = df_universe[df_universe["market"] == "BR"].copy()
 
+    logger.info(f"[spreadsheet] strategy='{strategy}' | universe={len(df_universe)} stocks | min_liq={min_liq}")
+
     criteria = preset["criteria"]
-    df_scored = _compute(df_universe, criteria, min_liq)
+    df_scored = _compute(df_universe, criteria, min_liq, strategy)
 
     df_ranked = df_scored.sort_values("_score", ascending=True, kind="mergesort")
+
+    # Log top 10 for debugging
+    if not df_ranked.empty:
+        top10 = df_ranked.head(10)
+        rank_cols = [c for c in top10.columns if c.startswith("_r_")]
+        log_cols = ["ticker", "_score"] + rank_cols
+        available_log_cols = [c for c in log_cols if c in top10.columns]
+        logger.info(f"[spreadsheet][{strategy}] TOP 10:\n{top10[available_log_cols].to_string(index=False)}")
 
     return df_ranked.head(top_n), []

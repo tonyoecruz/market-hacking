@@ -80,6 +80,8 @@ def init_database():
         ("stocks", "payout", "FLOAT"),          # Payout %
         ("stocks", "valor_mercado", "FLOAT"),   # Valor de Mercado
         ("stocks", "div_liq_ebitda", "FLOAT"),  # Dívida Líq/EBIT
+        ("stocks", "roe", "FLOAT"),             # ROE %
+        ("stocks", "roa", "FLOAT"),             # ROA %
         ("investor_personas", "voice_id", "VARCHAR(100) DEFAULT 'pt-BR-AntonioNeural'"),
     ]
     with engine.connect() as conn:
@@ -132,6 +134,7 @@ class DatabaseManager:
                 'pl', 'pvp', 'roic', 'ev_ebit', 'dy', 'liquidezmediadiaria', 'div_pat',
                 'valor_justo', 'margem', 'magic_rank',
                 'cagr_lucros', 'liq_corrente',  # ✅ columns confirmed in Supabase
+                'roe', 'roa',                    # ✅ NEW: persisted from StatusInvest
                 # ── NEW: Hybrid Screener V2.0 ──────────────────────────────
                 'margem_liquida', 'ev_ebitda', 'payout', 'valor_mercado', 'div_liq_ebitda',
                 'ValorJusto', 'Margem', 'MagicRank'

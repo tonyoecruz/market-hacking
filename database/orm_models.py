@@ -34,6 +34,8 @@ class StockDB(Base):
     cagr_lucros = Column(Float)      # CAGR Lucros 5 anos (lucpidasNet5Years via StatusInvest)
     liq_corrente = Column(Float)     # Liquidez Corrente (liquidezCorrente via StatusInvest)
     # ── NEW: Hybrid Screener V2.0 columns ────────────────────────────────────
+    roe             = Column(Float)  # ROE %             (roe via StatusInvest, stored as ratio)
+    roa             = Column(Float)  # ROA %             (roa via StatusInvest, stored as ratio)
     margem_liquida  = Column(Float)  # Margem Líquida %  (margemLiquida via StatusInvest)
     ev_ebitda       = Column(Float)  # EV/EBITDA         (eV_Ebitda via StatusInvest)
     payout          = Column(Float)  # Payout %          (payout via StatusInvest)
@@ -67,6 +69,8 @@ class StockDB(Base):
             'magic_rank': self.magic_rank,
             'cagr_lucros': getattr(self, 'cagr_lucros', None),
             'liq_corrente': getattr(self, 'liq_corrente', None),
+            'roe':             getattr(self, 'roe', None),
+            'roa':             getattr(self, 'roa', None),
             'margem_liquida':  getattr(self, 'margem_liquida', None),
             'ev_ebitda':       getattr(self, 'ev_ebitda', None),
             'payout':          getattr(self, 'payout', None),
