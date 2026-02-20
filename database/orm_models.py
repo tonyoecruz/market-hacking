@@ -31,11 +31,9 @@ class StockDB(Base):
     valor_justo = Column(Float)
     margem = Column(Float)           # Margem de segurança Graham
     magic_rank = Column(Float)
-    roe_si = Column(Float)           # ROE direto do StatusInvest (ratio)
     cagr_lucros = Column(Float)      # CAGR Lucros 5 anos (lucpidasNet5Years do StatusInvest)
     liq_corrente = Column(Float)     # Liquidez Corrente (liquidezCorrente do StatusInvest)
-    # queda_maximo not yet available from any source
-    # queda_maximo = Column(Float)   # % queda do máximo 52 semanas
+    # queda_maximo not yet available from any data source
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     __table_args__ = (
@@ -62,7 +60,6 @@ class StockDB(Base):
             'valor_justo': self.valor_justo,
             'margem': self.margem,
             'magic_rank': self.magic_rank,
-            'roe_si': getattr(self, 'roe_si', None),
             'cagr_lucros': getattr(self, 'cagr_lucros', None),
             'liq_corrente': getattr(self, 'liq_corrente', None),
             'queda_maximo': None,  # not yet in DB
