@@ -91,8 +91,7 @@ def init_database():
                 conn.commit()
                 print(f"  + Added column {table}.{column}")
             except Exception:
-                # Column already exists
-                pass
+                conn.rollback()  # CRITICAL: reset connection after failed ALTER TABLE
 
     print("Database initialized successfully")
 
