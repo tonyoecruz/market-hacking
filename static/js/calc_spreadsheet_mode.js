@@ -44,7 +44,7 @@ const SPREADSHEET_STRATEGIES = [
         desc: 'ROE alto + Margem alta + baixa alavancagem',
         color: 'from-amber-600 to-yellow-700',
         borderColor: 'border-amber-500',
-        columns: ['ROE %', 'Margem %', 'Dív/Pat', 'P/L', 'DY %'],
+        columns: ['ROE %', 'Marg Líq %', 'Dív/Pat', 'P/L', 'DY %'],
     },
     {
         id: 'mix',
@@ -111,13 +111,13 @@ function spreadsheetMetricValue(stock, metricName) {
         case 'P/VP': return fmtNum(v('pvp'));
         case 'DY %': return fmtPct(v('dy'));
         case 'ROIC %': return fmtPct(v('roic'));
-        case 'ROE %': return (v('lpa') && v('vpa') && v('vpa') !== 0)
-            ? fmtPct(v('lpa') / v('vpa')) : '-';
+        case 'ROE %': return v('roe') != null ? fmtPct(v('roe')) : '-';
         case 'EV/EBIT': return fmtNum(v('ev_ebit'));
         case 'E. Yield': return (v('ev_ebit') && v('ev_ebit') > 0)
             ? fmtPct(1 / v('ev_ebit')) : '-';
         case 'V. Justo': return v('valor_justo') ? `R$ ${fmtNum(v('valor_justo'))}` : '-';
         case 'Margem %': return fmtPct(v('margem'));
+        case 'Marg Líq %': return fmtPct(v('margem_liquida'));
         case 'Dív/Pat': return fmtNum(v('div_pat'));
         case 'CAGR %': return fmtPct(v('cagr_lucros'));
         case 'Liquidez': return fmtLiq(v('liquidezmediadiaria'));

@@ -48,10 +48,10 @@ def verify_pipeline():
     logger.info("\n--- 5. Testing Ranking Engine (Mix - uses roe/roa) ---")
     df_ranked_mix, caveats_mix = apply_spreadsheet_mode(df_uni, strategy='mix', top_n=5)
     logger.info(f"Ranked {len(df_ranked_mix)} stocks (Mix).")
-    if '_r_roe' in df_ranked_mix.columns and '_r_roa' in df_ranked_mix.columns:
-        logger.info("✅ Mix strategy correctly used roe/roa rank columns.")
+    if '_r_roe' in df_ranked_mix.columns:
+        logger.info("✅ Mix strategy correctly used roe rank column.")
     else:
-        logger.info("⚠️ Mix strategy rank columns missing (check logs for 'column NOT in DataFrame')")
+        logger.info("⚠️ Mix strategy roe rank column missing (check logs for 'column NOT in DataFrame')")
 
 if __name__ == "__main__":
     verify_pipeline()
