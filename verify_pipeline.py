@@ -42,11 +42,13 @@ def verify_pipeline():
         logger.error(f"❌ roe/roa MISSING from universe!")
 
     logger.info("\n--- 4. Testing Ranking Engine (Magic) ---")
-    df_ranked, caveats = apply_spreadsheet_mode(df_uni, strategy='magic', top_n=5)
-    logger.info(f"Ranked {len(df_ranked)} stocks. Top tickers: {df_ranked['ticker'].tolist()}")
-    
-    logger.info("\n--- 5. Testing Ranking Engine (Mix - uses roe/roa) ---")
-    df_ranked_mix, caveats_mix = apply_spreadsheet_mode(df_uni, strategy='mix', top_n=5)
+    df_ranked, caveats, universe_size, audit = apply_spreadsheet_mode(df_uni, strategy='magic', top_n=5)
+    logger.info(f"Ranked {len(df_ranked)} stocks (universe={universe_size}). Top tickers: {df_ranked['ticker'].tolist()}")
+    if audit:
+        logger.info(f"Audit top1: {audit[0]}")
+
+    logger.info("\n--- 5. Testing Ranking Engine (Mix - uses roe) ---")
+    df_ranked_mix, caveats_mix, _, _ = apply_spreadsheet_mode(df_uni, strategy='mix', top_n=5)
     logger.info(f"Ranked {len(df_ranked_mix)} stocks (Mix).")
     if '_r_roe' in df_ranked_mix.columns:
         logger.info("✅ Mix strategy correctly used roe rank column.")

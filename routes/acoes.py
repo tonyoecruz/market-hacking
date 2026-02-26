@@ -114,20 +114,22 @@ async def get_acoes_data(
             return JSONResponse({
                 'status': 'success', 'total_count': 0,
                 'ranking': [], 'strategy': strategy,
-                'mode': 'planilha', 'caveats': []
+                'mode': 'planilha', 'caveats': [], 'audit': []
             })
 
-        total = len(df_universe)
-        df_ranked, caveats = apply_spreadsheet_mode(df_universe, strategy, min_liq)
-        df_ranked = _clean_for_response(df_ranked)
+        df_ranked, caveats, universe_size, audit = apply_spreadsheet_mode(
+            df_universe, strategy, min_liq
+        )
+        df_clean = _clean_for_response(df_ranked)
 
         return JSONResponse({
             'status': 'success',
-            'total_count': total,
-            'ranking': df_ranked.to_dict('records'),
+            'total_count': universe_size,
+            'ranking': df_clean.to_dict('records'),
             'strategy': strategy,
             'mode': 'planilha',
             'caveats': caveats,
+            'audit': audit or [],
         })
 
     except Exception as e:
@@ -154,16 +156,23 @@ async def debug_ranking(
         if df_universe is None or df_universe.empty:
             return JSONResponse({'status': 'error', 'message': 'No data'})
 
-        total = len(df_universe)
-        df_ranked, caveats = apply_spreadsheet_mode(df_universe, strategy, min_liq, top_n=top_n)
+        df_ranked, caveats, universe_size, audit = apply_spreadsheet_mode(
+            df_universe, strategy, min_liq, top_n=top_n
+        )
 
         # Keep internal columns for debugging — only replace NaN
         df_debug = df_ranked.replace({float('nan'): None})
 
-        # Select columns to return: ticker, _score, _r_* columns, plus key metrics
+        # Select columns: ticker, key metrics, _score, _raw_*, _norm_*, _r_*
+        raw_cols = sorted([c for c in df_debug.columns if c.startswith('_raw_')])
+        norm_cols = sorted([c for c in df_debug.columns if c.startswith('_norm_')])
         rank_cols = sorted([c for c in df_debug.columns if c.startswith('_r_')])
-        display_cols = ['ticker', 'empresa', 'setor', 'price', 'liquidezmediadiaria',
-                        '_score'] + rank_cols
+        display_cols = [
+            'ticker', 'empresa', 'setor', 'price', 'liquidezmediadiaria',
+            'ev_ebit', 'roic', 'pl', 'pvp', 'dy', 'roe', 'div_pat',
+            'cagr_lucros', 'margem_liquida',
+            '_score', '_liq_penalty',
+        ] + raw_cols + norm_cols + rank_cols
         available_cols = [c for c in display_cols if c in df_debug.columns]
 
         return JSONResponse({
@@ -171,9 +180,10 @@ async def debug_ranking(
             'strategy': strategy,
             'market': market,
             'min_liq': min_liq,
-            'total_universe': total,
+            'total_universe': universe_size,
             'ranked_count': len(df_debug),
             'caveats': caveats,
+            'audit': audit or [],
             'ranking': df_debug[available_cols].to_dict('records'),
         })
 
