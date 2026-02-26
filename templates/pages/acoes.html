@@ -143,7 +143,7 @@
                                 <p id="strategy-desc" class="text-xs text-gray-400 mt-0.5"></p>
                             </div>
                             <div class="flex items-center space-x-3">
-                                <span class="text-sm text-gray-400">Ativos: <strong id="stock-count"
+                                <span class="text-sm text-gray-400">Ativos: <strong id="stock-count-results"
                                         class="text-primary">0</strong></span>
                                 <span class="text-sm text-gray-400">Exibindo: <strong id="rank-count"
                                         class="text-white">0</strong></span>
@@ -454,10 +454,13 @@
                     document.getElementById('strategy-desc').textContent = strat.desc;
                 }
                 document.getElementById('stock-count').textContent = data.total_count;
+                const scr = document.getElementById('stock-count-results');
+                if (scr) scr.textContent = data.total_count;
                 document.getElementById('rank-count').textContent = data.ranking.length;
 
                 renderRankingTable(data.ranking, sid);
                 renderCaveats(data.caveats || []);
+                renderAudit(data.audit || []);
 
                 document.getElementById('results').classList.remove('hidden');
                 const liqMsg = minLiq > 0 ? ` | Liq ≥ R$ ${minLiq.toLocaleString('pt-BR')}` : '';
@@ -496,6 +499,68 @@
             <ul class="list-disc list-inside space-y-0.5">
                 ${caveats.map(c => `<li class="text-yellow-300/80 text-xs">${c}</li>`).join('')}
             </ul>`;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // AUDIT PANEL (Log de Validação)
+    // ══════════════════════════════════════════════════════════════════════
+    function renderAudit(audit) {
+        let el = document.getElementById('audit-panel');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'audit-panel';
+            const resultsEl = document.getElementById('results');
+            resultsEl.insertAdjacentElement('beforeend', el);
+        }
+        if (!audit || audit.length === 0) {
+            el.innerHTML = '';
+            return;
+        }
+        const fmtV = (v) => v == null ? '-' : typeof v === 'number' ? v.toFixed(4) : v;
+        const fmtLiqA = (v) => {
+            if (!v) return '-';
+            const n = Number(v);
+            if (n >= 1e9) return 'R$ ' + (n/1e9).toFixed(1) + 'B';
+            if (n >= 1e6) return 'R$ ' + (n/1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return 'R$ ' + (n/1e3).toFixed(0) + 'K';
+            return 'R$ ' + n.toFixed(0);
+        };
+        let rows = audit.map(a => {
+            const crits = a.criterios.map(c =>
+                `<div class="flex gap-3 text-xs">
+                    <span class="text-gray-500 w-24">${c.col}</span>
+                    <span class="w-12">${c.direcao}</span>
+                    <span class="w-14 text-right">bruto: ${fmtV(c.bruto)}</span>
+                    <span class="w-14 text-right">norm: ${fmtV(c.normalizado)}</span>
+                    <span class="w-16 text-right text-cyan-400">rank: ${fmtV(c.rank)}</span>
+                    <span class="w-8 text-right text-gray-500">x${c.peso}</span>
+                    <span class="w-16 text-right text-yellow-400">= ${fmtV(c.contribuicao)}</span>
+                </div>`
+            ).join('');
+            const penaltyNote = a.liq_penalty > 0
+                ? `<span class="text-red-400 text-xs ml-2">[+${a.liq_penalty} penalidade liquidez]</span>` : '';
+            return `<div class="border-b border-gray-700/50 py-2">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-primary font-bold">#${a.pos}</span>
+                    <span class="text-white font-semibold">${a.ticker}</span>
+                    <span class="text-gray-500 text-xs">${a.setor || ''}</span>
+                    <span class="text-gray-500 text-xs">Liq: ${fmtLiqA(a.liquidez)}</span>
+                    <span class="ml-auto text-green-400 font-mono font-bold">SCORE: ${fmtV(a.score_final)}</span>
+                    ${penaltyNote}
+                </div>
+                <div class="ml-6 space-y-0.5">${crits}</div>
+                <div class="ml-6 text-xs text-gray-400 mt-1">Soma ranks: ${fmtV(a.soma_ranks)} + penalty: ${a.liq_penalty}</div>
+            </div>`;
+        }).join('');
+
+        el.className = 'mt-4 bg-dark-800 border border-cyan-700/30 rounded-lg px-4 py-3';
+        el.innerHTML = `
+            <details>
+                <summary class="text-cyan-400 text-sm font-semibold cursor-pointer select-none">
+                    Log de Auditoria — Top ${audit.length} (clique para expandir)
+                </summary>
+                <div class="mt-3 space-y-1 font-mono text-xs">${rows}</div>
+            </details>`;
     }
 
     // ══════════════════════════════════════════════════════════════════════

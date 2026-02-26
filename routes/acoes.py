@@ -192,6 +192,49 @@ async def debug_ranking(
         raise HTTPException(status_code=500, detail=str(e))
 
 # ══════════════════════════════════════════════════════════════════════════════
+# API ENDPOINT — DIAGNÓSTICO: checar dados de tickers específicos
+# ══════════════════════════════════════════════════════════════════════════════
+@router.get("/api/diagnostico")
+async def diagnostico(
+    tickers: str = "PRIO3,WEGE3,MWET4,RIAA3,WIZC3",
+    market: str = "BR",
+):
+    """
+    Diagnostic endpoint: returns raw DB values for specific tickers.
+    Usage: /acoes/api/diagnostico?tickers=PRIO3,WEGE3,MWET4
+    """
+    try:
+        ticker_list = [t.strip().upper() for t in tickers.split(",")]
+        df_universe = _build_universe(market, filter_risky=False)
+        if df_universe is None or df_universe.empty:
+            return JSONResponse({'status': 'error', 'message': 'No data'})
+
+        # Filter to requested tickers
+        df_match = df_universe[df_universe['ticker'].isin(ticker_list)]
+        df_missing = [t for t in ticker_list if t not in df_match['ticker'].values]
+
+        cols = [
+            'ticker', 'empresa', 'setor', 'price',
+            'ev_ebit', 'roic', 'pl', 'pvp', 'dy',
+            'roe', 'roa', 'div_pat', 'cagr_lucros', 'margem_liquida',
+            'liquidezmediadiaria', 'magic_rank',
+        ]
+        available = [c for c in cols if c in df_match.columns]
+        result = df_match[available].replace({float('nan'): None}).to_dict('records')
+
+        return JSONResponse({
+            'status': 'success',
+            'found': len(result),
+            'missing_tickers': df_missing,
+            'total_universe': len(df_universe),
+            'data': result,
+        })
+    except Exception as e:
+        logger.error(f"[diagnostico] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # API ENDPOINT 2 — MODO TEÓRICO (Absolute Formulas)
 # ══════════════════════════════════════════════════════════════════════════════
 @router.get("/api/data-teorico")
