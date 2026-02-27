@@ -401,6 +401,18 @@ async def edit_wallet_asset(
     return {"success": True, "message": message}
 
 
+@router.delete("/api/wallet/{wallet_id}")
+async def delete_wallet_api(
+    wallet_id: int,
+    user: dict = Depends(get_current_user_from_cookie)
+):
+    """Delete a wallet and all its assets"""
+    success, message = WalletQueries.delete_wallet(user["id"], wallet_id)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {"success": True, "message": message}
+
+
 @router.delete("/api/wallet/remove/{ticker}")
 async def remove_from_wallet(
     ticker: str,

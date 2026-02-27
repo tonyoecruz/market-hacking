@@ -179,6 +179,27 @@ class WalletQueries:
         except Exception as e:
             return False, f"Erro ao criar carteira: {str(e)}"
 
+    @staticmethod
+    def delete_wallet(user_id: int, wallet_id: int) -> tuple[bool, str]:
+        """Delete a wallet and all its assets"""
+        try:
+            supabase = get_supabase_client()
+
+            # Verify wallet belongs to user
+            wallet = supabase.table('wallets').select('id').eq('id', wallet_id).eq('user_id', user_id).execute()
+            if not wallet.data:
+                return False, "Carteira nao encontrada"
+
+            # Delete all assets in this wallet first
+            supabase.table('assets').delete().eq('wallet_id', wallet_id).execute()
+
+            # Delete the wallet itself
+            supabase.table('wallets').delete().eq('id', wallet_id).eq('user_id', user_id).execute()
+
+            return True, "Carteira excluida com sucesso"
+        except Exception as e:
+            return False, f"Erro ao excluir carteira: {str(e)}"
+
 
 class AssetQueries:
     """Asset-related database operations"""

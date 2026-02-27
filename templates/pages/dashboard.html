@@ -111,19 +111,17 @@
         overflow-y: auto;
     }
 
+    .wallet-dropdown .wallet-item {
+        transition: background 0.15s;
+    }
+
     .wallet-dropdown label {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 8px 14px;
         cursor: pointer;
-        transition: background 0.15s;
         font-size: 0.85rem;
         color: #e2e8f0;
-    }
-
-    .wallet-dropdown label:hover {
-        background: rgba(255, 255, 255, 0.04);
     }
 
     .wallet-dropdown input[type="checkbox"] {
@@ -515,7 +513,19 @@
 
         let html = '';
         for (const w of wallets) {
-            html += `<label><input type="checkbox" class="wallet-checkbox" value="${w.id}" onchange="onWalletFilterChange()"> ${w.name}</label>`;
+            html += `<div class="wallet-item flex items-center justify-between px-4 py-1.5 hover:bg-dark-700/50">
+                <label class="flex items-center gap-2 cursor-pointer flex-1">
+                    <input type="checkbox" class="wallet-checkbox" value="${w.id}" onchange="onWalletFilterChange()">
+                    <span class="text-sm text-gray-300">${w.name}</span>
+                </label>
+                <button onclick="deleteWallet(${w.id}, '${w.name.replace(/'/g, "\\'")}')"
+                    class="text-gray-600 hover:text-red-400 transition-colors p-1 ml-2" title="Excluir carteira">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </button>
+            </div>`;
         }
         container.innerHTML = html;
     }
@@ -531,6 +541,23 @@
             label.textContent = checked.length + ' Carteiras';
         }
         loadAnalytics();
+    }
+
+    async function deleteWallet(walletId, walletName) {
+        if (!confirm(`Excluir a carteira "${walletName}" e todos os seus ativos?`)) return;
+
+        try {
+            const res = await fetch(`/dashboard/api/wallet/${walletId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                walletsLoaded = false;
+                loadAnalytics();
+            } else {
+                alert(data.detail || 'Erro ao excluir carteira');
+            }
+        } catch (e) {
+            alert('Erro ao excluir carteira');
+        }
     }
 
     // ===================== PERIOD FILTER =====================
