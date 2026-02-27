@@ -29,7 +29,21 @@
                     <p class="text-gray-400 text-sm">Filtre e compare CDBs, LCIs, LCAs e mais por estratégia de
                         investimento.</p>
                 </div>
-                <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="flex items-center gap-4 flex-shrink-0">
+                    <!-- Risk Toggle -->
+                    <label class="flex items-center gap-2 cursor-pointer select-none"
+                        title="Mostrar produtos de instituições de alto risco">
+                        <span class="text-xs text-gray-400">⚠️ Alto Risco</span>
+                        <div class="relative">
+                            <input type="checkbox" id="risk-toggle" class="sr-only peer" onchange="onRiskToggle()">
+                            <div
+                                class="w-9 h-5 bg-gray-600 rounded-full peer peer-checked:bg-red-500/60 transition-colors">
+                            </div>
+                            <div
+                                class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4">
+                            </div>
+                        </div>
+                    </label>
                     <span class="text-sm text-gray-400">Produtos: <strong id="stock-count"
                             class="text-primary text-lg">0</strong></span>
                 </div>
@@ -41,6 +55,17 @@
                 <div class="w-56 flex-shrink-0">
                     <p class="text-xs text-gray-500 uppercase font-semibold mb-3 px-1">💵 Estratégias RF</p>
                     <div id="strategy-list" class="flex flex-col gap-2"></div>
+
+                    <!-- Risk Shield Indicator -->
+                    <div id="risk-shield" class="mt-4 px-3 py-2 bg-green-900/20 border border-green-600/30 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-400 text-sm">🛡️</span>
+                            <span class="text-green-400 text-xs font-semibold">Proteção ativa</span>
+                        </div>
+                        <p class="text-green-300/70 text-xs mt-1 leading-tight">Emissores liquidados e de alto risco
+                            estão ocultos.</p>
+                        <p id="risk-filtered-count" class="text-green-300/70 text-xs mt-0.5 hidden"></p>
+                    </div>
                 </div>
 
                 <!-- RIGHT: Loading + Ranking Table -->
@@ -121,9 +146,36 @@
 
 <script>
     let currentStrategy = null;
+    let showHighRisk = false;
     const STRATEGIES = RF_STRATEGIES;
 
     window.addEventListener('DOMContentLoaded', () => { renderStrategyCards(); });
+
+    function onRiskToggle() {
+        const toggle = document.getElementById('risk-toggle');
+        showHighRisk = toggle.checked;
+
+        // Update shield indicator
+        const shield = document.getElementById('risk-shield');
+        if (showHighRisk) {
+            shield.className = 'mt-4 px-3 py-2 bg-red-900/20 border border-red-600/30 rounded-lg';
+            shield.querySelector('span:first-child').textContent = '⚠️';
+            shield.querySelector('.font-semibold').textContent = 'Proteção desativada';
+            shield.querySelector('.font-semibold').className = 'text-red-400 text-xs font-semibold';
+            shield.querySelector('p').textContent = 'Emissores de alto risco estão visíveis.';
+            shield.querySelector('p').className = 'text-red-300/70 text-xs mt-1 leading-tight';
+        } else {
+            shield.className = 'mt-4 px-3 py-2 bg-green-900/20 border border-green-600/30 rounded-lg';
+            shield.querySelector('span:first-child').textContent = '🛡️';
+            shield.querySelector('.font-semibold').textContent = 'Proteção ativa';
+            shield.querySelector('.font-semibold').className = 'text-green-400 text-xs font-semibold';
+            shield.querySelector('p').textContent = 'Emissores liquidados e de alto risco estão ocultos.';
+            shield.querySelector('p').className = 'text-green-300/70 text-xs mt-1 leading-tight';
+        }
+
+        // Reload current strategy
+        if (currentStrategy) loadData(currentStrategy);
+    }
 
     function renderStrategyCards() {
         const list = document.getElementById('strategy-list');
@@ -168,7 +220,7 @@
         document.getElementById('refresh-btn').disabled = true;
 
         try {
-            const res = await fetch(`/renda-fixa/api/data-estrategia?strategy=${sid}`);
+            const res = await fetch(`/renda-fixa/api/data-estrategia?strategy=${sid}&show_high_risk=${showHighRisk}`);
             const data = await res.json();
             if (data.status === 'success') {
                 if (strat) {
@@ -180,6 +232,15 @@
                 document.getElementById('rank-count').textContent = data.ranking.length;
                 renderRankingTable(data.ranking, sid);
                 renderCaveats(data.caveats || []);
+
+                // Update risk filtered count
+                const rfCount = document.getElementById('risk-filtered-count');
+                if (data.risk_filtered > 0) {
+                    rfCount.textContent = `${data.risk_filtered} produto(s) filtrado(s)`;
+                    rfCount.classList.remove('hidden');
+                } else {
+                    rfCount.classList.add('hidden');
+                }
                 document.getElementById('results').classList.remove('hidden');
                 showToast(`${strat?.name || sid}: ${data.ranking.length} produto(s)`, 'success');
             } else {
@@ -227,7 +288,10 @@
                     <span class="font-bold ${typeColor} text-sm">${item.type || '-'}</span>
                     <span class="text-xs text-gray-500 ml-1">${item.rate_type || ''}</span>
                 </td>
-                <td class="px-3 py-3 text-gray-300 text-sm">${item.issuer || '-'}</td>
+                <td class="px-3 py-3 text-gray-300 text-sm">
+                    ${item.issuer || '-'}
+                    ${item._risk_tier === 'alto_risco' ? '<span class="ml-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">⚠️ risco</span>' : ''}
+                </td>
                 <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[0])}">${rfMetricValue(item, cols[0])}</td>
                 <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[1])}">${rfMetricValue(item, cols[1])}</td>
                 <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[2])}">${rfMetricValue(item, cols[2])}</td>

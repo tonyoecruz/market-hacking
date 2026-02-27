@@ -4,12 +4,17 @@ Renda Fixa Router — Strategy Screener
 Two modes:
   GET /renda-fixa/api/top-opportunities  → Legacy scored list
   GET /renda-fixa/api/data-estrategia    → Strategy-based engine (4 models)
+
+Risk filtering:
+  - Liquidated issuers are ALWAYS removed (BCB public data + local blacklist)
+  - High-risk issuers are hidden by default (toggle: show_high_risk=true)
 """
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from routes.auth import get_optional_user
 from modules.fixed_income import FixedIncomeManager
+from modules.risk_checker import filter_opportunities
 from routes.engines.rendafixa_engine import apply_rendafixa_strategy
 import logging
 
@@ -39,37 +44,56 @@ async def renda_fixa_page(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# API ENDPOINT — STRATEGY ENGINE
+# API ENDPOINT — STRATEGY ENGINE (with risk filtering)
 # ══════════════════════════════════════════════════════════════════════════════
 @router.get("/api/data-estrategia")
 async def get_rendafixa_data_estrategia(
     strategy: str = 'reserva_emergencia',
+    show_high_risk: bool = False,
 ):
     """
     Strategy-based Fixed Income screener.
     Available strategies: reserva_emergencia, ganho_real, trava_preco, duelo_tributario
+
+    Risk filtering:
+      - Liquidated institutions are ALWAYS filtered out (BCB + local blacklist)
+      - High-risk institutions are hidden by default (toggle: show_high_risk=true)
     """
     try:
-        # Get base data from FixedIncomeManager
+        # 1. Get base data
         all_opportunities = FixedIncomeManager.get_top_opportunities()
 
         if not all_opportunities:
             return JSONResponse({
                 'status': 'success', 'total_count': 0,
                 'ranking': [], 'strategy': strategy,
-                'caveats': [], 'score_col': {}
+                'caveats': [], 'score_col': {},
+                'risk_filtered': 0,
             })
 
-        total = len(all_opportunities)
-        ranked, score_col, caveats = apply_rendafixa_strategy(all_opportunities, strategy)
+        # 2. Risk filter BEFORE strategy (remove liquidated always, high-risk by toggle)
+        total_before = len(all_opportunities)
+        safe_opportunities = filter_opportunities(all_opportunities, show_high_risk=show_high_risk)
+        risk_filtered = total_before - len(safe_opportunities)
+
+        # 3. Apply strategy engine on safe list
+        ranked, score_col, caveats = apply_rendafixa_strategy(safe_opportunities, strategy)
+
+        # Add risk caveats
+        if risk_filtered > 0 and not show_high_risk:
+            caveats.append(
+                f"{risk_filtered} produto(s) de alto risco ocultado(s). "
+                "Ative 'Mostrar alto risco' para visualizar."
+            )
 
         return JSONResponse({
             'status': 'success',
-            'total_count': total,
+            'total_count': total_before,
             'ranking': ranked,
             'strategy': strategy,
             'caveats': caveats,
             'score_col': score_col,
+            'risk_filtered': risk_filtered,
         })
 
     except Exception as e:

@@ -20,18 +20,23 @@ class FixedIncomeManager:
         Here we analyze based on current Selic (approx 10.75% -> 11.25% scenario) and realistic market rates.
         """
         
+        # ⚠️ BLACKLIST — NUNCA incluir estas instituições:
+        # - Banco Master → Em processo de LIQUIDAÇÃO JUDICIAL
+        # - Caruana Financeira → Alto risco, problemas regulatórios
+        # Sempre verificar a situação regulatória do emissor antes de incluir.
+        
         # Simulated "Live" Market Data
         # Base CDI assumption: ~11.15% (just an example for calculation if needed)
         
         opportunities = [
             {
                 "type": "CDB",
-                "issuer": "Banco Master",
+                "issuer": "BTG Pactual",
                 "rate_type": "Pos-fixado",
-                "rate_val": 130.0, # % CDI
+                "rate_val": 118.0, # % CDI
                 "maturity": "2027-05-15",
                 "min_investment": 1000.00,
-                "risk_score": 3, # 1-5 (1=safest, 5=riskiest)
+                "risk_score": 2, # 1-5 (1=safest, 5=riskiest)
                 "safety_rating": "FGC Garantido",
                 "liquidity": "No Vencimento"
             },
@@ -91,15 +96,15 @@ class FixedIncomeManager:
                 "liquidity": "No Vencimento"
             },
             {
-                "type": "LC",
-                "issuer": "Caruana",
-                "rate_type": "Pos-fixado",
-                "rate_val": 122.0,
+                "type": "LCI",
+                "issuer": "Bradesco",
+                "rate_type": "Isento",
+                "rate_val": 90.0,
                 "maturity": "2026-12-10",
-                "min_investment": 5000.00,
-                "risk_score": 4,
+                "min_investment": 500.00,
+                "risk_score": 1,
                 "safety_rating": "FGC Garantido",
-                "liquidity": "No Vencimento"
+                "liquidity": "90 dias"
             },
              {
                 "type": "CDB",
