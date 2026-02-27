@@ -205,13 +205,33 @@
     }
 
     // ═══════════ EDITABLE VALUE HANDLER ═══════════
+    function onValueKeydown(e, idx, inputEl) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            onValueEdit(idx, inputEl);
+            inputEl.blur();
+        }
+    }
+
     function onValueEdit(idx, inputEl) {
-        const raw = inputEl.value.replace(/[^\d,\.]/g, '').replace(',', '.');
+        // Parse: accept "300000", "300.000", "R$ 300.000,00", etc.
+        const raw = inputEl.value
+            .replace(/[R$\s]/g, '')      // remove R$ and spaces
+            .replace(/\./g, '')          // remove thousand separators
+            .replace(',', '.');           // decimal comma → dot
         const newValue = parseFloat(raw);
-        if (isNaN(newValue) || newValue <= 0) return;
+        if (isNaN(newValue) || newValue <= 0) {
+            // Restore original formatted value
+            const item = window.__flippingData[idx];
+            inputEl.value = fmtMoney(item['Valor Total']);
+            return;
+        }
 
         const item = window.__flippingData[idx];
         const calc = recalcProfit(item, newValue);
+
+        // Format the input back to R$
+        inputEl.value = fmtMoney(newValue);
 
         // Update cells
         const row = inputEl.closest('tr');
@@ -279,10 +299,11 @@
         <td class="px-4 py-3 text-gray-300 text-xs">${item['Area (m2)']} m\u00B2</td>
         <td class="px-4 py-3">
             <input type="text" value="${fmtMoney(item['Valor Total'])}"
-                class="bg-dark-900 border border-gray-600 rounded px-2 py-1 text-white text-xs w-32 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                class="bg-dark-900 border border-gray-600 rounded px-2 py-1 text-white text-xs w-36 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                 onfocus="this.select()"
-                onchange="onValueEdit(${globalIdx}, this)"
-                title="Edite para simular negociacao">
+                onkeydown="onValueKeydown(event, ${globalIdx}, this)"
+                onblur="onValueEdit(${globalIdx}, this)"
+                title="Digite o valor e tecle Enter">
         </td>
         <td class="px-4 py-3 text-gray-400 text-xs cell-custo-total">${fmtMoney(calc.custoTotal)}</td>
         <td class="px-4 py-3 text-gray-300 text-xs cell-venda-est">${fmtMoney(calc.vendaEst)}</td>

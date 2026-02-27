@@ -55,17 +55,6 @@
                 <div class="w-56 flex-shrink-0">
                     <p class="text-xs text-gray-500 uppercase font-semibold mb-3 px-1">💵 Estratégias RF</p>
                     <div id="strategy-list" class="flex flex-col gap-2"></div>
-
-                    <!-- Risk Shield Indicator -->
-                    <div id="risk-shield" class="mt-4 px-3 py-2 bg-green-900/20 border border-green-600/30 rounded-lg">
-                        <div class="flex items-center gap-2">
-                            <span class="text-green-400 text-sm">🛡️</span>
-                            <span class="text-green-400 text-xs font-semibold">Proteção ativa</span>
-                        </div>
-                        <p class="text-green-300/70 text-xs mt-1 leading-tight">Emissores liquidados e de alto risco
-                            estão ocultos.</p>
-                        <p id="risk-filtered-count" class="text-green-300/70 text-xs mt-0.5 hidden"></p>
-                    </div>
                 </div>
 
                 <!-- RIGHT: Loading + Ranking Table -->
@@ -154,24 +143,6 @@
     function onRiskToggle() {
         const toggle = document.getElementById('risk-toggle');
         showHighRisk = toggle.checked;
-
-        // Update shield indicator
-        const shield = document.getElementById('risk-shield');
-        if (showHighRisk) {
-            shield.className = 'mt-4 px-3 py-2 bg-red-900/20 border border-red-600/30 rounded-lg';
-            shield.querySelector('span:first-child').textContent = '⚠️';
-            shield.querySelector('.font-semibold').textContent = 'Proteção desativada';
-            shield.querySelector('.font-semibold').className = 'text-red-400 text-xs font-semibold';
-            shield.querySelector('p').textContent = 'Emissores de alto risco estão visíveis.';
-            shield.querySelector('p').className = 'text-red-300/70 text-xs mt-1 leading-tight';
-        } else {
-            shield.className = 'mt-4 px-3 py-2 bg-green-900/20 border border-green-600/30 rounded-lg';
-            shield.querySelector('span:first-child').textContent = '🛡️';
-            shield.querySelector('.font-semibold').textContent = 'Proteção ativa';
-            shield.querySelector('.font-semibold').className = 'text-green-400 text-xs font-semibold';
-            shield.querySelector('p').textContent = 'Emissores liquidados e de alto risco estão ocultos.';
-            shield.querySelector('p').className = 'text-green-300/70 text-xs mt-1 leading-tight';
-        }
 
         // Reload current strategy
         if (currentStrategy) loadData(currentStrategy);
