@@ -8,8 +8,8 @@
 
     <div class="flex-1 flex flex-col overflow-hidden">
         <header class="bg-dark-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-white">💰 Renda Fixa</h1>
-            <button onclick="loadData()" id="refresh-btn"
+            <h1 class="text-2xl font-bold text-white">💵 Renda Fixa</h1>
+            <button onclick="reloadCurrentStrategy()" id="refresh-btn"
                 class="px-4 py-2 bg-primary/20 text-primary font-semibold rounded-lg hover:bg-primary/30 transition-all flex items-center space-x-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -21,132 +21,77 @@
         </header>
 
         <main class="flex-1 overflow-y-auto p-6">
-            <!-- Info Banner -->
-            <div class="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-6">
-                <p class="text-primary text-sm">
-                    💡 <strong>Oportunidades selecionadas com base em taxa, risco e liquidez.</strong>
-                    Clique em um produto para analisar e adicionar à sua carteira.
-                </p>
-            </div>
-
-            <!-- Market Rates Row -->
-            <div class="grid grid-cols-3 gap-4 mb-6">
-                <div class="bg-dark-800 rounded-lg p-4 border border-gray-700">
-                    <p class="text-xs text-gray-400 mb-1">🏦 Selic / CDI</p>
-                    <p class="text-2xl font-bold text-white" id="rate-cdi">13.75%</p>
-                    <p class="text-xs text-gray-500">a.a.</p>
+            <!-- Mode Banner -->
+            <div
+                class="bg-dark-800 border border-gray-700 rounded-xl p-4 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <p class="text-white font-bold text-base">💵 Estratégias de Renda Fixa — Análise por Perfil</p>
+                    <p class="text-gray-400 text-sm">Filtre e compare CDBs, LCIs, LCAs e mais por estratégia de
+                        investimento.</p>
                 </div>
-                <div class="bg-dark-800 rounded-lg p-4 border border-gray-700">
-                    <p class="text-xs text-gray-400 mb-1">📈 IPCA (12m)</p>
-                    <p class="text-2xl font-bold text-white" id="rate-ipca">4.83%</p>
-                    <p class="text-xs text-gray-500">acumulado</p>
-                </div>
-                <div class="bg-dark-800 rounded-lg p-4 border border-gray-700">
-                    <p class="text-xs text-gray-400 mb-1">⚡ Melhor CDB</p>
-                    <p class="text-2xl font-bold text-primary" id="rate-best">130% CDI</p>
-                    <p class="text-xs text-gray-500">com FGC</p>
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <span class="text-sm text-gray-400">Produtos: <strong id="stock-count"
+                            class="text-primary text-lg">0</strong></span>
                 </div>
             </div>
 
-            <!-- Loading -->
-            <div id="loading" class="hidden text-center py-12">
-                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p class="text-gray-400 mt-4">Carregando melhores oportunidades...</p>
-            </div>
-
-            <!-- Results Tabs -->
-            <div id="results" class="hidden">
-                <div class="flex space-x-4 mb-6">
-                    <button onclick="showTab('top10')" id="tab-top10"
-                        class="px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary">
-                        ⭐ TOP 10 Oportunidades
-                    </button>
-                    <button onclick="showTab('cdipre')" id="tab-cdipre"
-                        class="px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600">
-                        📊 CDI vs. Pré-Fixado
-                    </button>
-                    <button onclick="showTab('isento')" id="tab-isento"
-                        class="px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600">
-                        🏡 Isentos (LCI/LCA)
-                    </button>
+            <!-- Strategy Selector + Ranking Area -->
+            <div id="results-area" class="flex gap-5">
+                <!-- LEFT: Strategy Cards -->
+                <div class="w-56 flex-shrink-0">
+                    <p class="text-xs text-gray-500 uppercase font-semibold mb-3 px-1">💵 Estratégias RF</p>
+                    <div id="strategy-list" class="flex flex-col gap-2"></div>
                 </div>
 
-                <!-- TOP 10 Table -->
-                <div id="content-top10" class="bg-dark-800 rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-dark-700">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Tipo
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                        Emissor</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Rentabilidade</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Aporte Mín.</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">
-                                        Liquidez</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">
-                                        Risco</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">
-                                        Score</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="top10-tbody" class="divide-y divide-gray-700"></tbody>
-                        </table>
+                <!-- RIGHT: Loading + Ranking Table -->
+                <div class="flex-1 min-w-0">
+                    <div id="loading" class="hidden text-center py-20">
+                        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                        <p class="text-gray-400 mt-4">Calculando ranking...</p>
                     </div>
-                </div>
 
-                <!-- CDI vs Pre Table -->
-                <div id="content-cdipre" class="hidden bg-dark-800 rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-dark-700">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Tipo
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                        Emissor</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Taxa
-                                        CDI</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Taxa
-                                        Pré</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Vencimento</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="cdipre-tbody" class="divide-y divide-gray-700"></tbody>
-                        </table>
+                    <div id="empty-state" class="text-center py-20 text-gray-500">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <p class="text-lg">Selecione uma estratégia ao lado para filtrar oportunidades</p>
                     </div>
-                </div>
 
-                <!-- LCI/LCA Isentos Table -->
-                <div id="content-isento" class="hidden bg-dark-800 rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-dark-700">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Tipo
-                                    </th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                        Emissor</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">% CDI
-                                        (isento)</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Equiv. Bruto</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                        Vencimento</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">Ações
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="isento-tbody" class="divide-y divide-gray-700"></tbody>
-                        </table>
+                    <div id="results" class="hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 id="strategy-title" class="text-xl font-bold text-white"></h2>
+                                <p id="strategy-desc" class="text-xs text-gray-400 mt-0.5"></p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm text-gray-400">Total: <strong id="stock-count-results"
+                                        class="text-primary">0</strong></span>
+                                <span class="text-sm text-gray-400">Exibindo: <strong id="rank-count"
+                                        class="text-white">0</strong></span>
+                            </div>
+                        </div>
+
+                        <div class="bg-dark-800 rounded-xl overflow-hidden border border-gray-700/50">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-dark-700 text-gray-400 uppercase text-xs">
+                                        <tr>
+                                            <th class="px-3 py-3 text-center w-10">#</th>
+                                            <th class="px-3 py-3 text-left">Produto</th>
+                                            <th class="px-3 py-3 text-left">Emissor</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric1">-</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric2">-</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric3">-</th>
+                                            <th class="px-3 py-3 text-right" id="col-metric4">-</th>
+                                            <th class="px-3 py-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ranking-tbody" class="divide-y divide-gray-700/50"></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -154,16 +99,12 @@
     </div>
 </div>
 
-<!-- Analysis / Add to Portfolio Modal -->
+<!-- Analysis Modal -->
 <div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
     <div class="bg-dark-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
         <div class="p-6">
-            <!-- Header -->
             <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h3 class="text-2xl font-bold text-white" id="modal-ticker"></h3>
-                    <p class="text-gray-400 text-sm" id="modal-emissor"></p>
-                </div>
+                <h3 class="text-2xl font-bold text-white" id="modal-title"></h3>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-white p-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
@@ -171,412 +112,223 @@
                     </svg>
                 </button>
             </div>
-
-            <!-- Product Info Card -->
-            <div id="product-card" class="mb-6 rounded-xl p-5 border-2 border-gray-600 bg-dark-700">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                        <p class="text-xs text-gray-400">Rentabilidade</p>
-                        <p class="text-lg font-bold text-primary" id="modal-rate">-</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400">Tipo de Taxa</p>
-                        <p class="text-lg font-bold text-white" id="modal-rate-type">-</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400">Vencimento</p>
-                        <p class="text-lg font-bold text-white" id="modal-maturity">-</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400">Liquidez</p>
-                        <p class="text-lg font-bold text-white" id="modal-liquidity">-</p>
-                    </div>
-                </div>
-                <div class="mt-3 pt-3 border-t border-gray-600 flex items-center gap-4">
-                    <span class="text-xs text-gray-400">Garantia:</span>
-                    <span
-                        class="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded font-semibold"
-                        id="modal-guarantee">FGC Garantido</span>
-                    <span class="text-xs text-gray-400 ml-2">Score:</span>
-                    <span class="text-primary font-bold text-sm" id="modal-score">-</span>
-                </div>
-            </div>
-
-            <!-- Data Grid (context details) -->
-            <div id="modal-data-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6"></div>
-
-            <!-- AI Analysis -->
-            <div class="bg-dark-700 rounded-xl p-5">
-                <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-lg font-bold text-white flex items-center space-x-2">
-                        <span>🤖</span>
-                        <span>Análise IA</span>
-                    </h4>
-                    <button onclick="speakAnalysis()" id="tts-btn"
-                        class="flex items-center space-x-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition text-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z">
-                            </path>
-                        </svg>
-                        <span>Ouvir</span>
-                    </button>
-                </div>
-                <div id="modal-analysis" class="text-gray-300 whitespace-pre-line leading-relaxed">
-                    <div class="text-center py-8">
-                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        <p class="text-gray-400 mt-2">Gerando análise IA...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Add to Portfolio Section -->
-            <div id="portfolio-section" class="bg-dark-700 rounded-xl p-5 mt-4">
-                <h4 class="text-lg font-bold text-white flex items-center space-x-2 mb-4">
-                    <span>💼</span>
-                    <span>Adicionar à Carteira</span>
-                </h4>
-
-                <!-- Yield config fields (specific to Renda Fixa) -->
-                <div class="bg-dark-600/50 rounded-lg p-4 mb-4 border border-gray-600">
-                    <p class="text-xs text-gray-400 uppercase font-semibold mb-3">Rentabilidade do Investimento</p>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1">% do CDI</label>
-                            <input type="number" id="add-pct-cdi" placeholder="100" min="0" step="0.1" value=""
-                                style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
-                                class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                            <p class="text-[10px] text-gray-500 mt-1">Deixe vazio = 100% CDI padrão</p>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-1">Taxa Pré-Fixada (% a.a.)</label>
-                            <input type="number" id="add-pct-pre" placeholder="0" min="0" step="0.1" value="0"
-                                style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
-                                class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                            <p class="text-[10px] text-gray-500 mt-1">Para títulos pré-fixados</p>
-                        </div>
-                    </div>
-                    <p class="text-[10px] text-yellow-400 mt-2">💡 Exemplo: CDI=130 e Pré=0 → 130% do CDI. CDI=0 e
-                        Pré=12.5 → Prefixado a 12.5% a.a.</p>
-                </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <!-- Wallet: combo input (select existing or type new name) -->
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">Carteira</label>
-                        <input type="text" id="wallet-input" list="wallet-options" placeholder="Principal"
-                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
-                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                        <datalist id="wallet-options"></datalist>
-                    </div>
-                    <!-- Quantity -->
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">Qtd. Títulos</label>
-                        <input type="number" id="wallet-qty" value="1" min="0.01" step="1"
-                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
-                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                    </div>
-                    <!-- Price (Invested Value) -->
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">Valor Unitário (R$)</label>
-                        <input type="number" id="wallet-price" value="0" min="0.01" step="0.01"
-                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
-                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                    </div>
-                    <!-- Date -->
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">Data Compra</label>
-                        <input type="date" id="wallet-date"
-                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
-                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                    </div>
-                    <!-- Add button -->
-                    <div class="flex items-end">
-                        <button onclick="addToPortfolio()" id="add-portfolio-btn"
-                            class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition text-sm flex items-center justify-center space-x-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v16m8-8H4"></path>
-                            </svg>
-                            <span>Adicionar</span>
-                        </button>
-                    </div>
-                </div>
-                <p id="portfolio-msg" class="text-xs text-gray-400 mt-2 hidden"></p>
-            </div>
+            <div id="modal-content" class="text-gray-300"></div>
         </div>
     </div>
 </div>
 
+<script src="/static/js/calc_rendafixa.js"></script>
+
 <script>
-    let currentTab = 'top10';
-    let allOppsData = [];
-    let currentAnalysisText = '';
-    let currentAudio = null;
-    let currentModalTicker = '';
-    let currentModalPrice = 0; // unit value / min_investment for pre-fill
-    let currentOpp = null;
-    let walletMap = {};
+    let currentStrategy = null;
+    const STRATEGIES = RF_STRATEGIES;
 
-    // Auto-load data on page load
-    window.addEventListener('DOMContentLoaded', () => {
-        loadData();
-    });
+    window.addEventListener('DOMContentLoaded', () => { renderStrategyCards(); });
 
-    async function loadData() {
+    function renderStrategyCards() {
+        const list = document.getElementById('strategy-list');
+        list.innerHTML = STRATEGIES.map(s => `
+            <button id="card-${s.id}" onclick="selectStrategy('${s.id}')"
+                class="strategy-card w-full text-left px-4 py-3 rounded-xl border border-gray-700 bg-dark-800 hover:border-gray-500 transition-all group">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xl">${s.icon}</span>
+                    <span class="font-bold text-white text-sm group-hover:text-primary transition-colors">${s.name}</span>
+                    <svg class="w-4 h-4 ml-auto text-gray-600 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+                <p class="text-xs text-gray-500 mt-1 leading-tight">${s.desc}</p>
+            </button>
+        `).join('');
+    }
+
+    function selectStrategy(strategyId) {
+        currentStrategy = strategyId;
+        const strat = STRATEGIES.find(s => s.id === strategyId);
+        document.querySelectorAll('.strategy-card').forEach(c => c.classList.remove('border-primary', 'bg-primary/10'));
+        const activeCard = document.getElementById(`card-${strategyId}`);
+        if (activeCard) activeCard.classList.add('border-primary', 'bg-primary/10');
+        if (strat && strat.columns.length >= 4) {
+            ['col-metric1', 'col-metric2', 'col-metric3', 'col-metric4'].forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = strat.columns[i];
+            });
+        }
+        loadData(strategyId);
+    }
+
+    function reloadCurrentStrategy() { if (currentStrategy) loadData(currentStrategy); }
+
+    async function loadData(strategyId) {
+        const sid = strategyId || currentStrategy || STRATEGIES[0]?.id;
+        const strat = STRATEGIES.find(s => s.id === sid);
         document.getElementById('loading').classList.remove('hidden');
         document.getElementById('results').classList.add('hidden');
+        document.getElementById('empty-state').classList.add('hidden');
         document.getElementById('refresh-btn').disabled = true;
 
         try {
-            const response = await fetch('/renda-fixa/api/top-opportunities');
-            const data = await response.json();
-
-            if (data.opportunities && data.opportunities.length > 0) {
-                allOppsData = data.opportunities;
-                renderTop10(allOppsData);
-                renderCDIPreTable(allOppsData);
-                renderIsentoTable(allOppsData.filter(o => o.rate_type === 'Isento'));
+            const res = await fetch(`/renda-fixa/api/data-estrategia?strategy=${sid}`);
+            const data = await res.json();
+            if (data.status === 'success') {
+                if (strat) {
+                    document.getElementById('strategy-title').textContent = `${strat.icon} ${strat.name}`;
+                    document.getElementById('strategy-desc').textContent = strat.desc;
+                }
+                document.getElementById('stock-count').textContent = data.total_count;
+                document.getElementById('stock-count-results').textContent = data.total_count;
+                document.getElementById('rank-count').textContent = data.ranking.length;
+                renderRankingTable(data.ranking, sid);
+                renderCaveats(data.caveats || []);
                 document.getElementById('results').classList.remove('hidden');
-                showToast(`Carregadas ${allOppsData.length} oportunidades`, 'success');
+                showToast(`${strat?.name || sid}: ${data.ranking.length} produto(s)`, 'success');
             } else {
-                showToast('Nenhuma oportunidade carregada', 'error');
+                document.getElementById('empty-state').classList.remove('hidden');
             }
-        } catch (error) {
+        } catch (err) {
             showToast('Erro ao carregar dados.', 'error');
+            document.getElementById('empty-state').classList.remove('hidden');
         } finally {
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('refresh-btn').disabled = false;
         }
     }
 
-    function getRiskBadge(risk_score) {
-        if (risk_score <= 1) return '<span class="px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">Baixo</span>';
-        if (risk_score <= 3) return '<span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">Médio</span>';
-        return '<span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">Alto</span>';
+    function renderCaveats(caveats) {
+        let el = document.getElementById('caveats-panel');
+        if (!el) { el = document.createElement('div'); el.id = 'caveats-panel'; document.getElementById('results').insertAdjacentElement('beforeend', el); }
+        if (!caveats?.length) { el.innerHTML = ''; return; }
+        el.className = 'mt-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg px-4 py-3';
+        el.innerHTML = `<p class="text-yellow-400 text-xs font-semibold mb-1">⚠️ Notas do modelo:</p>
+            <ul class="list-disc list-inside space-y-0.5">${caveats.map(c => `<li class="text-yellow-300/80 text-xs">${c}</li>`).join('')}</ul>`;
     }
 
-    function getRateDisplay(opp) {
-        if (opp.rate_type === 'Pré-fixado') return `<span class="text-white font-bold">${opp.rate_val}%</span> <span class="text-xs text-gray-500">a.a.</span>`;
-        let d = `<span class="text-white font-bold">${opp.rate_val}%</span> <span class="text-xs text-gray-500">CDI</span>`;
-        if (opp.rate_type === 'Isento') d += ' <span class="text-xs text-green-400 font-semibold">IR Isento</span>';
-        return d;
-    }
+    function fmtNum(v, d = 2) { return v == null ? '-' : Number(v).toFixed(d); }
 
-    function renderTop10(opps) {
-        const tbody = document.getElementById('top10-tbody');
-        if (!opps || opps.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">Nenhuma oportunidade encontrada</td></tr>';
+    function renderRankingTable(items, sid) {
+        const tbody = document.getElementById('ranking-tbody');
+        if (!items?.length) {
+            tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-10 text-center text-gray-400">Nenhum produto encontrado para esta estratégia.</td></tr>`;
             return;
         }
-        tbody.innerHTML = opps.slice(0, 10).map(opp => `
-            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeOpp('${opp.type}', '${opp.issuer}')">
-                <td class="px-4 py-3 text-white font-semibold">${opp.type}</td>
-                <td class="px-4 py-3 text-gray-300">${opp.issuer}</td>
-                <td class="px-4 py-3 text-right">${getRateDisplay(opp)}</td>
-                <td class="px-4 py-3 text-right text-gray-300">R$ ${opp.min_investment?.toFixed(2) || '1,00'}</td>
-                <td class="px-4 py-3 text-center text-gray-400 text-sm">${opp.liquidity}</td>
-                <td class="px-4 py-3 text-center">${getRiskBadge(opp.risk_score)}</td>
-                <td class="px-4 py-3 text-center text-primary font-bold">${opp.score}</td>
-                <td class="px-4 py-3 text-right">
-                    <button onclick="event.stopPropagation(); analyzeOpp('${opp.type}', '${opp.issuer}')"
-                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
-                        Analisar
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-    }
+        const strat = STRATEGIES.find(s => s.id === sid);
+        const cols = strat ? strat.columns : ['% CDI', 'Tipo', 'Emissor', 'Liquidez'];
 
-    function renderCDIPreTable(opps) {
-        const tbody = document.getElementById('cdipre-tbody');
-        tbody.innerHTML = opps.map(opp => `
-            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeOpp('${opp.type}', '${opp.issuer}')">
-                <td class="px-4 py-3 text-white font-semibold">${opp.type}</td>
-                <td class="px-4 py-3 text-gray-300">${opp.issuer}</td>
-                <td class="px-4 py-3 text-right ${opp.rate_type !== 'Pré-fixado' ? 'text-white font-bold' : 'text-gray-500'}">
-                    ${opp.rate_type !== 'Pré-fixado' ? opp.rate_val + '% CDI' : '-'}
-                </td>
-                <td class="px-4 py-3 text-right ${opp.rate_type === 'Pré-fixado' ? 'text-yellow-400 font-bold' : 'text-gray-500'}">
-                    ${opp.rate_type === 'Pré-fixado' ? opp.rate_val + '% a.a.' : '-'}
-                </td>
-                <td class="px-4 py-3 text-right text-gray-400 text-sm">${opp.maturity}</td>
-                <td class="px-4 py-3 text-right">
-                    <button onclick="event.stopPropagation(); analyzeOpp('${opp.type}', '${opp.issuer}')"
-                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
-                        Analisar
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-    }
+        tbody.innerHTML = items.map((item, idx) => {
+            const pos = idx + 1;
+            const posColor = pos <= 3 ? 'text-amber-400 font-bold' : 'text-gray-500';
+            const typeColor = (item.type || '').toUpperCase() === 'LCI' || (item.type || '').toUpperCase() === 'LCA'
+                ? 'text-green-400' : 'text-white';
 
-    function renderIsentoTable(opps) {
-        const tbody = document.getElementById('isento-tbody');
-        if (!opps || opps.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Nenhum ativo isento encontrado</td></tr>';
-            return;
-        }
-        tbody.innerHTML = opps.map(opp => {
-            // Gross equivalent: CDI% / (1 - 0.15) for 15% IR (simplified)
-            const grossEquiv = (opp.rate_val / 0.85).toFixed(1);
             return `
-            <tr class="hover:bg-dark-700 cursor-pointer" onclick="analyzeOpp('${opp.type}', '${opp.issuer}')">
-                <td class="px-4 py-3 text-white font-semibold">${opp.type}</td>
-                <td class="px-4 py-3 text-gray-300">${opp.issuer}</td>
-                <td class="px-4 py-3 text-right text-green-400 font-bold">${opp.rate_val}% CDI</td>
-                <td class="px-4 py-3 text-right text-primary font-bold">≈ ${grossEquiv}% CDI bruto</td>
-                <td class="px-4 py-3 text-right text-gray-400 text-sm">${opp.maturity}</td>
-                <td class="px-4 py-3 text-right">
-                    <button onclick="event.stopPropagation(); analyzeOpp('${opp.type}', '${opp.issuer}')"
-                        class="px-3 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 text-sm">
-                        Analisar
-                    </button>
+            <tr class="hover:bg-dark-700/60 transition-colors cursor-pointer" onclick="analyzeProduct(${idx})">
+                <td class="px-3 py-3 text-center ${posColor} text-sm">${pos}</td>
+                <td class="px-3 py-3">
+                    <span class="font-bold ${typeColor} text-sm">${item.type || '-'}</span>
+                    <span class="text-xs text-gray-500 ml-1">${item.rate_type || ''}</span>
+                </td>
+                <td class="px-3 py-3 text-gray-300 text-sm">${item.issuer || '-'}</td>
+                <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[0])}">${rfMetricValue(item, cols[0])}</td>
+                <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[1])}">${rfMetricValue(item, cols[1])}</td>
+                <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[2])}">${rfMetricValue(item, cols[2])}</td>
+                <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[3])}">${rfMetricValue(item, cols[3])}</td>
+                <td class="px-3 py-3 text-center">
+                    <button onclick="event.stopPropagation(); analyzeProduct(${idx})"
+                        class="px-3 py-1 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 text-xs font-medium transition">Detalhes</button>
                 </td>
             </tr>`;
         }).join('');
+
+        // Store items for modal
+        window._rfItems = items;
     }
 
-    function showTab(tab) {
-        currentTab = tab;
-        ['top10', 'cdipre', 'isento'].forEach(t => {
-            document.getElementById(`tab-${t}`).className = tab === t
-                ? 'px-6 py-3 bg-primary/10 text-primary rounded-lg font-semibold border-b-2 border-primary'
-                : 'px-6 py-3 bg-dark-700 text-gray-400 rounded-lg font-semibold hover:bg-dark-600';
-            document.getElementById(`content-${t}`).classList.toggle('hidden', tab !== t);
-        });
-    }
+    function analyzeProduct(idx) {
+        const item = window._rfItems?.[idx];
+        if (!item) return;
 
-    async function analyzeOpp(type, issuer) {
-        // Find the opportunity object
-        currentOpp = allOppsData.find(o => o.type === type && o.issuer === issuer) || null;
-
-        if (!currentOpp) {
-            showToast('Ativo não encontrado', 'error');
-            return;
-        }
-
-        const key = `${type}-${issuer}`;
-        currentModalTicker = key.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-        // Pre-fill: min_investment is the "price" for a single titulo
-        currentModalPrice = currentOpp.min_investment || 1000;
-
-        // Show modal & reset state
-        document.getElementById('modal-ticker').textContent = `${type} – ${issuer}`;
-        document.getElementById('modal-emissor').textContent = `${currentOpp.safety_rating} | ${currentOpp.rate_type}`;
-        document.getElementById('modal-analysis').innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div><p class="text-gray-400 mt-2">Gerando análise IA...</p></div>';
-        document.getElementById('portfolio-msg').classList.add('hidden');
+        document.getElementById('modal-title').textContent = `${item.type} — ${item.issuer}`;
         document.getElementById('analysis-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
 
-        // Fill product card
-        document.getElementById('modal-rate').textContent = getRateText(currentOpp);
-        document.getElementById('modal-rate-type').textContent = currentOpp.rate_type;
-        document.getElementById('modal-maturity').textContent = currentOpp.maturity;
-        document.getElementById('modal-liquidity').textContent = currentOpp.liquidity;
-        document.getElementById('modal-score').textContent = currentOpp.score;
-        document.getElementById('modal-guarantee').textContent = currentOpp.safety_rating;
+        const rateText = item.rate_type === 'Pré-fixado'
+            ? `${fmtNum(item.rate_val, 1)}% a.a.`
+            : item.rate_type === 'Isento'
+                ? `${fmtNum(item.rate_val, 1)}% do CDI (isento IR)`
+                : `${fmtNum(item.rate_val, 1)}% do CDI`;
 
-        // Data grid
-        document.getElementById('modal-data-grid').innerHTML = [
-            { label: 'Tipo', value: currentOpp.type },
-            { label: 'Emissor', value: currentOpp.issuer },
-            { label: 'Score de Qualidade', value: currentOpp.score },
-            { label: 'Risco', value: currentOpp.risk_score <= 1 ? 'Baixo' : currentOpp.risk_score <= 3 ? 'Médio' : 'Alto' },
-            { label: 'Investimento Mín.', value: `R$ ${currentOpp.min_investment?.toFixed(2) || '1.000,00'}` },
-            { label: 'Liquidez', value: currentOpp.liquidity },
-        ].map(m => `
-            <div class="bg-dark-600 rounded-lg p-3">
-                <p class="text-xs text-gray-400">${m.label}</p>
-                <p class="text-white font-semibold">${m.value}</p>
+        const isExempt = ['LCI', 'LCA', 'CRI', 'CRA'].includes((item.type || '').toUpperCase());
+        const exemptBadge = isExempt
+            ? '<span class="px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs font-semibold">Isento IR</span>'
+            : '<span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs font-semibold">Tributado</span>';
+
+        const grossEquiv = item._taxa_bruta_equiv
+            ? `<div class="bg-dark-700 rounded-lg p-3 text-center">
+                    <p class="text-gray-400 text-xs mb-1">Taxa Bruta Equiv.</p>
+                    <p class="text-green-400 font-bold text-lg">${fmtNum(item._taxa_bruta_equiv, 1)}%</p>
+               </div>` : '';
+
+        const aliquotaInfo = item._aliquota_ir != null
+            ? `<div class="bg-dark-700 rounded-lg p-3 text-center">
+                    <p class="text-gray-400 text-xs mb-1">Alíquota IR</p>
+                    <p class="text-white font-bold text-lg">${fmtNum(item._aliquota_ir, 1)}%</p>
+               </div>` : '';
+
+        document.getElementById('modal-content').innerHTML = `
+        <div class="space-y-4">
+            <div class="flex items-center gap-2 mb-2">
+                ${exemptBadge}
+                <span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-xs font-semibold">${item.safety_rating || 'N/A'}</span>
             </div>
-        `).join('');
 
-        // Pre-fill add to portfolio fields
-        loadWallets();
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-dark-700 rounded-lg p-3 text-center">
+                    <p class="text-gray-400 text-xs mb-1">Rentabilidade</p>
+                    <p class="text-primary font-bold text-lg">${rateText}</p>
+                </div>
+                <div class="bg-dark-700 rounded-lg p-3 text-center">
+                    <p class="text-gray-400 text-xs mb-1">Vencimento</p>
+                    <p class="text-white font-bold text-sm">${item.maturity || '-'}</p>
+                </div>
+                <div class="bg-dark-700 rounded-lg p-3 text-center">
+                    <p class="text-gray-400 text-xs mb-1">Liquidez</p>
+                    <p class="text-white font-bold text-sm">${item.liquidity || '-'}</p>
+                </div>
+                <div class="bg-dark-700 rounded-lg p-3 text-center">
+                    <p class="text-gray-400 text-xs mb-1">Risco</p>
+                    <p class="font-bold text-sm ${item.risk_score <= 2 ? 'text-green-400' : item.risk_score <= 3 ? 'text-yellow-400' : 'text-red-400'}">
+                        ${'⭐'.repeat(Math.min(item.risk_score || 1, 5))} (${item.risk_score}/5)
+                    </p>
+                </div>
+            </div>
 
-        // Pre-fill CDI/Pre fields from the opportunity
-        if (currentOpp.rate_type === 'Pré-fixado') {
-            document.getElementById('add-pct-cdi').value = '';
-            document.getElementById('add-pct-pre').value = currentOpp.rate_val;
-        } else {
-            document.getElementById('add-pct-cdi').value = currentOpp.rate_val;
-            document.getElementById('add-pct-pre').value = '';
-        }
+            ${grossEquiv || aliquotaInfo ? `<div class="grid grid-cols-2 gap-3">${grossEquiv}${aliquotaInfo}</div>` : ''}
 
-        // AI analysis via /renda-fixa/api/analyze
-        try {
-            const investor = localStorage.getItem('investor_persona') || '';
-            const response = await fetch(`/renda-fixa/api/analyze`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: currentOpp.type,
-                    issuer: currentOpp.issuer,
-                    rate_val: currentOpp.rate_val,
-                    rate_type: currentOpp.rate_type,
-                    maturity: currentOpp.maturity,
-                    liquidity: currentOpp.liquidity,
-                    safety_rating: currentOpp.safety_rating,
-                    score: currentOpp.score,
-                    investor
-                })
-            });
+            <div class="bg-dark-700 rounded-xl p-5">
+                <h4 class="text-lg font-bold text-white flex items-center space-x-2 mb-3">
+                    <span>📋</span><span>Detalhes do Produto</span>
+                </h4>
+                <div class="grid grid-cols-2 gap-y-2 text-sm">
+                    <span class="text-gray-400">Tipo:</span> <span class="text-white">${item.type}</span>
+                    <span class="text-gray-400">Modalidade:</span> <span class="text-white">${item.rate_type}</span>
+                    <span class="text-gray-400">Aplicação Mínima:</span> <span class="text-white">R$ ${fmtNum(item.min_investment, 2)}</span>
+                    <span class="text-gray-400">Garantia:</span> <span class="text-white">${item.safety_rating}</span>
+                    <span class="text-gray-400">Score SCOPE3:</span> <span class="text-primary font-bold">${item.score || '-'}</span>
+                </div>
+            </div>
 
-            if (response.ok) {
-                const data = await response.json();
-                currentAnalysisText = data.analysis || 'Análise não disponível';
-                document.getElementById('modal-analysis').textContent = currentAnalysisText;
-            } else {
-                document.getElementById('modal-analysis').textContent = 'Análise temporariamente indisponível.';
-            }
-        } catch (error) {
-            document.getElementById('modal-analysis').textContent = `Este produto da ${issuer} oferece ${getRateText(currentOpp)} com vencimento em ${currentOpp.maturity}. ${currentOpp.safety_rating} garante sua proteção. Score de qualidade: ${currentOpp.score}.`;
-        }
+            <div class="bg-primary/10 border border-primary/30 rounded-lg p-4">
+                <p class="text-primary text-xs">
+                    💡 <strong>Dica:</strong>
+                    ${isExempt
+                ? 'Produtos isentos de IR (LCI/LCA) podem ser mais vantajosos que CDBs com taxas nominais maiores. Compare sempre pela taxa bruta equivalente.'
+                : 'CDBs são tributados pela tabela regressiva de IR (22,5% até 15%). Para prazos curtos, LCI/LCA isentos podem ser mais vantajosos.'}
+                </p>
+            </div>
+        </div>`;
     }
 
-    function getRateText(opp) {
-        if (!opp) return '-';
-        if (opp.rate_type === 'Pré-fixado') return `${opp.rate_val}% a.a.`;
-        if (opp.rate_type === 'Isento') return `${opp.rate_val}% CDI (isento IR)`;
-        return `${opp.rate_val}% CDI`;
-    }
-
-    async function speakAnalysis() {
-        if (!currentAnalysisText) return;
-        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-
-        const btn = document.getElementById('tts-btn');
-        btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div><span>Gerando...</span>';
-
-        try {
-            const response = await fetch('/api/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: currentAnalysisText, investor: localStorage.getItem('investor_persona') || '' })
-            });
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                currentAudio = new Audio(url);
-                currentAudio.play();
-                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg><span>Parar</span>';
-                currentAudio.onended = () => {
-                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
-                };
-            } else {
-                showToast('TTS não disponível', 'error');
-                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
-            }
-        } catch (e) {
-            showToast('Erro ao gerar áudio', 'error');
-            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg><span>Ouvir</span>';
-        }
-    }
-
-    function closeModal() {
-        document.getElementById('analysis-modal').classList.add('hidden');
-        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    }
+    function closeModal() { document.getElementById('analysis-modal').classList.add('hidden'); document.body.style.overflow = ''; }
 
     function showToast(message, type = 'info') {
         const toast = document.createElement('div');
@@ -584,136 +336,6 @@
         toast.textContent = message;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
-    }
-
-    async function loadWallets() {
-        // PRE-FILL price with min_investment (the "unit price" of the fixed income product)
-        if (currentModalPrice > 0) {
-            document.getElementById('wallet-price').value = currentModalPrice.toFixed(2);
-        }
-        // Set date to today
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('wallet-date').value = today;
-
-        try {
-            const response = await fetch('/dashboard/api/wallets');
-            if (response.ok) {
-                const data = await response.json();
-                const datalist = document.getElementById('wallet-options');
-                const input = document.getElementById('wallet-input');
-                walletMap = {};
-
-                if (data.wallets && data.wallets.length > 0) {
-                    datalist.innerHTML = data.wallets.map(w => {
-                        walletMap[w.name] = w.id;
-                        return `<option value="${w.name}">`;
-                    }).join('');
-                    // Default to first wallet
-                    input.value = data.wallets[0].name;
-                } else {
-                    datalist.innerHTML = '';
-                    input.value = 'Principal';
-                }
-            }
-        } catch (e) {
-            document.getElementById('wallet-input').value = 'Principal';
-        }
-    }
-
-    async function addToPortfolio() {
-        const btn = document.getElementById('add-portfolio-btn');
-        const msg = document.getElementById('portfolio-msg');
-        const walletName = document.getElementById('wallet-input').value.trim();
-        const qty = parseFloat(document.getElementById('wallet-qty').value) || 1;
-        const price = parseFloat(document.getElementById('wallet-price').value) || currentModalPrice;
-        const date = document.getElementById('wallet-date').value;
-
-        // Yield logic — as requested:
-        // If user leaves blank → 100% CDI
-        // User can zero one out (e.g., CDI=0 and Pre=12.5 → only pre-fixado)
-        let pctCdi = parseFloat(document.getElementById('add-pct-cdi').value);
-        let pctPre = parseFloat(document.getElementById('add-pct-pre').value) || 0;
-
-        if (isNaN(pctCdi) || pctCdi === 0) {
-            if (pctPre === 0) {
-                pctCdi = 100; // default: 100% CDI
-            } else {
-                pctCdi = 0; // pre-fixado only
-            }
-        }
-
-        if (!currentModalTicker || price <= 0) {
-            msg.textContent = 'Selecione um produto e informe o valor unitário.';
-            msg.className = 'text-xs text-red-400 mt-2';
-            msg.classList.remove('hidden');
-            return;
-        }
-        if (!walletName) {
-            msg.textContent = 'Digite o nome da carteira.';
-            msg.className = 'text-xs text-red-400 mt-2';
-            msg.classList.remove('hidden');
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>';
-
-        try {
-            let walletId = walletMap[walletName];
-
-            // If wallet doesn't exist, create it automatically
-            if (!walletId) {
-                const createResp = await fetch('/dashboard/api/wallet/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: walletName })
-                });
-                if (createResp.ok) {
-                    const createData = await createResp.json();
-                    walletId = createData.wallet_id;
-                    if (walletId) walletMap[walletName] = walletId;
-                }
-                if (!walletId) {
-                    msg.textContent = 'Erro ao criar carteira. Faça login primeiro.';
-                    msg.className = 'text-xs text-red-400 mt-2';
-                    msg.classList.remove('hidden');
-                    btn.disabled = false;
-                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg><span>Adicionar</span>';
-                    return;
-                }
-            }
-
-            const response = await fetch('/dashboard/api/wallet/add-json', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ticker: currentModalTicker,
-                    quantity: qty,
-                    price: price,
-                    wallet_id: parseInt(walletId),
-                    date: date
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                msg.textContent = `Adicionado à carteira "${walletName}"! (${pctCdi > 0 ? pctCdi + '% CDI' : ''} ${pctPre > 0 ? (pctCdi > 0 ? '+ ' : '') + pctPre + '% a.a.' : ''})`;
-                msg.className = 'text-xs text-green-400 mt-2';
-                showToast(`Renda Fixa adicionada à carteira!`, 'success');
-                loadWallets();
-            } else {
-                msg.textContent = data.detail || data.message || 'Erro ao adicionar';
-                msg.className = 'text-xs text-red-400 mt-2';
-            }
-        } catch (e) {
-            msg.textContent = 'Faça login para adicionar à carteira';
-            msg.className = 'text-xs text-yellow-400 mt-2';
-        } finally {
-            msg.classList.remove('hidden');
-            btn.disabled = false;
-            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg><span>Adicionar</span>';
-        }
     }
 </script>
 {% endblock %}

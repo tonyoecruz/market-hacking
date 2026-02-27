@@ -1,11 +1,23 @@
+"""
+ETFs Router — Strategy Screener
+=================================
+Two modes:
+  GET /etfs/api/data              → Legacy liquidity-sorted list
+  GET /etfs/api/data-estrategia   → Strategy-based engine (4 models)
+"""
+
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from routes.auth import get_optional_user
+from database.db_manager import DatabaseManager
+from routes.engines.etfs_engine import apply_etfs_strategy
 import os
 import logging
 import pandas as pd
-from database.db_manager import DatabaseManager
+
+import data_utils
+
 db_instance = DatabaseManager()
 
 logger = logging.getLogger(__name__)
@@ -13,10 +25,82 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SHARED: Build ETF Universe DataFrame
+# ══════════════════════════════════════════════════════════════════════════════
+def _build_etf_universe() -> pd.DataFrame | None:
+    etfs = db_instance.get_etfs()
+    if not etfs:
+        return None
+
+    df = pd.DataFrame(etfs)
+
+    numeric_cols = ['liquidezmediadiaria', 'price']
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+    # Filter: price > 0
+    df = df[df['price'].fillna(0) > 0].copy()
+    return df
+
+
+def _clean_for_response(df: pd.DataFrame) -> pd.DataFrame:
+    """Keep score/display columns, replace NaN with None."""
+    result = df.replace({float('nan'): None})
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE ROUTE
+# ══════════════════════════════════════════════════════════════════════════════
 @router.get("/", response_class=HTMLResponse)
 async def etfs_page(request: Request, user: dict = Depends(get_optional_user)):
     return templates.TemplateResponse("pages/etfs.html", {"request": request, "title": "ETFs", "user": user})
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# API ENDPOINT — STRATEGY ENGINE
+# ══════════════════════════════════════════════════════════════════════════════
+@router.get("/api/data-estrategia")
+async def get_etfs_data_estrategia(
+    strategy: str = 'boglehead',
+):
+    """
+    Strategy-based ETF screener.
+    Available strategies: boglehead, sharpe, momentum, renda_etf
+    """
+    try:
+        df_universe = _build_etf_universe()
+        if df_universe is None or df_universe.empty:
+            return JSONResponse({
+                'status': 'success', 'total_count': 0,
+                'ranking': [], 'strategy': strategy,
+                'caveats': [], 'score_col': {}
+            })
+
+        total = len(df_universe)
+        df_ranked, score_col, caveats = apply_etfs_strategy(df_universe, strategy)
+        df_ranked = _clean_for_response(df_ranked)
+
+        return JSONResponse({
+            'status': 'success',
+            'total_count': total,
+            'ranking': df_ranked.to_dict('records'),
+            'strategy': strategy,
+            'caveats': caveats,
+            'score_col': score_col,
+        })
+
+    except Exception as e:
+        logger.error(f"[etfs/api/data-estrategia] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# LEGACY API ENDPOINTS (kept for backward compatibility)
+# ══════════════════════════════════════════════════════════════════════════════
 @router.post("/api/scan")
 async def scan_etfs(request: Request):
     """Trigger ETF data scan/update"""
@@ -33,6 +117,7 @@ async def scan_etfs(request: Request):
             'status': 'error',
             'message': f'Erro ao escanear ETFs: {str(e)}'
         }, status_code=500)
+
 
 @router.get("/api/data")
 async def get_etfs_data():
@@ -60,16 +145,11 @@ async def get_etfs_data():
         print(f"ERRO API ETFS: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/api/decode/{ticker}")
 async def decode_etf(ticker: str, investor: str = ''):
     """AI analysis for a specific ETF"""
     try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("data_utils",
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_utils.py"))
-        data_utils = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(data_utils)
-
         etf = db_instance.get_etf_by_ticker(ticker)
         if not etf:
             raise HTTPException(status_code=404, detail='ETF nao encontrado')
