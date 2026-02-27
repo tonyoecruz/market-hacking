@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from modules.house_flipping import SerperAgencyDiscovery, AgencyCrawler, calculate_flipping_opportunity
 import pandas as pd
+import json
 import logging
 
 router = APIRouter()
@@ -76,13 +77,18 @@ async def run_flipping_scan(request: Request, city: str = Form(...)):
             "agencies_with_data": agencies_with_data
         }
 
+        # Unique property types for filter checkboxes
+        tipos_unicos = sorted(df_analyzed['Tipo'].dropna().unique().tolist())
+
         logger.info(f"[FLIPPING] Scan complete: {len(results)} listings from {agencies_with_data} agencies")
 
         return templates.TemplateResponse("partials/flipping_results.html", {
             "request": request,
             "results": results,
+            "results_json": json.dumps(results, ensure_ascii=False, default=str),
             "agencies": agencies_for_template,
             "stats": stats,
+            "tipos": tipos_unicos,
             "city": city
         })
 

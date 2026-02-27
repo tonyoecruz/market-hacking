@@ -18,23 +18,53 @@
 </div>
 {% else %}
 
-<!-- Analytics Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<!-- Filter & Grouping Controls -->
+<div class="bg-dark-800 rounded-lg border border-gray-700 p-4 mb-6">
+    <div class="flex flex-wrap items-center gap-6">
+        <!-- Grouping -->
+        <div class="flex items-center gap-3">
+            <label class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Agrupar por:</label>
+            <select id="flipping-group-by" onchange="renderFlippingResults()"
+                class="bg-dark-900 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
+                <option value="cidade">Cidade (lista unica)</option>
+                <option value="bairro">Bairro</option>
+                <option value="tipo">Tipo de Imovel</option>
+                <option value="bairro_tipo">Bairro + Tipo</option>
+            </select>
+        </div>
+
+        <!-- Type Filter -->
+        <div class="flex items-center gap-3">
+            <label class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Tipos:</label>
+            <div id="flipping-type-filters" class="flex flex-wrap gap-2">
+                {% for tipo in tipos %}
+                <label class="flex items-center gap-1.5 bg-dark-900 border border-gray-600 rounded-lg px-3 py-1.5 cursor-pointer hover:border-primary/50 transition text-sm">
+                    <input type="checkbox" class="flipping-type-cb accent-[#00FF9D] w-4 h-4" value="{{ tipo }}" checked onchange="renderFlippingResults()">
+                    <span class="text-gray-300">{{ tipo }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div id="flipping-kpis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-dark-800 p-6 rounded-lg border-l-4 border-blue-500">
         <p class="text-gray-400 text-sm uppercase">Imoveis Analisados</p>
-        <p class="text-3xl font-bold text-white">{{ stats.count }}</p>
+        <p class="text-3xl font-bold text-white" id="kpi-count">{{ stats.count }}</p>
     </div>
     <div class="bg-dark-800 p-6 rounded-lg border-l-4 border-purple-500">
         <p class="text-gray-400 text-sm uppercase">Media da Regiao</p>
-        <p class="text-3xl font-bold text-white">R$ {{ "%.2f"|format(stats.avg_m2) }}/m&#178;</p>
+        <p class="text-3xl font-bold text-white" id="kpi-avg-m2">R$ {{ "%.2f"|format(stats.avg_m2) }}/m&#178;</p>
     </div>
     <div class="bg-dark-800 p-6 rounded-lg border-l-4 border-primary">
         <p class="text-gray-400 text-sm uppercase">Melhor Oportunidade</p>
         {% if stats.best_deal %}
-        <p class="text-3xl font-bold text-primary">{{ stats.best_deal['Dif vs Med (%)'] }}%</p>
+        <p class="text-3xl font-bold text-primary" id="kpi-best-deal">{{ stats.best_deal['Dif vs Med (%)'] }}%</p>
         <p class="text-xs text-gray-400">Abaixo da media</p>
         {% else %}
-        <p class="text-xl text-gray-500">-</p>
+        <p class="text-xl text-gray-500" id="kpi-best-deal">-</p>
         {% endif %}
     </div>
     <div class="bg-dark-800 p-6 rounded-lg border-l-4 border-yellow-500">
@@ -44,10 +74,10 @@
     </div>
 </div>
 
-<!-- Results Table -->
-<div class="bg-dark-800 rounded-lg overflow-hidden border border-gray-700">
+<!-- Results Table (JS-driven) -->
+<div id="flipping-table-container" class="bg-dark-800 rounded-lg overflow-hidden border border-gray-700">
     <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
+        <table class="w-full text-left text-sm" id="flipping-table">
             <thead class="bg-dark-700 text-gray-400 uppercase text-xs font-bold">
                 <tr>
                     <th class="px-6 py-4">Bairro</th>
@@ -60,35 +90,7 @@
                     <th class="px-6 py-4 text-right">Acao</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
-                {% for item in results %}
-                <tr class="hover:bg-dark-700 transition-colors group">
-                    <td class="px-6 py-4 font-medium text-white">{{ item.Bairro }}</td>
-                    <td class="px-6 py-4 text-gray-300 text-xs">{{ item.Imobiliaria }}</td>
-                    <td class="px-6 py-4 text-gray-300">{{ item.Tipo }}</td>
-                    <td class="px-6 py-4 text-gray-300">{{ item['Area (m2)'] }} m&#178;</td>
-                    <td class="px-6 py-4 text-white font-semibold">R$ {{ "%.2f"|format(item['Valor Total']) }}</td>
-                    <td class="px-6 py-4 text-gray-400">R$ {{ "%.2f"|format(item['Valor/m2']) }}</td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="inline-block px-2 py-1 rounded text-xs font-bold
-                            {% if item['Dif vs Med (%)'] < -20 %}bg-primary/20 text-primary
-                            {% elif item['Dif vs Med (%)'] < 0 %}bg-blue-500/20 text-blue-400
-                            {% else %}bg-red-500/20 text-red-400{% endif %}">
-                            {{ item['Dif vs Med (%)'] }}%
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                        {% if item.Link %}
-                        <a href="{{ item.Link }}" target="_blank"
-                            class="inline-flex items-center gap-1 text-primary hover:text-white transition-colors text-xs uppercase font-bold tracking-wider">
-                            Ver Anuncio &#8599;
-                        </a>
-                        {% else %}
-                        <span class="text-gray-600 text-xs">-</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
+            <tbody id="flipping-tbody" class="divide-y divide-gray-700">
             </tbody>
         </table>
     </div>
@@ -107,5 +109,127 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Inject data for JS rendering -->
+<script>
+window.__flippingData = {{ results_json|safe }};
+
+function getFilteredData() {
+    const data = window.__flippingData;
+    const checkedTypes = Array.from(document.querySelectorAll('.flipping-type-cb:checked')).map(cb => cb.value);
+    return data.filter(item => checkedTypes.includes(item.Tipo));
+}
+
+function updateKPIs(filtered) {
+    document.getElementById('kpi-count').textContent = filtered.length;
+    if (filtered.length > 0) {
+        const avgM2 = filtered.reduce((s, i) => s + (i['Valor/m2'] || 0), 0) / filtered.length;
+        document.getElementById('kpi-avg-m2').innerHTML = `R$ ${avgM2.toFixed(2)}/m\u00B2`;
+        const best = filtered.reduce((best, i) => (i['Dif vs Med (%)'] < best['Dif vs Med (%)']) ? i : best, filtered[0]);
+        document.getElementById('kpi-best-deal').textContent = `${best['Dif vs Med (%)']}%`;
+    } else {
+        document.getElementById('kpi-avg-m2').innerHTML = 'R$ 0.00/m\u00B2';
+        document.getElementById('kpi-best-deal').textContent = '-';
+    }
+}
+
+function fmtMoney(v) { return `R$ ${Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; }
+
+function discountBadge(pct) {
+    let cls = 'bg-red-500/20 text-red-400';
+    if (pct < -20) cls = 'bg-primary/20 text-primary';
+    else if (pct < 0) cls = 'bg-blue-500/20 text-blue-400';
+    return `<span class="inline-block px-2 py-1 rounded text-xs font-bold ${cls}">${pct}%</span>`;
+}
+
+function rowHtml(item) {
+    const link = item.Link
+        ? `<a href="${item.Link}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:text-white transition-colors text-xs uppercase font-bold tracking-wider">Ver Anuncio &#8599;</a>`
+        : '<span class="text-gray-600 text-xs">-</span>';
+    return `<tr class="hover:bg-dark-700 transition-colors">
+        <td class="px-6 py-4 font-medium text-white">${item.Bairro || 'N/A'}</td>
+        <td class="px-6 py-4 text-gray-300 text-xs">${item.Imobiliaria || ''}</td>
+        <td class="px-6 py-4 text-gray-300">${item.Tipo || ''}</td>
+        <td class="px-6 py-4 text-gray-300">${item['Area (m2)']} m\u00B2</td>
+        <td class="px-6 py-4 text-white font-semibold">${fmtMoney(item['Valor Total'])}</td>
+        <td class="px-6 py-4 text-gray-400">${fmtMoney(item['Valor/m2'])}</td>
+        <td class="px-6 py-4 text-center">${discountBadge(item['Dif vs Med (%)'])}</td>
+        <td class="px-6 py-4 text-right">${link}</td>
+    </tr>`;
+}
+
+function groupHeaderHtml(label, items, colspan) {
+    const avgM2 = items.reduce((s, i) => s + (i['Valor/m2'] || 0), 0) / items.length;
+    const best = items.reduce((b, i) => (i['Dif vs Med (%)'] < b['Dif vs Med (%)']) ? i : b, items[0]);
+    return `<tr class="bg-dark-600/60 border-t-2 border-primary/30">
+        <td colspan="${colspan}" class="px-6 py-3">
+            <div class="flex items-center justify-between">
+                <span class="text-primary font-bold text-sm uppercase tracking-wide">${label}</span>
+                <div class="flex items-center gap-4 text-xs text-gray-400">
+                    <span>${items.length} imoveis</span>
+                    <span>Media: <strong class="text-white">${fmtMoney(avgM2)}/m\u00B2</strong></span>
+                    <span>Melhor: ${discountBadge(best['Dif vs Med (%)'])}</span>
+                </div>
+            </div>
+        </td>
+    </tr>`;
+}
+
+function renderFlippingResults() {
+    const filtered = getFilteredData();
+    const groupBy = document.getElementById('flipping-group-by').value;
+    const tbody = document.getElementById('flipping-tbody');
+
+    updateKPIs(filtered);
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">Nenhum imovel encontrado com os filtros selecionados.</td></tr>';
+        return;
+    }
+
+    let html = '';
+
+    if (groupBy === 'cidade') {
+        // Flat list sorted by discount
+        const sorted = [...filtered].sort((a, b) => a['Dif vs Med (%)'] - b['Dif vs Med (%)']);
+        html = sorted.map(rowHtml).join('');
+    } else {
+        // Grouped rendering
+        let groupKey;
+        if (groupBy === 'bairro') groupKey = item => item.Bairro || 'N/A';
+        else if (groupBy === 'tipo') groupKey = item => item.Tipo || 'Outro';
+        else groupKey = item => `${item.Bairro || 'N/A'} — ${item.Tipo || 'Outro'}`;
+
+        // Build groups
+        const groups = {};
+        for (const item of filtered) {
+            const key = groupKey(item);
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(item);
+        }
+
+        // Sort groups: "N/A" / "Sem Bairro" at the end, others alphabetically
+        const sortedKeys = Object.keys(groups).sort((a, b) => {
+            const aNA = a === 'N/A' || a.startsWith('N/A');
+            const bNA = b === 'N/A' || b.startsWith('N/A');
+            if (aNA && !bNA) return 1;
+            if (!aNA && bNA) return -1;
+            return a.localeCompare(b, 'pt-BR');
+        });
+
+        for (const key of sortedKeys) {
+            const items = groups[key].sort((a, b) => a['Dif vs Med (%)'] - b['Dif vs Med (%)']);
+            const label = key === 'N/A' ? 'Sem Bairro Identificado' : key;
+            html += groupHeaderHtml(label, items, 8);
+            html += items.map(rowHtml).join('');
+        }
+    }
+
+    tbody.innerHTML = html;
+}
+
+// Initial render
+renderFlippingResults();
+</script>
 
 {% endif %}
