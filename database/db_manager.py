@@ -733,6 +733,21 @@ class DatabaseManager:
         finally:
             db.close()
 
+    def get_flipping_stats(self) -> Dict:
+        """Get House Flipping aggregate stats: total cities and total listings"""
+        db = self.SessionLocal()
+        try:
+            cities_count = db.query(FlippingCityDB).filter(
+                FlippingCityDB.active == 1
+            ).count()
+            listings_count = db.query(FlippingListingDB).count()
+            return {
+                "cities_count": cities_count,
+                "listings_count": listings_count
+            }
+        finally:
+            db.close()
+
     # ==================== INVESTOR PERSONAS ====================
 
     def get_investors(self) -> List[Dict]:

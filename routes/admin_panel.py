@@ -288,6 +288,12 @@ async def get_dashboard_overview(session: dict = Depends(verify_admin_session)):
             else:
                 price_ranges['> R$100'] += 1
 
+        # 15. House Flipping stats
+        try:
+            flipping_stats = db_manager.get_flipping_stats()
+        except Exception:
+            flipping_stats = {"cities_count": 0, "listings_count": 0}
+
         return JSONResponse({
             "status": "success",
             "data": {
@@ -304,6 +310,7 @@ async def get_dashboard_overview(session: dict = Depends(verify_admin_session)):
                 "top_roic": top_roic,
                 "top_dy": top_dy,
                 "logs_timeline": logs_timeline,
+                "flipping_stats": flipping_stats,
                 "update_stats": {
                     "total": len(logs),
                     "success": success_count,
