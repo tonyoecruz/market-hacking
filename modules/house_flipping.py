@@ -207,7 +207,7 @@ class AgencyCrawler:
             logger.warning(f"[CRAWL] Error fetching {url}: {e}")
             return ""
 
-    async def crawl_agency(self, agency: dict, city: str, max_pages: int = 4, is_capital: bool = False) -> list:
+    async def crawl_agency(self, agency: dict, city: str, max_pages: int = 3, is_capital: bool = False) -> list:
         """
         Fetch agency site pages via HTTP and extract structured listings.
         Returns list of dicts matching the expected DataFrame schema.
@@ -346,7 +346,7 @@ Conteudo do site da imobiliaria "{agency_name}":
             logger.warning(f"[GEMINI] Extraction failed for {agency_name}: {e}")
             return []
 
-    async def crawl_all_agencies(self, agencies: list, city: str, max_agencies: int = 15, is_capital: bool = False) -> list:
+    async def crawl_all_agencies(self, agencies: list, city: str, max_agencies: int = 10, is_capital: bool = False) -> list:
         """
         Crawl multiple agencies sequentially with rate limiting.
         Returns combined list of all extracted listings.
