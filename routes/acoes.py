@@ -43,8 +43,10 @@ def _build_universe(market: str | None, filter_risky: bool) -> pd.DataFrame | No
         'liquidezmediadiaria', 'lpa', 'vpa', 'margem', 'magic_rank',
         'price', 'valor_justo', 'roic', 'ev_ebit', 'pl', 'pvp', 'dy',
         'div_pat', 'cagr_lucros', 'liq_corrente',
-        # ── Hybrid Screener V2.0 columns ──
         'roe', 'roa', 'margem_liquida', 'ev_ebitda', 'payout', 'valor_mercado', 'div_liq_ebitda',
+        # V3.0: Full StatusInvest columns
+        'p_ebit', 'p_sr', 'peg_ratio', 'p_ativo', 'p_capital_giro', 'p_ativo_circulante',
+        'giro_ativos', 'margem_bruta', 'margem_ebit', 'pl_ativo', 'passivo_ativo', 'cagr_receitas',
     ]
     for col in numeric_cols:
         if col in df.columns:
@@ -171,7 +173,7 @@ async def debug_ranking(
             'ticker', 'empresa', 'setor', 'price', 'liquidezmediadiaria',
             'ev_ebit', 'roic', 'pl', 'pvp', 'dy', 'roe', 'div_pat',
             'cagr_lucros', 'margem_liquida',
-            '_score', '_liq_penalty',
+            '_score',
         ] + raw_cols + norm_cols + rank_cols
         available_cols = [c for c in display_cols if c in df_debug.columns]
 
@@ -215,9 +217,16 @@ async def diagnostico(
 
         cols = [
             'ticker', 'empresa', 'setor', 'price',
-            'ev_ebit', 'roic', 'pl', 'pvp', 'dy',
-            'roe', 'roa', 'div_pat', 'cagr_lucros', 'margem_liquida',
-            'liquidezmediadiaria', 'magic_rank',
+            'pl', 'pvp', 'ev_ebit', 'p_ebit', 'p_sr', 'peg_ratio',
+            'roic', 'roe', 'roa', 'dy',
+            'lpa', 'vpa', 'giro_ativos',
+            'margem_bruta', 'margem_ebit', 'margem_liquida',
+            'div_pat', 'div_liq_ebitda', 'liq_corrente',
+            'pl_ativo', 'passivo_ativo',
+            'p_ativo', 'p_capital_giro', 'p_ativo_circulante',
+            'cagr_lucros', 'cagr_receitas',
+            'liquidezmediadiaria', 'valor_mercado',
+            'magic_rank',
         ]
         available = [c for c in cols if c in df_match.columns]
         result = df_match[available].replace({float('nan'): None}).to_dict('records')

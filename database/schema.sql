@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS stocks (
     payout FLOAT,
     valor_mercado FLOAT,
     div_liq_ebitda FLOAT,
+    -- NEW: Full StatusInvest API columns (V3.0)
+    p_ebit FLOAT,
+    p_sr FLOAT,
+    peg_ratio FLOAT,
+    p_ativo FLOAT,
+    p_capital_giro FLOAT,
+    p_ativo_circulante FLOAT,
+    giro_ativos FLOAT,
+    margem_bruta FLOAT,
+    margem_ebit FLOAT,
+    pl_ativo FLOAT,
+    passivo_ativo FLOAT,
+    cagr_receitas FLOAT,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uix_ticker_market UNIQUE (ticker, market)
 );

@@ -82,6 +82,19 @@ def init_database():
         ("stocks", "div_liq_ebitda", "FLOAT"),  # Dívida Líq/EBIT
         ("stocks", "roe", "FLOAT"),             # ROE %
         ("stocks", "roa", "FLOAT"),             # ROA %
+        # V3.0: Full StatusInvest API columns
+        ("stocks", "p_ebit", "FLOAT"),
+        ("stocks", "p_sr", "FLOAT"),
+        ("stocks", "peg_ratio", "FLOAT"),
+        ("stocks", "p_ativo", "FLOAT"),
+        ("stocks", "p_capital_giro", "FLOAT"),
+        ("stocks", "p_ativo_circulante", "FLOAT"),
+        ("stocks", "giro_ativos", "FLOAT"),
+        ("stocks", "margem_bruta", "FLOAT"),
+        ("stocks", "margem_ebit", "FLOAT"),
+        ("stocks", "pl_ativo", "FLOAT"),
+        ("stocks", "passivo_ativo", "FLOAT"),
+        ("stocks", "cagr_receitas", "FLOAT"),
         ("investor_personas", "voice_id", "VARCHAR(100) DEFAULT 'pt-BR-AntonioNeural'"),
     ]
     with engine.connect() as conn:
@@ -127,15 +140,19 @@ class DatabaseManager:
             # Remove duplicate tickers
             df = df.drop_duplicates(subset=['ticker'], keep='first')
             
-            # Valid columns
+            # Valid columns — ALL StatusInvest API fields + calculated fields
             valid_columns = [
                 'ticker', 'market', 'empresa', 'setor', 'price', 'lpa', 'vpa',
                 'pl', 'pvp', 'roic', 'ev_ebit', 'dy', 'liquidezmediadiaria', 'div_pat',
                 'valor_justo', 'margem', 'magic_rank',
-                'cagr_lucros', 'liq_corrente',  # ✅ columns confirmed in Supabase
-                'roe', 'roa',                    # ✅ NEW: persisted from StatusInvest
-                # ── NEW: Hybrid Screener V2.0 ──────────────────────────────
+                'cagr_lucros', 'liq_corrente',
+                'roe', 'roa',
                 'margem_liquida', 'ev_ebitda', 'payout', 'valor_mercado', 'div_liq_ebitda',
+                # V3.0: Full StatusInvest API columns
+                'p_ebit', 'p_sr', 'peg_ratio', 'p_ativo', 'p_capital_giro',
+                'p_ativo_circulante', 'giro_ativos', 'margem_bruta', 'margem_ebit',
+                'pl_ativo', 'passivo_ativo', 'cagr_receitas',
+                # Legacy calculated field names
                 'ValorJusto', 'Margem', 'MagicRank'
             ]
             

@@ -145,68 +145,79 @@ def get_br_stocks_statusinvest():
         logger.info(f"StatusInvest Stocks columns: {sorted(df.columns.tolist())}")
 
         # MAPPING STATUS INVEST TO APP SCHEMA
-        # StatusInvest paginated API returns ALL LOWERCASE keys:
-        # verified from live API probe: sectorname, margemliquida, lucros_cagr5,
-        # valormercado, dividaliquidaebit, liquidezcorrente, roic, dy, etc.
+        # StatusInvest paginated API returns ALL LOWERCASE keys.
+        # Verified via live API probe (36 columns total).
+        # ALL columns are mapped to preserve full data fidelity.
         rename_map = {
+            # ── Identity ──────────────────────────────────────────────────────
             'ticker': 'ticker',
+            'companyname': 'empresa',
+            'sectorname': 'setor',
+            # ── Price & Valuation ─────────────────────────────────────────────
             'price': 'price',
             'p_l': 'pl',
             'p_vp': 'pvp',
             'ev_ebit': 'ev_ebit',
+            'p_ebit': 'p_ebit',
+            'p_sr': 'p_sr',
+            'peg_ratio': 'peg_ratio',
+            'p_ativo': 'p_ativo',
+            'p_capitalgiro': 'p_capital_giro',
+            'p_ativocirculante': 'p_ativo_circulante',
+            # ── Profitability ─────────────────────────────────────────────────
             'roic': 'roic',
-            'roe': 'roe',              # ROE already as ratio (0-1?) — checked below
+            'roe': 'roe',
+            'roa': 'roa',
             'dy': 'dy',
-            'liquidezmediadiaria': 'liquidezmediadiaria',
             'lpa': 'lpa',
             'vpa': 'vpa',
+            'giroativos': 'giro_ativos',
+            # ── Margins ───────────────────────────────────────────────────────
+            'margembruta': 'margem_bruta',
+            'margemebit': 'margem_ebit',
+            'margemliquida': 'margem_liquida',
+            # ── Debt / Structure ──────────────────────────────────────────────
             'dividaliquidapatrimonioliquido': 'div_pat',
-            'liquidezcorrente': 'liq_corrente',       # ✅ correct key
-            'lucros_cagr5': 'cagr_lucros',            # ✅ correct key (not lucpidasNet5Years)
-            'companyname': 'empresa',
-            'sectorname': 'setor',
-            # ── NEW columns (Hybrid Screener V2.0) ──────────────────────────
-            'roa': 'roa',                              # ✅ ROA (whole number from API)
-            'margemliquida': 'margem_liquida',        # ✅ correct key (lowercase)
-            'valormercado': 'valor_mercado',           # ✅ correct key (lowercase)
-            'dividaliquidaebit': 'div_liq_ebitda',    # ✅ correct key (lowercase)
-            # Note: ev_ebitda and payout not in StatusInvest paginated API
-            # They will stay null until API adds them
+            'dividaliquidaebit': 'div_liq_ebitda',
+            'liquidezcorrente': 'liq_corrente',
+            'pl_ativo': 'pl_ativo',
+            'passivo_ativo': 'passivo_ativo',
+            # ── Growth (CAGR 5 anos) ─────────────────────────────────────────
+            'lucros_cagr5': 'cagr_lucros',
+            'receitas_cagr5': 'cagr_receitas',
+            # ── Size & Liquidity ──────────────────────────────────────────────
+            'liquidezmediadiaria': 'liquidezmediadiaria',
+            'valormercado': 'valor_mercado',
         }
 
         # Filter only existing columns just in case
         cols_to_rename = {k: v for k, v in rename_map.items() if k in df.columns}
         df.rename(columns=cols_to_rename, inplace=True)
 
-        # Normalize Data Types
-        numeric_cols = ['price', 'pl', 'pvp', 'ev_ebit', 'roic', 'dy', 'liquidezmediadiaria',
-                        'lpa', 'vpa', 'div_pat', 'liq_corrente', 'cagr_lucros', 'roe', 'roa',
-                        'margem_liquida', 'valor_mercado', 'div_liq_ebitda']
+        # Normalize ALL numeric columns
+        numeric_cols = [
+            'price', 'pl', 'pvp', 'ev_ebit', 'p_ebit', 'p_sr', 'peg_ratio',
+            'p_ativo', 'p_capital_giro', 'p_ativo_circulante',
+            'roic', 'roe', 'roa', 'dy', 'lpa', 'vpa', 'giro_ativos',
+            'margem_bruta', 'margem_ebit', 'margem_liquida',
+            'div_pat', 'div_liq_ebitda', 'liq_corrente', 'pl_ativo', 'passivo_ativo',
+            'cagr_lucros', 'cagr_receitas',
+            'liquidezmediadiaria', 'valor_mercado',
+        ]
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
         # StatusInvest returns percentages as whole numbers (e.g. 15.0 = 15%)
-        # App expects ratios (0.15 = 15%)
-        if 'dy' in df.columns:
-            df['dy'] = pd.to_numeric(df['dy'], errors='coerce').fillna(0)
-            df['dy'] = df['dy'] / 100.0
-        if 'roic' in df.columns:
-            df['roic'] = pd.to_numeric(df['roic'], errors='coerce').fillna(0)
-            df['roic'] = df['roic'] / 100.0
-        if 'roe' in df.columns:
-            df['roe'] = pd.to_numeric(df['roe'], errors='coerce').fillna(0)
-            # StatusInvest returns ROE as whole number (17.0 = 17%)
-            df['roe'] = df['roe'] / 100.0
-
-        # Normalize new percentage columns (StatusInvest returns as whole numbers)
-        for pct_col in ['margem_liquida', 'roa']:
+        # App stores as ratios (0.15 = 15%)
+        pct_cols = [
+            'dy', 'roic', 'roe', 'roa',
+            'margem_bruta', 'margem_ebit', 'margem_liquida',
+            'cagr_lucros', 'cagr_receitas',
+        ]
+        for pct_col in pct_cols:
             if pct_col in df.columns:
                 df[pct_col] = df[pct_col] / 100.0
-
-        # cagr_lucros: StatusInvest returns as whole number (e.g. -43.98 = -43.98%)
-        if 'cagr_lucros' in df.columns:
-            df['cagr_lucros'] = df['cagr_lucros'] / 100.0
 
         return df
 

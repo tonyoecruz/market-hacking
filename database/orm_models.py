@@ -33,14 +33,27 @@ class StockDB(Base):
     magic_rank = Column(Float)
     cagr_lucros = Column(Float)      # CAGR Lucros 5 anos (lucpidasNet5Years via StatusInvest)
     liq_corrente = Column(Float)     # Liquidez Corrente (liquidezCorrente via StatusInvest)
-    # ── NEW: Hybrid Screener V2.0 columns ────────────────────────────────────
-    roe             = Column(Float)  # ROE %             (roe via StatusInvest, stored as ratio)
-    roa             = Column(Float)  # ROA %             (roa via StatusInvest, stored as ratio)
-    margem_liquida  = Column(Float)  # Margem Líquida %  (margemLiquida via StatusInvest)
-    ev_ebitda       = Column(Float)  # EV/EBITDA         (eV_Ebitda via StatusInvest)
-    payout          = Column(Float)  # Payout %          (payout via StatusInvest)
-    valor_mercado   = Column(Float)  # Valor de Mercado  (valordemercado via StatusInvest)
-    div_liq_ebitda  = Column(Float)  # Dív.Líq/EBIT      (dividaLiquidaEbit via StatusInvest)
+    # ── Hybrid Screener V2.0 columns ─────────────────────────────────────────
+    roe             = Column(Float)  # ROE %
+    roa             = Column(Float)  # ROA %
+    margem_liquida  = Column(Float)  # Margem Líquida %
+    ev_ebitda       = Column(Float)  # EV/EBITDA
+    payout          = Column(Float)  # Payout %
+    valor_mercado   = Column(Float)  # Valor de Mercado
+    div_liq_ebitda  = Column(Float)  # Dív.Líq/EBIT
+    # ── Full StatusInvest API columns (V3.0) ──────────────────────────────────
+    p_ebit              = Column(Float)  # P/EBIT
+    p_sr                = Column(Float)  # P/Receita (Price/Sales)
+    peg_ratio           = Column(Float)  # PEG Ratio
+    p_ativo             = Column(Float)  # P/Ativo
+    p_capital_giro      = Column(Float)  # P/Capital de Giro
+    p_ativo_circulante  = Column(Float)  # P/Ativo Circulante
+    giro_ativos         = Column(Float)  # Giro Ativos
+    margem_bruta        = Column(Float)  # Margem Bruta %
+    margem_ebit         = Column(Float)  # Margem EBIT %
+    pl_ativo            = Column(Float)  # PL/Ativo
+    passivo_ativo       = Column(Float)  # Passivo/Ativo
+    cagr_receitas       = Column(Float)  # CAGR Receitas 5 anos
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     __table_args__ = (
@@ -67,15 +80,28 @@ class StockDB(Base):
             'valor_justo': self.valor_justo,
             'margem': self.margem,
             'magic_rank': self.magic_rank,
-            'cagr_lucros': getattr(self, 'cagr_lucros', None),
-            'liq_corrente': getattr(self, 'liq_corrente', None),
-            'roe':             getattr(self, 'roe', None),
-            'roa':             getattr(self, 'roa', None),
-            'margem_liquida':  getattr(self, 'margem_liquida', None),
-            'ev_ebitda':       getattr(self, 'ev_ebitda', None),
-            'payout':          getattr(self, 'payout', None),
-            'valor_mercado':   getattr(self, 'valor_mercado', None),
-            'div_liq_ebitda':  getattr(self, 'div_liq_ebitda', None),
+            'cagr_lucros': self.cagr_lucros,
+            'liq_corrente': self.liq_corrente,
+            'roe': self.roe,
+            'roa': self.roa,
+            'margem_liquida': self.margem_liquida,
+            'ev_ebitda': self.ev_ebitda,
+            'payout': self.payout,
+            'valor_mercado': self.valor_mercado,
+            'div_liq_ebitda': self.div_liq_ebitda,
+            # V3.0: Full StatusInvest columns
+            'p_ebit': self.p_ebit,
+            'p_sr': self.p_sr,
+            'peg_ratio': self.peg_ratio,
+            'p_ativo': self.p_ativo,
+            'p_capital_giro': self.p_capital_giro,
+            'p_ativo_circulante': self.p_ativo_circulante,
+            'giro_ativos': self.giro_ativos,
+            'margem_bruta': self.margem_bruta,
+            'margem_ebit': self.margem_ebit,
+            'pl_ativo': self.pl_ativo,
+            'passivo_ativo': self.passivo_ativo,
+            'cagr_receitas': self.cagr_receitas,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 

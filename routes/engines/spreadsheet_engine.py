@@ -13,7 +13,7 @@ Algorithm:
   3. Apply tie-breaker: rankFinal = rankBase + (rankBase / 10000.0)
   4. Score = SUM of all rankFinal values across active criteria
      (criteria with weight > 1 are summed that many times)
-  5. Liquidity penalty: score += 1000 if liquidez <= min_liq
+  5. Liquidity filter: EXCLUDE stocks with liquidez < min_liq (matches Excel)
   6. Sort ASC by score (lowest = best)
 """
 from __future__ import annotations
@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 LIQ_COL = "liquidezmediadiaria"
 DEFAULT_MIN_LIQ = 500_000
-LIQ_PENALTY = 1000.0
 
 # (column_name, lower_is_better, weight)
 Criterion = Tuple[str, bool, int]
@@ -207,13 +206,12 @@ def _apply_pre_filters(
 def _compute(
     df: pd.DataFrame,
     criteria: List[Criterion],
-    min_liq: float,
     strategy: str = "",
 ) -> pd.DataFrame:
     """
     Compute the spreadsheet score for every stock in the universe.
 
-    Score = SUM(rank_final for each criterion × weight) + liquidity_penalty
+    Score = SUM(rank_final for each criterion × weight)
     """
     out = df.copy()
     out["_score"] = 0.0
@@ -249,18 +247,6 @@ def _compute(
             f"rank=[{ranks.min():.1f}..{ranks.max():.1f}]"
         )
 
-    # Liquidity penalty
-    out["_liq_penalty"] = 0.0
-    if LIQ_COL in out.columns:
-        liq = pd.to_numeric(out[LIQ_COL], errors="coerce").fillna(0)
-        penalized_mask = liq <= float(min_liq)
-        out.loc[penalized_mask, "_liq_penalty"] = LIQ_PENALTY
-        out["_score"] += out["_liq_penalty"]
-        logger.info(
-            f"[spreadsheet][{strategy}] liquidity penalty: "
-            f"{penalized_mask.sum()} stocks <= {min_liq:,.0f}"
-        )
-
     return out
 
 
@@ -279,7 +265,7 @@ def _build_audit(
     - Raw values from DB
     - Normalized values (after 1/x if applicable)
     - Individual rank scores (with decimal tie-breaker)
-    - Sum breakdown + liquidity penalty
+    - Sum breakdown
     """
     audit = []
     for idx, (_, row) in enumerate(df_ranked.head(top_n).iterrows()):
@@ -290,7 +276,6 @@ def _build_audit(
             "setor": row.get("setor", ""),
             "liquidez": row.get(LIQ_COL),
             "score_final": round(row.get("_score", 0), 4),
-            "liq_penalty": round(row.get("_liq_penalty", 0), 1),
             "criterios": [],
         }
 
@@ -361,30 +346,46 @@ def apply_spreadsheet_mode(
                 f"Pré-filtro removeu {removed} ativos com valores inválidos"
             )
 
+    # 3. Liquidity exclusion filter (matches Excel: exclude before ranking)
+    if min_liq > 0 and LIQ_COL in df_universe.columns:
+        liq = pd.to_numeric(df_universe[LIQ_COL], errors="coerce").fillna(0)
+        before_liq = len(df_universe)
+        df_universe = df_universe[liq >= min_liq].copy()
+        liq_removed = before_liq - len(df_universe)
+        if liq_removed > 0:
+            caveats.append(
+                f"Filtro de liquidez removeu {liq_removed} ativos "
+                f"(mín. {min_liq:,.0f})"
+            )
+            logger.info(
+                f"[spreadsheet][{strategy}] liquidity filter: "
+                f"excluded {liq_removed} stocks < {min_liq:,.0f}"
+            )
+
     universe_size = len(df_universe)
     logger.info(
         f"[spreadsheet][{strategy}] ranking_universe={universe_size} stocks "
-        f"(after pre-filter)"
+        f"(after all filters)"
     )
 
     if df_universe.empty:
         return df_universe, ["Nenhum ativo no universo após filtros"], 0, None
 
-    # 3. Compute scores
+    # 4. Compute scores
     criteria = preset["criteria"]
-    df_scored = _compute(df_universe, criteria, min_liq, strategy)
+    df_scored = _compute(df_universe, criteria, strategy)
 
-    # 4. Sort by score ASC (lowest = best) — stable mergesort
+    # 5. Sort by score ASC (lowest = best) — stable mergesort
     df_ranked = df_scored.sort_values("_score", ascending=True, kind="mergesort")
 
-    # 5. Build audit trail for top 10
+    # 6. Build audit trail for top 10
     audit = _build_audit(df_ranked, criteria, top_n=10)
 
-    # 6. Log top 10
+    # 7. Log top 10
     if not df_ranked.empty:
         top10 = df_ranked.head(10)
         rank_cols = sorted([c for c in top10.columns if c.startswith("_r_")])
-        log_cols = ["ticker", "_score", "_liq_penalty"] + rank_cols
+        log_cols = ["ticker", "_score"] + rank_cols
         available = [c for c in log_cols if c in top10.columns]
         logger.info(
             f"[spreadsheet][{strategy}] TOP 10:\n"

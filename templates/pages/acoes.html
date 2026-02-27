@@ -537,8 +537,6 @@
                     <span class="w-16 text-right text-yellow-400">= ${fmtV(c.contribuicao)}</span>
                 </div>`
             ).join('');
-            const penaltyNote = a.liq_penalty > 0
-                ? `<span class="text-red-400 text-xs ml-2">[+${a.liq_penalty} penalidade liquidez]</span>` : '';
             return `<div class="border-b border-gray-700/50 py-2">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="text-primary font-bold">#${a.pos}</span>
@@ -546,10 +544,9 @@
                     <span class="text-gray-500 text-xs">${a.setor || ''}</span>
                     <span class="text-gray-500 text-xs">Liq: ${fmtLiqA(a.liquidez)}</span>
                     <span class="ml-auto text-green-400 font-mono font-bold">SCORE: ${fmtV(a.score_final)}</span>
-                    ${penaltyNote}
                 </div>
                 <div class="ml-6 space-y-0.5">${crits}</div>
-                <div class="ml-6 text-xs text-gray-400 mt-1">Soma ranks: ${fmtV(a.soma_ranks)} + penalty: ${a.liq_penalty}</div>
+                <div class="ml-6 text-xs text-gray-400 mt-1">Soma ranks: ${fmtV(a.soma_ranks)}</div>
             </div>`;
         }).join('');
 
