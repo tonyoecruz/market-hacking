@@ -95,6 +95,7 @@ def init_database():
         ("stocks", "pl_ativo", "FLOAT"),
         ("stocks", "passivo_ativo", "FLOAT"),
         ("stocks", "cagr_receitas", "FLOAT"),
+        ("stocks", "queda_maximo", "FLOAT"),
         ("investor_personas", "voice_id", "VARCHAR(100) DEFAULT 'pt-BR-AntonioNeural'"),
     ]
     with engine.connect() as conn:
@@ -151,7 +152,7 @@ class DatabaseManager:
                 # V3.0: Full StatusInvest API columns
                 'p_ebit', 'p_sr', 'peg_ratio', 'p_ativo', 'p_capital_giro',
                 'p_ativo_circulante', 'giro_ativos', 'margem_bruta', 'margem_ebit',
-                'pl_ativo', 'passivo_ativo', 'cagr_receitas',
+                'pl_ativo', 'passivo_ativo', 'cagr_receitas', 'queda_maximo',
                 # Legacy calculated field names
                 'ValorJusto', 'Margem', 'MagicRank'
             ]

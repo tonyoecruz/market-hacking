@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS stocks (
     pl_ativo FLOAT,
     passivo_ativo FLOAT,
     cagr_receitas FLOAT,
+    queda_maximo FLOAT,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uix_ticker_market UNIQUE (ticker, market)
 );

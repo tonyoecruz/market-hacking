@@ -17,6 +17,7 @@ import data_utils
 
 # Import DatabaseManager
 from database.db_manager import DatabaseManager
+from modules.statusinvest_extractor import enrich_queda_maximo
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +74,12 @@ def update_stocks_br():
             
             # Calculate Graham + Magic Formula
             df = _calculate_graham_magic(df)
-            
-            logger.info(f"✅ Found {len(df)} BR stocks (with Graham+Magic calc)")
+
+            # Enrich with 52-week high data (Queda do Máximo)
+            logger.info("📈 Fetching 52-week high from Google Finance (yfinance)...")
+            df = enrich_queda_maximo(df)
+
+            logger.info(f"✅ Found {len(df)} BR stocks (with Graham+Magic+Queda calc)")
             count = db.save_stocks(df, market='BR')
             logger.info(f"💾 Saved {count} BR stocks to database")
             return count

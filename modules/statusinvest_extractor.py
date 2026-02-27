@@ -272,3 +272,83 @@ def get_br_fiis_statusinvest():
     except Exception as e:
         logger.error(f"Error fetching Status Invest FIIs: {e}")
         return pd.DataFrame()
+
+
+def enrich_queda_maximo(df: pd.DataFrame, batch_size: int = 50) -> pd.DataFrame:
+    """
+    Enrich stock DataFrame with 'queda_maximo' column.
+    Uses yfinance to fetch 52-week high (like Excel's GOOGLEFINANCE($A7;"high52"))
+    and calculates: queda = (price / high52 - 1) * 100
+
+    Processes in batches for efficiency. Stocks without data get NaN.
+    """
+    try:
+        import yfinance as yf
+    except ImportError:
+        logger.warning("yfinance not installed — skipping queda_maximo enrichment")
+        return df
+
+    if 'ticker' not in df.columns or 'price' not in df.columns:
+        return df
+
+    tickers = df['ticker'].tolist()
+    high52_map = {}
+
+    # Process in batches
+    for i in range(0, len(tickers), batch_size):
+        batch = tickers[i:i + batch_size]
+        yf_tickers = [f"{t}.SA" for t in batch]
+        ticker_str = ' '.join(yf_tickers)
+
+        logger.info(
+            f"yfinance: Fetching high52 batch {i // batch_size + 1}"
+            f"/{(len(tickers) + batch_size - 1) // batch_size} "
+            f"({len(batch)} tickers)..."
+        )
+
+        try:
+            data = yf.download(
+                ticker_str,
+                period="1y",
+                progress=False,
+                threads=True,
+                group_by='ticker',
+            )
+
+            for t_br, t_yf in zip(batch, yf_tickers):
+                try:
+                    if len(yf_tickers) == 1:
+                        # Single ticker: columns are flat (High, Low, etc.)
+                        col = data['High']
+                    else:
+                        # Multiple tickers: multi-level columns (ticker, field)
+                        col = data[(t_yf, 'High')]
+
+                    if not col.empty:
+                        high52 = col.max()
+                        if pd.notna(high52) and high52 > 0:
+                            high52_map[t_br] = float(high52)
+                except (KeyError, TypeError):
+                    pass
+
+        except Exception as e:
+            logger.warning(f"yfinance batch error: {e}")
+            continue
+
+    # Calculate queda_maximo for each stock
+    # Stored as POSITIVE percentage: e.g., 5.0 means stock is 5% below its 52-week high
+    # Matches Excel "Queda do Máximo" with direction "Menor" (1/x transform)
+    def calc_queda(row):
+        ticker = row['ticker']
+        price = row.get('price', 0)
+        high52 = high52_map.get(ticker)
+        if high52 and high52 > 0 and price and price > 0:
+            return round((1 - price / high52) * 100, 2)
+        return None
+
+    df['queda_maximo'] = df.apply(calc_queda, axis=1)
+
+    found = df['queda_maximo'].notna().sum()
+    logger.info(f"yfinance: Calculated queda_maximo for {found}/{len(df)} stocks")
+
+    return df

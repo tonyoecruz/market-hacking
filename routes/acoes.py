@@ -47,6 +47,7 @@ def _build_universe(market: str | None, filter_risky: bool) -> pd.DataFrame | No
         # V3.0: Full StatusInvest columns
         'p_ebit', 'p_sr', 'peg_ratio', 'p_ativo', 'p_capital_giro', 'p_ativo_circulante',
         'giro_ativos', 'margem_bruta', 'margem_ebit', 'pl_ativo', 'passivo_ativo', 'cagr_receitas',
+        'queda_maximo',
     ]
     for col in numeric_cols:
         if col in df.columns:

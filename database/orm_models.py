@@ -54,6 +54,7 @@ class StockDB(Base):
     pl_ativo            = Column(Float)  # PL/Ativo
     passivo_ativo       = Column(Float)  # Passivo/Ativo
     cagr_receitas       = Column(Float)  # CAGR Receitas 5 anos
+    queda_maximo        = Column(Float)  # Queda do Máximo 52 semanas (%)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     __table_args__ = (
@@ -102,6 +103,7 @@ class StockDB(Base):
             'pl_ativo': self.pl_ativo,
             'passivo_ativo': self.passivo_ativo,
             'cagr_receitas': self.cagr_receitas,
+            'queda_maximo': self.queda_maximo,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 

@@ -61,37 +61,38 @@ SPREADSHEET_PRESETS: Dict[str, Dict[str, Any]] = {
 
     "baratas": {
         "criteria": [
-            ("ev_ebit", True, 1),
-            ("pl",      True, 1),
-            ("pvp",     True, 1),
+            ("queda_maximo", True, 1),   # Queda do Máximo 52sem — lower drop is better (Menor)
+            ("pl",           True, 1),   # P/L — lower is better
+            ("pvp",          True, 1),   # P/VP — lower is better
         ],
         "pre_filter": {
-            "ev_ebit": {"op": ">", "val": 0},
-            "pl":      {"op": ">", "val": 0},
-            "pvp":     {"op": ">", "val": 0},
+            "pl":  {"op": ">", "val": 0},
+            "pvp": {"op": ">", "val": 0},
         },
     },
 
     "solidas": {
         "criteria": [
-            ("div_pat",        True, 1),     # Dív/Patrimônio — lower is better
-            ("roe",            False, 1),    # ROE — higher is better
-            ("margem_liquida", False, 1),    # Margem Líquida — higher is better
+            ("div_pat",       True, 1),     # Dív.Líq/Patrimônio — lower is better
+            ("liq_corrente",  False, 1),    # Liq. Corrente — higher is better
+            ("cagr_lucros",   False, 1),    # CAGR Lucros 5 anos — higher is better
         ],
     },
 
     "mix": {
         "criteria": [
-            ("pl",  True, 1),          # P/L — lower is better
-            ("dy",  False, 1),         # DY — higher is better
-            ("roe", False, 1),         # ROE — higher is better
+            ("pl",           True, 1),     # P/L — lower is better
+            ("pvp",          True, 1),     # P/VP — lower is better
+            ("liq_corrente", False, 1),    # Liq. Corrente — higher is better
+            ("roe",          False, 1),    # ROE — higher is better
+            ("cagr_lucros",  False, 1),    # CAGR Lucros 5 anos — higher is better
         ],
     },
 
     "dividendos": {
         "criteria": [
-            ("dy",          False, 3),   # DY — weight 3 (summed 3x)
-            ("cagr_lucros", False, 1),
+            ("cagr_lucros", False, 1),    # CAGR Lucros 5 anos — higher is better
+            ("dy",          False, 1),    # DY — higher is better
         ],
     },
 
