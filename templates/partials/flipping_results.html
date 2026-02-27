@@ -115,6 +115,7 @@
             <thead class="bg-dark-700 text-gray-400 uppercase text-xs font-bold">
                 <tr>
                     <th class="px-4 py-3">Bairro</th>
+                    <th class="px-4 py-3">Imobiliaria</th>
                     <th class="px-4 py-3">Tipo</th>
                     <th class="px-4 py-3">Area</th>
                     <th class="px-4 py-3">Valor Imovel &#9999;&#65039;</th>
@@ -273,6 +274,7 @@
 
         return `<tr class="hover:bg-dark-700 transition-colors">
         <td class="px-4 py-3 font-medium text-white text-xs">${item.Bairro || 'N/A'}</td>
+        <td class="px-4 py-3 text-gray-300 text-xs">${item.Imobiliaria || ''}</td>
         <td class="px-4 py-3 text-gray-300 text-xs">${item.Tipo || ''}</td>
         <td class="px-4 py-3 text-gray-300 text-xs">${item['Area (m2)']} m\u00B2</td>
         <td class="px-4 py-3">
@@ -324,7 +326,7 @@
         updateKPIs(filtered);
 
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-8 text-center text-gray-500">Nenhum imovel encontrado com os filtros selecionados.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="px-6 py-8 text-center text-gray-500">Nenhum imovel encontrado com os filtros selecionados.</td></tr>';
             return;
         }
 
@@ -357,7 +359,7 @@
             for (const key of sortedKeys) {
                 const items = groups[key].sort((a, b) => a['Dif vs Med (%)'] - b['Dif vs Med (%)']);
                 const label = key === 'N/A' ? 'Sem Bairro Identificado' : key;
-                html += groupHeaderHtml(label, items, 10);
+                html += groupHeaderHtml(label, items, 11);
                 html += items.map(item => rowHtml(item, allData.indexOf(item))).join('');
             }
         }
