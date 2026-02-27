@@ -217,7 +217,8 @@ class FlippingCityDB(Base):
     active = Column(Integer, default=1)  # 1=active, 0=inactive
     added_at = Column(DateTime, default=func.now())
     last_scraped_at = Column(DateTime, nullable=True)
-    
+    last_accessed_at = Column(DateTime, nullable=True)
+
     def to_dict(self):
         """Convert to dictionary for API responses"""
         return {
@@ -226,7 +227,8 @@ class FlippingCityDB(Base):
             'state': self.state,
             'active': bool(self.active),
             'added_at': self.added_at.isoformat() if self.added_at else None,
-            'last_scraped_at': self.last_scraped_at.isoformat() if self.last_scraped_at else None
+            'last_scraped_at': self.last_scraped_at.isoformat() if self.last_scraped_at else None,
+            'last_accessed_at': self.last_accessed_at.isoformat() if self.last_accessed_at else None
         }
 
 
@@ -246,6 +248,7 @@ class FlippingListingDB(Base):
     media_setor_m2 = Column(Float)
     desconto_pct = Column(Float)
     link = Column(String(500))
+    regiao = Column(String(50), nullable=True)
     scraped_at = Column(DateTime, default=func.now())
 
     def to_dict(self):
@@ -261,6 +264,7 @@ class FlippingListingDB(Base):
             'Media Setor (m2)': self.media_setor_m2,
             'Dif vs Med (%)': self.desconto_pct,
             'Link': self.link or '',
+            'Regiao': self.regiao or '',
         }
 
 

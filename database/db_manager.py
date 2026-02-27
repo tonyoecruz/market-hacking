@@ -97,6 +97,8 @@ def init_database():
         ("stocks", "cagr_receitas", "FLOAT"),
         ("stocks", "queda_maximo", "FLOAT"),
         ("investor_personas", "voice_id", "VARCHAR(100) DEFAULT 'pt-BR-AntonioNeural'"),
+        ("flipping_cities", "last_accessed_at", "TIMESTAMP"),
+        ("flipping_listings", "regiao", "VARCHAR(50)"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in _migrate_columns:
@@ -657,7 +659,7 @@ class DatabaseManager:
     
     # ==================== FLIPPING LISTINGS (CACHE) ====================
 
-    def save_flipping_listings(self, city: str, results: List[Dict]) -> int:
+    def save_flipping_listings(self, city: str, results: List[Dict], state: str = None) -> int:
         """Save flipping scan results for a city (replaces old data)"""
         db = self.SessionLocal()
         try:
@@ -683,6 +685,7 @@ class DatabaseManager:
                     media_setor_m2=r.get('Media Setor (m2)'),
                     desconto_pct=r.get('Dif vs Med (%)'),
                     link=r.get('Link'),
+                    regiao=r.get('Regiao'),
                     scraped_at=now,
                 ))
 
@@ -697,7 +700,7 @@ class DatabaseManager:
                 city_record.last_scraped_at = now
             else:
                 # Auto-add city if not tracked yet
-                db.add(FlippingCityDB(city=city_norm, active=1, added_at=now, last_scraped_at=now))
+                db.add(FlippingCityDB(city=city_norm, state=state, active=1, added_at=now, last_scraped_at=now, last_accessed_at=now))
 
             db.commit()
             logger.info(f"Saved {len(new_objects)} flipping listings for '{city_norm}'")
@@ -745,6 +748,48 @@ class DatabaseManager:
                 "cities_count": cities_count,
                 "listings_count": listings_count
             }
+        finally:
+            db.close()
+
+    def touch_flipping_city(self, city: str):
+        """Update last_accessed_at for a city (called on every user scan)"""
+        db = self.SessionLocal()
+        try:
+            city_norm = city.strip().title()
+            record = db.query(FlippingCityDB).filter(FlippingCityDB.city == city_norm).first()
+            if record:
+                record.last_accessed_at = datetime.now()
+                db.commit()
+        except Exception:
+            db.rollback()
+        finally:
+            db.close()
+
+    def cleanup_inactive_flipping_cities(self, days: int = 30):
+        """Delete cities (and their listings) not accessed in N days"""
+        from sqlalchemy import or_, and_
+        db = self.SessionLocal()
+        try:
+            cutoff = datetime.now() - timedelta(days=days)
+            inactive = db.query(FlippingCityDB).filter(
+                or_(
+                    FlippingCityDB.last_accessed_at < cutoff,
+                    and_(FlippingCityDB.last_accessed_at == None, FlippingCityDB.added_at < cutoff)
+                )
+            ).all()
+
+            for city_record in inactive:
+                db.query(FlippingListingDB).filter(FlippingListingDB.city == city_record.city).delete()
+                db.delete(city_record)
+
+            db.commit()
+            if inactive:
+                logger.info(f"Cleaned up {len(inactive)} inactive flipping cities")
+            return len(inactive)
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error cleaning up flipping cities: {e}", exc_info=True)
+            return 0
         finally:
             db.close()
 

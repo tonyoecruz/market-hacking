@@ -9,7 +9,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
 
 import asyncio
-from scheduler.data_updater import update_all_data, update_flipping, cleanup_old_logs
+from scheduler.data_updater import update_all_data, update_flipping, cleanup_old_logs, cleanup_inactive_flipping_cities
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +119,16 @@ def start_scheduler():
         name='Cleanup Old Logs',
         replace_existing=True
     )
+
+    # Schedule daily cleanup of inactive flipping cities at 3:30 AM
+    scheduler.add_job(
+        cleanup_inactive_flipping_cities,
+        trigger=CronTrigger(hour=3, minute=30),
+        id='cleanup_flipping_cities',
+        name='Cleanup Inactive Flipping Cities (30 days)',
+        replace_existing=True
+    )
+    logger.info("🧹 Flipping cities cleanup scheduled daily at 3:30 AM")
     
     # Start scheduler
     scheduler.start()

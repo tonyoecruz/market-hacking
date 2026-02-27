@@ -131,6 +131,12 @@ def _html_to_text(html: str) -> str:
     text = re.sub(r'<noscript[^>]*>.*?</noscript>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
     # Remove HTML comments
     text = re.sub(r'<!--.*?-->', ' ', text, flags=re.DOTALL)
+    # Preserve <a href="..."> links as "text (URL)" so the LLM can extract them
+    text = re.sub(
+        r'<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+        r'\2 (\1)',
+        text, flags=re.DOTALL | re.IGNORECASE
+    )
     # Replace <br>, <p>, <div>, <li>, <tr> with newlines for readability
     text = re.sub(r'<(?:br|p|div|li|tr|h[1-6])[^>]*/?>', '\n', text, flags=re.IGNORECASE)
     # Strip all remaining HTML tags
@@ -201,7 +207,7 @@ class AgencyCrawler:
             logger.warning(f"[CRAWL] Error fetching {url}: {e}")
             return ""
 
-    async def crawl_agency(self, agency: dict, city: str, max_pages: int = 2) -> list:
+    async def crawl_agency(self, agency: dict, city: str, max_pages: int = 2, is_capital: bool = False) -> list:
         """
         Fetch agency site pages via HTTP and extract structured listings.
         Returns list of dicts matching the expected DataFrame schema.
@@ -227,7 +233,7 @@ class AgencyCrawler:
                 if not text:
                     continue
 
-                listings = await self._extract_with_gemini(text, city, agency["name"])
+                listings = await self._extract_with_gemini(text, city, agency["name"], domain_root, is_capital)
                 if listings:
                     all_listings.extend(listings)
                     pages_crawled += 1
@@ -243,7 +249,7 @@ class AgencyCrawler:
         logger.info(f"[CRAWL] Total: {len(all_listings)} listings from {agency['name']}")
         return all_listings
 
-    async def _extract_with_gemini(self, page_text: str, city: str, agency_name: str) -> list:
+    async def _extract_with_gemini(self, page_text: str, city: str, agency_name: str, base_domain: str = "", is_capital: bool = False) -> list:
         """
         Send page text to Gemini and extract structured listing data.
         """
@@ -254,6 +260,11 @@ class AgencyCrawler:
         # Truncate to avoid token limits
         content = page_text[:15000]
 
+        # Build region field instruction for capitals
+        regiao_field = ""
+        if is_capital:
+            regiao_field = f"""- "Regiao": classifique em qual regiao da cidade de {city} o bairro esta localizado. Use exatamente um de: "Norte", "Sul", "Leste", "Oeste", "Centro". Baseie-se na geografia conhecida da cidade (string)\n"""
+
         prompt = f"""Analise o conteudo abaixo de um site de imobiliaria e extraia TODOS os imoveis a venda listados.
 
 Para cada imovel, extraia exatamente estes campos em JSON:
@@ -262,8 +273,8 @@ Para cada imovel, extraia exatamente estes campos em JSON:
 - "Referencia": codigo de referencia do imovel se disponivel, senao string vazia (string)
 - "Area": area em metros quadrados, apenas o numero (float). Ex: 120.0
 - "Valor": valor total em reais, apenas o numero sem pontos de milhar (float). Ex: 350000.0
-- "Link": URL do anuncio se disponivel, senao string vazia (string)
-
+- "Link": URL do anuncio individual do imovel, se disponivel no texto entre parenteses (ex: https://site.com/imovel/123). Se nao encontrar, use string vazia (string)
+{regiao_field}
 Regras OBRIGATORIAS:
 1. SOMENTE inclua imoveis que tenham Area > 0 E Valor > 0 (ambos obrigatorios)
 2. Se nao encontrar nenhum imovel valido, retorne: []
@@ -305,7 +316,12 @@ Conteudo do site da imobiliaria "{agency_name}":
                     if area <= 0 or valor <= 0:
                         continue
 
-                    normalized.append({
+                    # Resolve relative URLs
+                    raw_link = str(item.get("Link", "")).strip()
+                    if raw_link and raw_link.startswith("/") and base_domain:
+                        raw_link = base_domain.rstrip("/") + raw_link
+
+                    entry = {
                         "Cidade": city,
                         "Imobiliaria": agency_name,
                         "Bairro": str(item.get("Bairro", "N/A")).strip(),
@@ -313,8 +329,11 @@ Conteudo do site da imobiliaria "{agency_name}":
                         "Referencia": str(item.get("Referencia", "")),
                         "Area (m2)": area,
                         "Valor Total": valor,
-                        "Link": str(item.get("Link", ""))
-                    })
+                        "Link": raw_link,
+                    }
+                    if is_capital:
+                        entry["Regiao"] = str(item.get("Regiao", "")).strip()
+                    normalized.append(entry)
                 except (ValueError, TypeError):
                     continue
 
@@ -327,7 +346,7 @@ Conteudo do site da imobiliaria "{agency_name}":
             logger.warning(f"[GEMINI] Extraction failed for {agency_name}: {e}")
             return []
 
-    async def crawl_all_agencies(self, agencies: list, city: str, max_agencies: int = 8) -> list:
+    async def crawl_all_agencies(self, agencies: list, city: str, max_agencies: int = 8, is_capital: bool = False) -> list:
         """
         Crawl multiple agencies sequentially with rate limiting.
         Returns combined list of all extracted listings.
@@ -338,7 +357,7 @@ Conteudo do site da imobiliaria "{agency_name}":
             logger.info(f"[CRAWL] Agency {i+1}/{min(len(agencies), max_agencies)}: {agency['name']} ({agency['domain']})")
 
             try:
-                listings = await self.crawl_agency(agency, city)
+                listings = await self.crawl_agency(agency, city, is_capital=is_capital)
                 all_listings.extend(listings)
             except Exception as e:
                 logger.error(f"[CRAWL] Agency '{agency['name']}' failed: {e}")

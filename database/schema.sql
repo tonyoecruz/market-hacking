@@ -98,7 +98,19 @@ CREATE TABLE IF NOT EXISTS flipping_listings (
     media_setor_m2 FLOAT,
     desconto_pct FLOAT,
     link VARCHAR(500),
+    regiao VARCHAR(50),
     scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: flipping_cities (monitored cities for house flipping)
+CREATE TABLE IF NOT EXISTS flipping_cities (
+    id SERIAL PRIMARY KEY,
+    city VARCHAR(200) NOT NULL UNIQUE,
+    state VARCHAR(50),
+    active INTEGER DEFAULT 1,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_scraped_at TIMESTAMP,
+    last_accessed_at TIMESTAMP
 );
 
 -- Indexes for performance

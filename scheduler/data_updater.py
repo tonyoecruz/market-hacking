@@ -392,3 +392,11 @@ async def update_flipping():
 def cleanup_old_logs():
     """Remove old update logs"""
     db.cleanup_logs(days=7)
+
+
+def cleanup_inactive_flipping_cities():
+    """Remove flipping cities not accessed in 30 days"""
+    removed = db.cleanup_inactive_flipping_cities(days=30)
+    if removed:
+        logger.info(f"[FLIPPING] Cleaned up {removed} inactive cities (30+ days)")
+    return removed

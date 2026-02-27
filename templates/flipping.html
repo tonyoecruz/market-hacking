@@ -23,18 +23,49 @@
                     <span class="text-gray-500 text-xs">Descobre imobiliarias, visita sites e compara precos</span>
                 </div>
 
-                <form id="scanForm" class="flex gap-3 items-end" onsubmit="handleScan(event)">
-                    <div class="relative" style="width: 320px;">
-                        <label class="block text-sm font-medium text-gray-400 mb-1">Cidade Alvo</label>
-                        <input type="text" name="city" id="cityInput" autocomplete="off"
-                            class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm"
-                            placeholder="Selecione ou digite uma cidade..." required>
-                        <!-- Autocomplete dropdown -->
-                        <div id="cityDropdown" class="hidden absolute left-0 right-0 mt-1 bg-dark-900 border border-gray-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                <form id="scanForm" class="flex flex-wrap gap-3 items-end" onsubmit="handleScan(event)">
+                    <!-- Estado -->
+                    <div style="width: 220px;">
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Estado</label>
+                        <select id="stateSelect" onchange="onStateChange()"
+                            class="w-full bg-dark-900 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm">
+                            <option value="">Selecione o estado...</option>
+                            {% for uf, name in states %}
+                            <option value="{{ uf }}">{{ uf }} - {{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Cidade -->
+                    <div style="width: 260px;">
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Cidade</label>
+                        <div class="relative">
+                            <select id="citySelect" disabled onchange="onCityChange()"
+                                class="w-full bg-dark-900 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                                <option value="">Selecione o estado primeiro...</option>
+                            </select>
+                            <div id="cityLoading" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
+                                <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            </div>
                         </div>
                     </div>
-                    <button type="submit" id="scanBtn"
-                        class="bg-primary hover:bg-green-400 text-dark-900 font-bold py-2.5 px-6 rounded-lg transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,157,0.3)] text-sm">
+
+                    <!-- Regiao (only for capitals) -->
+                    <div id="regionContainer" class="hidden" style="width: 180px;">
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Regiao</label>
+                        <select id="regionSelect"
+                            class="w-full bg-dark-900 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm">
+                            <option value="">Tudo</option>
+                            <option value="Norte">Norte</option>
+                            <option value="Sul">Sul</option>
+                            <option value="Leste">Leste</option>
+                            <option value="Oeste">Oeste</option>
+                            <option value="Centro">Centro</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" id="scanBtn" disabled
+                        class="bg-primary hover:bg-green-400 text-dark-900 font-bold py-2.5 px-6 rounded-lg transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,157,0.3)] text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
                         &#128640; Iniciar Varredura
                     </button>
                 </form>
@@ -58,75 +89,93 @@
 
 {% block scripts %}
 <script>
-    // ===================== CITY AUTOCOMPLETE =====================
-    let monitoredCities = [];
+    // ===================== CAPITALS MAP (from backend) =====================
+    const CAPITALS = {{ capitals | tojson }};
 
-    async function loadCities() {
-        try {
-            const res = await fetch('/flipping/api/cities');
-            const data = await res.json();
-            monitoredCities = data.cities || [];
-        } catch (e) {
-            console.error('Error loading cities:', e);
-        }
-    }
+    // ===================== STATE CHANGE → LOAD CITIES =====================
+    async function onStateChange() {
+        const stateSelect = document.getElementById('stateSelect');
+        const citySelect = document.getElementById('citySelect');
+        const cityLoading = document.getElementById('cityLoading');
+        const scanBtn = document.getElementById('scanBtn');
+        const regionContainer = document.getElementById('regionContainer');
 
-    function renderCityDropdown(filter) {
-        const dd = document.getElementById('cityDropdown');
-        const filterLower = (filter || '').toLowerCase();
+        const uf = stateSelect.value;
 
-        let cities = monitoredCities;
-        if (filterLower) {
-            cities = cities.filter(c => c.toLowerCase().includes(filterLower));
-        }
+        // Reset city and region
+        citySelect.innerHTML = '<option value="">Carregando cidades...</option>';
+        citySelect.disabled = true;
+        scanBtn.disabled = true;
+        regionContainer.classList.add('hidden');
 
-        if (cities.length === 0) {
-            dd.classList.add('hidden');
+        if (!uf) {
+            citySelect.innerHTML = '<option value="">Selecione o estado primeiro...</option>';
             return;
         }
 
-        let html = '';
-        for (const city of cities) {
-            html += `<div class="px-4 py-2.5 text-sm text-gray-300 hover:bg-primary/10 hover:text-white cursor-pointer transition-colors"
-                onclick="selectCity('${city.replace(/'/g, "\\'")}')">${city}</div>`;
-        }
-        dd.innerHTML = html;
-        dd.classList.remove('hidden');
-    }
+        // Show loading spinner
+        cityLoading.classList.remove('hidden');
 
-    function selectCity(city) {
-        document.getElementById('cityInput').value = city;
-        document.getElementById('cityDropdown').classList.add('hidden');
-    }
+        try {
+            const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+            const cities = await res.json();
 
-    // Wire up events
-    document.addEventListener('DOMContentLoaded', () => {
-        loadCities();
-
-        const input = document.getElementById('cityInput');
-        const dd = document.getElementById('cityDropdown');
-
-        input.addEventListener('focus', () => renderCityDropdown(input.value));
-        input.addEventListener('input', () => renderCityDropdown(input.value));
-
-        // Close dropdown on click outside
-        document.addEventListener('click', (e) => {
-            if (!input.contains(e.target) && !dd.contains(e.target)) {
-                dd.classList.add('hidden');
+            let html = '<option value="">Selecione a cidade...</option>';
+            for (const c of cities) {
+                html += `<option value="${c.nome}">${c.nome}</option>`;
             }
-        });
-    });
+            citySelect.innerHTML = html;
+            citySelect.disabled = false;
+        } catch (e) {
+            console.error('Error loading cities from IBGE:', e);
+            citySelect.innerHTML = '<option value="">Erro ao carregar cidades</option>';
+        } finally {
+            cityLoading.classList.add('hidden');
+        }
+    }
+
+    // ===================== CITY CHANGE → CHECK CAPITAL =====================
+    function onCityChange() {
+        const citySelect = document.getElementById('citySelect');
+        const stateSelect = document.getElementById('stateSelect');
+        const regionContainer = document.getElementById('regionContainer');
+        const scanBtn = document.getElementById('scanBtn');
+
+        const city = citySelect.value;
+        const uf = stateSelect.value;
+
+        // Enable/disable scan button
+        scanBtn.disabled = !city;
+
+        // Check if selected city is a capital
+        if (city && uf && CAPITALS[uf]) {
+            const capital = CAPITALS[uf];
+            // Compare normalized (case-insensitive)
+            if (city.toLowerCase() === capital.toLowerCase()) {
+                regionContainer.classList.remove('hidden');
+            } else {
+                regionContainer.classList.add('hidden');
+            }
+        } else {
+            regionContainer.classList.add('hidden');
+        }
+    }
 
     // ===================== SCAN =====================
     async function handleScan(e) {
         e.preventDefault();
 
-        const city = document.getElementById('cityInput').value;
+        const city = document.getElementById('citySelect').value;
+        const state = document.getElementById('stateSelect').value;
+        const regionSelect = document.getElementById('regionSelect');
+        const regionContainer = document.getElementById('regionContainer');
+        const region = regionContainer.classList.contains('hidden') ? '' : (regionSelect.value || '');
+
+        if (!city) return;
+
         const btn = document.getElementById('scanBtn');
         const container = document.getElementById('resultsContainer');
         const loader = document.getElementById('loadingState');
-
-        document.getElementById('cityDropdown').classList.add('hidden');
 
         // UI State: Loading
         btn.disabled = true;
@@ -136,6 +185,8 @@
 
         const formData = new FormData();
         formData.append('city', city);
+        formData.append('state', state);
+        formData.append('region', region);
 
         try {
             const response = await fetch('/flipping/scan', {
@@ -152,9 +203,6 @@
                 newScript.textContent = oldScript.textContent;
                 oldScript.parentNode.replaceChild(newScript, oldScript);
             });
-
-            // Refresh cities list (new city may have been added)
-            loadCities();
 
         } catch (error) {
             console.error(error);

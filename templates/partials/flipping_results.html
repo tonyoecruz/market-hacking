@@ -33,6 +33,20 @@
             </select>
         </div>
 
+        <!-- Region Filter (only for capitals) -->
+        {% if is_capital and regioes %}
+        <div class="flex items-center gap-3">
+            <label class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Regiao:</label>
+            <select id="flipping-region-filter" onchange="renderFlippingResults()"
+                class="bg-dark-900 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
+                <option value="">Todas</option>
+                {% for regiao in regioes %}
+                <option value="{{ regiao }}">{{ regiao }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
         <!-- Type Filter -->
         <div class="flex items-center gap-3">
             <label class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Tipos:</label>
@@ -117,7 +131,15 @@ window.__flippingData = {{ results_json|safe }};
 function getFilteredData() {
     const data = window.__flippingData;
     const checkedTypes = Array.from(document.querySelectorAll('.flipping-type-cb:checked')).map(cb => cb.value);
-    return data.filter(item => checkedTypes.includes(item.Tipo));
+    let filtered = data.filter(item => checkedTypes.includes(item.Tipo));
+
+    // Region filter (only present for capitals)
+    const regionFilter = document.getElementById('flipping-region-filter');
+    if (regionFilter && regionFilter.value) {
+        filtered = filtered.filter(item => item.Regiao === regionFilter.value);
+    }
+
+    return filtered;
 }
 
 function updateKPIs(filtered) {
