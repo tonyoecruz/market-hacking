@@ -52,8 +52,10 @@
             <label class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Tipos:</label>
             <div id="flipping-type-filters" class="flex flex-wrap gap-2">
                 {% for tipo in tipos %}
-                <label class="flex items-center gap-1.5 bg-dark-900 border border-gray-600 rounded-lg px-3 py-1.5 cursor-pointer hover:border-primary/50 transition text-sm">
-                    <input type="checkbox" class="flipping-type-cb accent-[#00FF9D] w-4 h-4" value="{{ tipo }}" checked onchange="renderFlippingResults()">
+                <label
+                    class="flex items-center gap-1.5 bg-dark-900 border border-gray-600 rounded-lg px-3 py-1.5 cursor-pointer hover:border-primary/50 transition text-sm">
+                    <input type="checkbox" class="flipping-type-cb accent-[#00FF9D] w-4 h-4" value="{{ tipo }}" checked
+                        onchange="renderFlippingResults()">
                     <span class="text-gray-300">{{ tipo }}</span>
                 </label>
                 {% endfor %}
@@ -63,28 +65,46 @@
 </div>
 
 <!-- KPI Cards -->
-<div id="flipping-kpis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <div class="bg-dark-800 p-6 rounded-lg border-l-4 border-blue-500">
-        <p class="text-gray-400 text-sm uppercase">Imoveis Analisados</p>
+<div id="flipping-kpis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+    <div class="bg-dark-800 p-5 rounded-lg border-l-4 border-blue-500">
+        <p class="text-gray-400 text-xs uppercase">Imoveis Analisados</p>
         <p class="text-3xl font-bold text-white" id="kpi-count">{{ stats.count }}</p>
     </div>
-    <div class="bg-dark-800 p-6 rounded-lg border-l-4 border-purple-500">
-        <p class="text-gray-400 text-sm uppercase">Media da Regiao</p>
-        <p class="text-3xl font-bold text-white" id="kpi-avg-m2">R$ {{ "%.2f"|format(stats.avg_m2) }}/m&#178;</p>
+    <div class="bg-dark-800 p-5 rounded-lg border-l-4 border-purple-500">
+        <p class="text-gray-400 text-xs uppercase">Media R$/m&#178;</p>
+        <p class="text-2xl font-bold text-white" id="kpi-avg-m2">R$ {{ "%.2f"|format(stats.avg_m2) }}/m&#178;</p>
     </div>
-    <div class="bg-dark-800 p-6 rounded-lg border-l-4 border-primary">
-        <p class="text-gray-400 text-sm uppercase">Melhor Oportunidade</p>
+    <div class="bg-dark-800 p-5 rounded-lg border-l-4 border-primary">
+        <p class="text-gray-400 text-xs uppercase">Melhor Desconto</p>
         {% if stats.best_deal %}
         <p class="text-3xl font-bold text-primary" id="kpi-best-deal">{{ stats.best_deal['Dif vs Med (%)'] }}%</p>
-        <p class="text-xs text-gray-400">Abaixo da media</p>
         {% else %}
         <p class="text-xl text-gray-500" id="kpi-best-deal">-</p>
         {% endif %}
     </div>
-    <div class="bg-dark-800 p-6 rounded-lg border-l-4 border-yellow-500">
-        <p class="text-gray-400 text-sm uppercase">Imobiliarias</p>
-        <p class="text-3xl font-bold text-white">{{ stats.agencies_with_data }}<span class="text-lg text-gray-500">/{{ stats.agencies_found }}</span></p>
+    <div class="bg-dark-800 p-5 rounded-lg border-l-4 border-amber-500">
+        <p class="text-gray-400 text-xs uppercase">Melhor Lucro R$</p>
+        <p class="text-2xl font-bold text-green-400" id="kpi-best-profit">-</p>
+    </div>
+    <div class="bg-dark-800 p-5 rounded-lg border-l-4 border-yellow-500">
+        <p class="text-gray-400 text-xs uppercase">Imobiliarias</p>
+        <p class="text-3xl font-bold text-white">{{ stats.agencies_with_data }}<span class="text-lg text-gray-500">/{{
+                stats.agencies_found }}</span></p>
         <p class="text-xs text-gray-400">com dados extraidos</p>
+    </div>
+</div>
+
+<!-- Cost Legend -->
+<div class="bg-dark-800/50 rounded-lg border border-gray-700/50 px-4 py-3 mb-4">
+    <div class="flex flex-wrap items-center gap-4 text-xs text-gray-400">
+        <span class="font-semibold text-gray-300">&#128176; Custos embutidos:</span>
+        <span>ITBI+Registro <strong class="text-white">6%</strong></span>
+        <span>&#8226;</span>
+        <span>Reforma <strong class="text-white">15%</strong></span>
+        <span>&#8226;</span>
+        <span>Manutencao <strong class="text-white">Cond. &#215; 6 meses</strong></span>
+        <span>&#8226;</span>
+        <span class="text-primary font-semibold">&#9999;&#65039; Clique no valor para simular negociacao</span>
     </div>
 </div>
 
@@ -94,14 +114,16 @@
         <table class="w-full text-left text-sm" id="flipping-table">
             <thead class="bg-dark-700 text-gray-400 uppercase text-xs font-bold">
                 <tr>
-                    <th class="px-6 py-4">Bairro</th>
-                    <th class="px-6 py-4">Imobiliaria</th>
-                    <th class="px-6 py-4">Tipo</th>
-                    <th class="px-6 py-4">Area</th>
-                    <th class="px-6 py-4">Valor Total</th>
-                    <th class="px-6 py-4">R$/m&#178;</th>
-                    <th class="px-6 py-4 text-center">Desconto</th>
-                    <th class="px-6 py-4 text-right">Acao</th>
+                    <th class="px-4 py-3">Bairro</th>
+                    <th class="px-4 py-3">Tipo</th>
+                    <th class="px-4 py-3">Area</th>
+                    <th class="px-4 py-3">Valor Imovel &#9999;&#65039;</th>
+                    <th class="px-4 py-3">Custo Total</th>
+                    <th class="px-4 py-3">Venda Est.</th>
+                    <th class="px-4 py-3 text-center">Lucro R$</th>
+                    <th class="px-4 py-3 text-center">Lucro %</th>
+                    <th class="px-4 py-3 text-center">Desconto</th>
+                    <th class="px-4 py-3 text-right">Acao</th>
                 </tr>
             </thead>
             <tbody id="flipping-tbody" class="divide-y divide-gray-700">
@@ -126,132 +148,225 @@
 
 <!-- Inject data for JS rendering -->
 <script>
-window.__flippingData = {{ results_json|safe }};
+    window.__flippingData = {{ results_json | safe }};
 
-function getFilteredData() {
-    const data = window.__flippingData;
-    const checkedTypes = Array.from(document.querySelectorAll('.flipping-type-cb:checked')).map(cb => cb.value);
-    let filtered = data.filter(item => checkedTypes.includes(item.Tipo));
+    // ═══════════ CONSTANTS ═══════════
+    const ITBI_RATE = 0.06;
+    const REFORMA_RATE = 0.15;
 
-    // Region filter (only present for capitals)
-    const regionFilter = document.getElementById('flipping-region-filter');
-    if (regionFilter && regionFilter.value) {
-        filtered = filtered.filter(item => item.Regiao === regionFilter.value);
+    // ═══════════ HELPERS ═══════════
+    function fmtMoney(v) { return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
+
+    function discountBadge(pct) {
+        let cls = 'bg-red-500/20 text-red-400';
+        if (pct < -20) cls = 'bg-primary/20 text-primary';
+        else if (pct < 0) cls = 'bg-blue-500/20 text-blue-400';
+        return `<span class="inline-block px-2 py-1 rounded text-xs font-bold ${cls}">${pct}%</span>`;
     }
 
-    return filtered;
-}
-
-function updateKPIs(filtered) {
-    document.getElementById('kpi-count').textContent = filtered.length;
-    if (filtered.length > 0) {
-        const avgM2 = filtered.reduce((s, i) => s + (i['Valor/m2'] || 0), 0) / filtered.length;
-        document.getElementById('kpi-avg-m2').innerHTML = `R$ ${avgM2.toFixed(2)}/m\u00B2`;
-        const best = filtered.reduce((best, i) => (i['Dif vs Med (%)'] < best['Dif vs Med (%)']) ? i : best, filtered[0]);
-        document.getElementById('kpi-best-deal').textContent = `${best['Dif vs Med (%)']}%`;
-    } else {
-        document.getElementById('kpi-avg-m2').innerHTML = 'R$ 0.00/m\u00B2';
-        document.getElementById('kpi-best-deal').textContent = '-';
+    function profitBadge(valor, pct) {
+        if (valor == null || isNaN(valor)) return '<span class="text-gray-500">-</span>';
+        const isPositive = valor >= 0;
+        const color = isPositive ? 'text-green-400' : 'text-red-400';
+        const bg = isPositive ? 'bg-green-500/10' : 'bg-red-500/10';
+        return `<span class="inline-block px-2 py-1 rounded text-xs font-bold ${bg} ${color}">${isPositive ? '+' : ''}${fmtMoney(valor)}</span>`;
     }
-}
 
-function fmtMoney(v) { return `R$ ${Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; }
+    function profitPctBadge(pct) {
+        if (pct == null || isNaN(pct)) return '<span class="text-gray-500">-</span>';
+        const isPositive = pct >= 0;
+        const color = isPositive ? 'text-green-400' : 'text-red-400';
+        const bg = isPositive ? 'bg-green-500/10' : 'bg-red-500/10';
+        return `<span class="inline-block px-2 py-1 rounded text-xs font-bold ${bg} ${color}">${isPositive ? '+' : ''}${pct.toFixed(1)}%</span>`;
+    }
 
-function discountBadge(pct) {
-    let cls = 'bg-red-500/20 text-red-400';
-    if (pct < -20) cls = 'bg-primary/20 text-primary';
-    else if (pct < 0) cls = 'bg-blue-500/20 text-blue-400';
-    return `<span class="inline-block px-2 py-1 rounded text-xs font-bold ${cls}">${pct}%</span>`;
-}
+    // ═══════════ RECALCULATE PROFIT (client-side, for editable value) ═══════════
+    function recalcProfit(item, customValue) {
+        const valor = customValue != null ? customValue : item['Valor Total'];
+        const area = item['Area (m2)'] || 0;
+        const mediaSetor = item['Media Setor (m2)'] || 0;
+        const condo = item['Condominio'] || 0;
 
-function rowHtml(item) {
-    const link = item.Link
-        ? `<a href="${item.Link}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:text-white transition-colors text-xs uppercase font-bold tracking-wider">Ver Anuncio &#8599;</a>`
-        : '<span class="text-gray-600 text-xs">-</span>';
-    return `<tr class="hover:bg-dark-700 transition-colors">
-        <td class="px-6 py-4 font-medium text-white">${item.Bairro || 'N/A'}</td>
-        <td class="px-6 py-4 text-gray-300 text-xs">${item.Imobiliaria || ''}</td>
-        <td class="px-6 py-4 text-gray-300">${item.Tipo || ''}</td>
-        <td class="px-6 py-4 text-gray-300">${item['Area (m2)']} m\u00B2</td>
-        <td class="px-6 py-4 text-white font-semibold">${fmtMoney(item['Valor Total'])}</td>
-        <td class="px-6 py-4 text-gray-400">${fmtMoney(item['Valor/m2'])}</td>
-        <td class="px-6 py-4 text-center">${discountBadge(item['Dif vs Med (%)'])}</td>
-        <td class="px-6 py-4 text-right">${link}</td>
+        const itbi = valor * ITBI_RATE;
+        const reforma = valor * REFORMA_RATE;
+        const manutencao = condo * 6;
+        const custoTotal = valor + itbi + reforma + manutencao;
+        const vendaEst = mediaSetor * area;
+        const lucroR = vendaEst - custoTotal;
+        const lucroPct = custoTotal > 0 ? (lucroR / custoTotal) * 100 : 0;
+
+        return {
+            custoTotal: Math.round(custoTotal * 100) / 100,
+            vendaEst: Math.round(vendaEst * 100) / 100,
+            lucroR: Math.round(lucroR * 100) / 100,
+            lucroPct: Math.round(lucroPct * 100) / 100,
+        };
+    }
+
+    // ═══════════ EDITABLE VALUE HANDLER ═══════════
+    function onValueEdit(idx, inputEl) {
+        const raw = inputEl.value.replace(/[^\d,\.]/g, '').replace(',', '.');
+        const newValue = parseFloat(raw);
+        if (isNaN(newValue) || newValue <= 0) return;
+
+        const item = window.__flippingData[idx];
+        const calc = recalcProfit(item, newValue);
+
+        // Update cells
+        const row = inputEl.closest('tr');
+        row.querySelector('.cell-custo-total').innerHTML = fmtMoney(calc.custoTotal);
+        row.querySelector('.cell-venda-est').innerHTML = fmtMoney(calc.vendaEst);
+        row.querySelector('.cell-lucro-r').innerHTML = profitBadge(calc.lucroR, calc.lucroPct);
+        row.querySelector('.cell-lucro-pct').innerHTML = profitPctBadge(calc.lucroPct);
+
+        // Highlight the row to show it was edited
+        row.classList.add('ring-1', 'ring-primary/40');
+    }
+
+    // ═══════════ FILTERS ═══════════
+    function getFilteredData() {
+        const data = window.__flippingData;
+        const checkedTypes = Array.from(document.querySelectorAll('.flipping-type-cb:checked')).map(cb => cb.value);
+        let filtered = data.filter(item => checkedTypes.includes(item.Tipo));
+
+        // Region filter (only present for capitals)
+        const regionFilter = document.getElementById('flipping-region-filter');
+        if (regionFilter && regionFilter.value) {
+            filtered = filtered.filter(item => item.Regiao === regionFilter.value);
+        }
+
+        return filtered;
+    }
+
+    function updateKPIs(filtered) {
+        document.getElementById('kpi-count').textContent = filtered.length;
+        if (filtered.length > 0) {
+            const avgM2 = filtered.reduce((s, i) => s + (i['Valor/m2'] || 0), 0) / filtered.length;
+            document.getElementById('kpi-avg-m2').innerHTML = `R$ ${avgM2.toFixed(2)}/m\u00B2`;
+            const best = filtered.reduce((best, i) => (i['Dif vs Med (%)'] < best['Dif vs Med (%)']) ? i : best, filtered[0]);
+            document.getElementById('kpi-best-deal').textContent = `${best['Dif vs Med (%)']}%`;
+
+            // Best profit
+            const bestProfit = filtered.reduce((b, i) => {
+                const calc = recalcProfit(i, null);
+                return calc.lucroR > b.lucroR ? calc : b;
+            }, { lucroR: -Infinity });
+            if (bestProfit.lucroR > -Infinity) {
+                const el = document.getElementById('kpi-best-profit');
+                el.textContent = fmtMoney(bestProfit.lucroR);
+                el.className = `text-2xl font-bold ${bestProfit.lucroR >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            }
+        } else {
+            document.getElementById('kpi-avg-m2').innerHTML = 'R$ 0.00/m\u00B2';
+            document.getElementById('kpi-best-deal').textContent = '-';
+            document.getElementById('kpi-best-profit').textContent = '-';
+        }
+    }
+
+    // ═══════════ ROW RENDERER ═══════════
+    function rowHtml(item, globalIdx) {
+        const link = item.Link
+            ? `<a href="${item.Link}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:text-white transition-colors text-xs uppercase font-bold tracking-wider">Ver &#8599;</a>`
+            : '<span class="text-gray-600 text-xs">-</span>';
+
+        const calc = recalcProfit(item, null);
+
+        return `<tr class="hover:bg-dark-700 transition-colors">
+        <td class="px-4 py-3 font-medium text-white text-xs">${item.Bairro || 'N/A'}</td>
+        <td class="px-4 py-3 text-gray-300 text-xs">${item.Tipo || ''}</td>
+        <td class="px-4 py-3 text-gray-300 text-xs">${item['Area (m2)']} m\u00B2</td>
+        <td class="px-4 py-3">
+            <input type="text" value="${fmtMoney(item['Valor Total'])}"
+                class="bg-dark-900 border border-gray-600 rounded px-2 py-1 text-white text-xs w-32 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                onfocus="this.select()"
+                onchange="onValueEdit(${globalIdx}, this)"
+                title="Edite para simular negociacao">
+        </td>
+        <td class="px-4 py-3 text-gray-400 text-xs cell-custo-total">${fmtMoney(calc.custoTotal)}</td>
+        <td class="px-4 py-3 text-gray-300 text-xs cell-venda-est">${fmtMoney(calc.vendaEst)}</td>
+        <td class="px-4 py-3 text-center cell-lucro-r">${profitBadge(calc.lucroR, calc.lucroPct)}</td>
+        <td class="px-4 py-3 text-center cell-lucro-pct">${profitPctBadge(calc.lucroPct)}</td>
+        <td class="px-4 py-3 text-center">${discountBadge(item['Dif vs Med (%)'])}</td>
+        <td class="px-4 py-3 text-right">${link}</td>
     </tr>`;
-}
+    }
 
-function groupHeaderHtml(label, items, colspan) {
-    const avgM2 = items.reduce((s, i) => s + (i['Valor/m2'] || 0), 0) / items.length;
-    const best = items.reduce((b, i) => (i['Dif vs Med (%)'] < b['Dif vs Med (%)']) ? i : b, items[0]);
-    return `<tr class="bg-dark-600/60 border-t-2 border-primary/30">
-        <td colspan="${colspan}" class="px-6 py-3">
+    function groupHeaderHtml(label, items, colspan) {
+        const avgM2 = items.reduce((s, i) => s + (i['Valor/m2'] || 0), 0) / items.length;
+        const best = items.reduce((b, i) => (i['Dif vs Med (%)'] < b['Dif vs Med (%)']) ? i : b, items[0]);
+        const bestCalc = items.reduce((b, i) => {
+            const c = recalcProfit(i, null);
+            return c.lucroR > b.lucroR ? c : b;
+        }, { lucroR: -Infinity });
+
+        return `<tr class="bg-dark-600/60 border-t-2 border-primary/30">
+        <td colspan="${colspan}" class="px-4 py-3">
             <div class="flex items-center justify-between">
                 <span class="text-primary font-bold text-sm uppercase tracking-wide">${label}</span>
                 <div class="flex items-center gap-4 text-xs text-gray-400">
                     <span>${items.length} imoveis</span>
                     <span>Media: <strong class="text-white">${fmtMoney(avgM2)}/m\u00B2</strong></span>
-                    <span>Melhor: ${discountBadge(best['Dif vs Med (%)'])}</span>
+                    <span>Melhor desc: ${discountBadge(best['Dif vs Med (%)'])}</span>
+                    <span>Melhor lucro: ${profitPctBadge(bestCalc.lucroPct)}</span>
                 </div>
             </div>
         </td>
     </tr>`;
-}
-
-function renderFlippingResults() {
-    const filtered = getFilteredData();
-    const groupBy = document.getElementById('flipping-group-by').value;
-    const tbody = document.getElementById('flipping-tbody');
-
-    updateKPIs(filtered);
-
-    if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">Nenhum imovel encontrado com os filtros selecionados.</td></tr>';
-        return;
     }
 
-    let html = '';
+    // ═══════════ MAIN RENDER ═══════════
+    function renderFlippingResults() {
+        const allData = window.__flippingData;
+        const filtered = getFilteredData();
+        const groupBy = document.getElementById('flipping-group-by').value;
+        const tbody = document.getElementById('flipping-tbody');
 
-    if (groupBy === 'cidade') {
-        // Flat list sorted by discount
-        const sorted = [...filtered].sort((a, b) => a['Dif vs Med (%)'] - b['Dif vs Med (%)']);
-        html = sorted.map(rowHtml).join('');
-    } else {
-        // Grouped rendering
-        let groupKey;
-        if (groupBy === 'bairro') groupKey = item => item.Bairro || 'N/A';
-        else if (groupBy === 'tipo') groupKey = item => item.Tipo || 'Outro';
-        else groupKey = item => `${item.Bairro || 'N/A'} — ${item.Tipo || 'Outro'}`;
+        updateKPIs(filtered);
 
-        // Build groups
-        const groups = {};
-        for (const item of filtered) {
-            const key = groupKey(item);
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(item);
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-8 text-center text-gray-500">Nenhum imovel encontrado com os filtros selecionados.</td></tr>';
+            return;
         }
 
-        // Sort groups: "N/A" / "Sem Bairro" at the end, others alphabetically
-        const sortedKeys = Object.keys(groups).sort((a, b) => {
-            const aNA = a === 'N/A' || a.startsWith('N/A');
-            const bNA = b === 'N/A' || b.startsWith('N/A');
-            if (aNA && !bNA) return 1;
-            if (!aNA && bNA) return -1;
-            return a.localeCompare(b, 'pt-BR');
-        });
+        let html = '';
 
-        for (const key of sortedKeys) {
-            const items = groups[key].sort((a, b) => a['Dif vs Med (%)'] - b['Dif vs Med (%)']);
-            const label = key === 'N/A' ? 'Sem Bairro Identificado' : key;
-            html += groupHeaderHtml(label, items, 8);
-            html += items.map(rowHtml).join('');
+        if (groupBy === 'cidade') {
+            const sorted = [...filtered].sort((a, b) => a['Dif vs Med (%)'] - b['Dif vs Med (%)']);
+            html = sorted.map(item => rowHtml(item, allData.indexOf(item))).join('');
+        } else {
+            let groupKey;
+            if (groupBy === 'bairro') groupKey = item => item.Bairro || 'N/A';
+            else if (groupBy === 'tipo') groupKey = item => item.Tipo || 'Outro';
+            else groupKey = item => `${item.Bairro || 'N/A'} — ${item.Tipo || 'Outro'}`;
+
+            const groups = {};
+            for (const item of filtered) {
+                const key = groupKey(item);
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(item);
+            }
+
+            const sortedKeys = Object.keys(groups).sort((a, b) => {
+                const aNA = a === 'N/A' || a.startsWith('N/A');
+                const bNA = b === 'N/A' || b.startsWith('N/A');
+                if (aNA && !bNA) return 1;
+                if (!aNA && bNA) return -1;
+                return a.localeCompare(b, 'pt-BR');
+            });
+
+            for (const key of sortedKeys) {
+                const items = groups[key].sort((a, b) => a['Dif vs Med (%)'] - b['Dif vs Med (%)']);
+                const label = key === 'N/A' ? 'Sem Bairro Identificado' : key;
+                html += groupHeaderHtml(label, items, 10);
+                html += items.map(item => rowHtml(item, allData.indexOf(item))).join('');
+            }
         }
+
+        tbody.innerHTML = html;
     }
 
-    tbody.innerHTML = html;
-}
-
-// Initial render
-renderFlippingResults();
+    // Initial render
+    renderFlippingResults();
 </script>
 
 {% endif %}

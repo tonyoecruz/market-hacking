@@ -376,7 +376,19 @@ Conteudo do site da imobiliaria "{agency_name}":
 def calculate_flipping_opportunity(df):
     """
     Pandas engine to process real estate data.
-    Calculates price/m2, sector average, and difference vs average.
+    Calculates price/m2, sector average, difference vs average,
+    and full profitability analysis (costs, estimated sale value, profit).
+
+    Cost Structure:
+      - ITBI + Registration: 6% of property value
+      - Renovation: 15% of property value
+      - 6-month Maintenance: Condo fee × 6 (if available)
+      - Total Cost = Property Value + All Above
+
+    Profit Calculation:
+      - Estimated Sale = Average $/m² (by Bairro+Tipo) × Property Area
+      - Profit R$ = Sale − Total Cost
+      - Profit % = (Profit / Total Cost) × 100
     """
     if df.empty:
         return df
@@ -389,6 +401,30 @@ def calculate_flipping_opportunity(df):
 
     # 3. Calculate Diff vs Mean (%)
     df['Dif vs Med (%)'] = ((df['Valor/m2'] - df['Media Setor (m2)']) / df['Media Setor (m2)']) * 100
+
+    # ── PROFITABILITY ANALYSIS ──────────────────────────────────────────
+
+    # 4. Costs
+    df['Custo ITBI'] = (df['Valor Total'] * 0.06).round(2)        # 6% ITBI + Registro
+    df['Custo Reforma'] = (df['Valor Total'] * 0.15).round(2)     # 15% Reforma
+
+    # Condomínio × 6 (if column exists and has data)
+    if 'Condominio' in df.columns:
+        df['Condominio'] = pd.to_numeric(df['Condominio'], errors='coerce').fillna(0)
+        df['Custo Manutencao'] = (df['Condominio'] * 6).round(2)
+    else:
+        df['Custo Manutencao'] = 0.0
+
+    df['Custo Total'] = (
+        df['Valor Total'] + df['Custo ITBI'] + df['Custo Reforma'] + df['Custo Manutencao']
+    ).round(2)
+
+    # 5. Estimated Sale Value = Average $/m² in the region/type × property area
+    df['Valor Venda Est'] = (df['Media Setor (m2)'] * df['Area (m2)']).round(2)
+
+    # 6. Profit
+    df['Lucro R$'] = (df['Valor Venda Est'] - df['Custo Total']).round(2)
+    df['Lucro %'] = ((df['Lucro R$'] / df['Custo Total']) * 100).round(2)
 
     # Format for display
     df['Dif vs Med (%)'] = df['Dif vs Med (%)'].round(2)
