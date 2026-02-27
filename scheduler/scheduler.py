@@ -8,7 +8,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
 
-from scheduler.data_updater import update_all_data, cleanup_old_logs
+import asyncio
+from scheduler.data_updater import update_all_data, update_flipping, cleanup_old_logs
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,37 @@ AUTO_UPDATE_ENABLED = os.getenv('AUTO_UPDATE_ENABLED', 'true').lower() == 'true'
 
 # Global scheduler instance
 scheduler = BackgroundScheduler()
+
+
+def _run_async(coro):
+    """Run an async coroutine from sync APScheduler context"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                return pool.submit(asyncio.run, coro).result()
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
+
+
+def _run_flipping_update():
+    """Sync wrapper for the async flipping update"""
+    _run_async(update_flipping())
+
+
+def _get_flipping_interval_days():
+    """Get flipping update interval from DB settings"""
+    try:
+        from database.db_manager import DatabaseManager
+        db = DatabaseManager()
+        interval = db.get_setting('flipping_update_interval_days')
+        if interval:
+            return int(interval)
+    except Exception as e:
+        logger.warning(f"Could not read flipping interval from DB: {e}")
+    return 1  # Default: 1 day
 
 
 def _get_update_interval_minutes():
@@ -68,6 +100,17 @@ def start_scheduler():
         replace_existing=True
     )
     
+    # Schedule flipping updates
+    flipping_interval_days = _get_flipping_interval_days()
+    scheduler.add_job(
+        _run_flipping_update,
+        trigger=IntervalTrigger(days=flipping_interval_days),
+        id='update_flipping_data',
+        name='Update House Flipping Data',
+        replace_existing=True
+    )
+    logger.info(f"🏠 Flipping updates scheduled every {flipping_interval_days} day(s)")
+
     # Schedule daily cleanup at 3 AM
     scheduler.add_job(
         cleanup_old_logs,

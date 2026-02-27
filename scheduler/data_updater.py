@@ -334,6 +334,61 @@ def update_all_data():
     
     return results
 
+async def update_flipping():
+    """Update House Flipping data for all monitored cities"""
+    from modules.house_flipping import SerperAgencyDiscovery, AgencyCrawler, calculate_flipping_opportunity
+
+    cities = db.get_flipping_cities()
+    if not cities:
+        logger.info("[FLIPPING] No monitored cities to update")
+        return 0
+
+    logger.info(f"[FLIPPING] Updating {len(cities)} monitored cities...")
+    total = 0
+
+    for city_record in cities:
+        city = city_record["city"]
+        try:
+            logger.info(f"[FLIPPING] Scanning '{city}'...")
+
+            # Discover agencies
+            discovery = SerperAgencyDiscovery()
+            agencies = await discovery.discover(city)
+            if not agencies:
+                logger.warning(f"[FLIPPING] No agencies found for '{city}'")
+                continue
+
+            # Crawl
+            crawler = AgencyCrawler()
+            listings = await crawler.crawl_all_agencies(agencies, city)
+            if not listings:
+                logger.warning(f"[FLIPPING] No listings extracted for '{city}'")
+                continue
+
+            # Analyze
+            df = pd.DataFrame(listings)
+            df['Valor Total'] = pd.to_numeric(df['Valor Total'], errors='coerce')
+            df['Area (m2)'] = pd.to_numeric(df['Area (m2)'], errors='coerce')
+            df = df.dropna(subset=['Valor Total', 'Area (m2)'])
+
+            if df.empty:
+                continue
+
+            df_analyzed = calculate_flipping_opportunity(df)
+            results = df_analyzed.to_dict('records')
+
+            # Save to cache
+            count = db.save_flipping_listings(city, results)
+            total += count
+            logger.info(f"[FLIPPING] Saved {count} listings for '{city}'")
+
+        except Exception as e:
+            logger.error(f"[FLIPPING] Error updating '{city}': {e}", exc_info=True)
+
+    logger.info(f"[FLIPPING] Update complete: {total} total listings across {len(cities)} cities")
+    return total
+
+
 def cleanup_old_logs():
     """Remove old update logs"""
     db.cleanup_logs(days=7)

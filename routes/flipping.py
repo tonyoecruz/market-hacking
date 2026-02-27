@@ -1,18 +1,22 @@
 """
 House Flipping Routes
 Discovers local real estate agencies, crawls their sites, and analyzes opportunities.
+Results are cached in the database for fast repeat access.
 """
 from fastapi import APIRouter, Request, Form
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from modules.house_flipping import SerperAgencyDiscovery, AgencyCrawler, calculate_flipping_opportunity
+from database.db_manager import DatabaseManager
 import pandas as pd
 import json
 import logging
+from datetime import datetime, timedelta
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 logger = logging.getLogger(__name__)
+db = DatabaseManager()
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -20,38 +24,93 @@ async def flipping_page(request: Request):
     return templates.TemplateResponse("flipping.html", {"request": request, "title": "House Flipping"})
 
 
+@router.get("/api/cities")
+async def get_monitored_cities():
+    """Return list of cities that have been scanned (for autocomplete)"""
+    cities = db.get_flipping_cities()
+    return {"cities": [c["city"] for c in cities]}
+
+
+def _build_response(request, results, agencies_for_template, city):
+    """Build the template response from results list"""
+    tipos_unicos = sorted(set(r.get("Tipo", "Outro") for r in results))
+    agencies_with_data = len(set(r.get("Imobiliaria", "") for r in results))
+
+    # Calculate avg_m2 from results
+    valores_m2 = [r["Valor/m2"] for r in results if r.get("Valor/m2")]
+    avg_m2 = sum(valores_m2) / len(valores_m2) if valores_m2 else 0
+
+    stats = {
+        "count": len(results),
+        "avg_m2": avg_m2,
+        "best_deal": results[0] if results else None,
+        "agencies_found": len(agencies_for_template),
+        "agencies_with_data": agencies_with_data,
+    }
+
+    return templates.TemplateResponse("partials/flipping_results.html", {
+        "request": request,
+        "results": results,
+        "results_json": json.dumps(results, ensure_ascii=False, default=str),
+        "agencies": agencies_for_template,
+        "stats": stats,
+        "tipos": tipos_unicos,
+        "city": city,
+    })
+
+
 @router.post("/scan", response_class=HTMLResponse)
 async def run_flipping_scan(request: Request, city: str = Form(...)):
     try:
-        # Step 1: Discover agencies via Serper.dev
-        logger.info(f"[FLIPPING] Starting scan for city: {city}")
+        city_norm = city.strip().title()
+        logger.info(f"[FLIPPING] Scan requested for: {city_norm}")
+
+        # ── Check cache first ──────────────────────────────────────────
+        last_update = db.get_flipping_last_update(city_norm)
+
+        # Get update interval from settings (default: 1 day)
+        interval_days = int(db.get_setting("flipping_update_interval_days", "1"))
+        cache_valid = (
+            last_update is not None
+            and (datetime.now() - last_update) < timedelta(days=interval_days)
+        )
+
+        if cache_valid:
+            logger.info(f"[FLIPPING] Cache hit for '{city_norm}' (last update: {last_update})")
+            cached = db.get_flipping_listings(city_norm)
+            if cached:
+                return _build_response(request, cached, [], city_norm)
+
+        # ── Cache miss → full scan ─────────────────────────────────────
+        logger.info(f"[FLIPPING] Cache miss for '{city_norm}', starting full scan...")
+
+        # Step 1: Discover agencies
         discovery = SerperAgencyDiscovery()
-        agencies = await discovery.discover(city)
+        agencies = await discovery.discover(city_norm)
 
         if not agencies:
             return templates.TemplateResponse("partials/flipping_results.html", {
                 "request": request,
-                "error": f"Nenhuma imobiliaria encontrada em '{city}'. Verifique o nome da cidade ou configure a SERPER_API_KEY.",
+                "error": f"Nenhuma imobiliaria encontrada em '{city_norm}'. Verifique o nome da cidade.",
                 "agencies": []
             })
 
         logger.info(f"[FLIPPING] Found {len(agencies)} agencies, starting crawl...")
 
-        # Step 2: Crawl agencies and extract listings via Crawl4AI + Gemini
+        # Step 2: Crawl agencies
         crawler = AgencyCrawler()
-        listings = await crawler.crawl_all_agencies(agencies, city)
+        listings = await crawler.crawl_all_agencies(agencies, city_norm)
 
-        # Format agencies for template (compatible with existing partial)
         agencies_for_template = [{"name": a["name"], "site": a["domain"]} for a in agencies]
 
         if not listings:
             return templates.TemplateResponse("partials/flipping_results.html", {
                 "request": request,
-                "error": f"Encontramos {len(agencies)} imobiliarias em '{city}', mas nao foi possivel extrair imoveis dos sites. Os sites podem estar bloqueando acesso automatizado.",
+                "error": f"Encontramos {len(agencies)} imobiliarias em '{city_norm}', mas nao foi possivel extrair imoveis dos sites.",
                 "agencies": agencies_for_template
             })
 
-        # Step 3: Calculate opportunities (UNCHANGED LOGIC)
+        # Step 3: Calculate opportunities
         df = pd.DataFrame(listings)
         df['Valor Total'] = pd.to_numeric(df['Valor Total'], errors='coerce')
         df['Area (m2)'] = pd.to_numeric(df['Area (m2)'], errors='coerce')
@@ -67,30 +126,11 @@ async def run_flipping_scan(request: Request, city: str = Form(...)):
         df_analyzed = calculate_flipping_opportunity(df)
         results = df_analyzed.to_dict('records')
 
-        # Stats
-        agencies_with_data = len(set(r.get("Imobiliaria", "") for r in results))
-        stats = {
-            "count": len(results),
-            "avg_m2": df_analyzed['Valor/m2'].mean() if not df_analyzed.empty else 0,
-            "best_deal": results[0] if results else None,
-            "agencies_found": len(agencies),
-            "agencies_with_data": agencies_with_data
-        }
+        # Step 4: Save to cache
+        db.save_flipping_listings(city_norm, results)
+        logger.info(f"[FLIPPING] Saved {len(results)} listings to cache for '{city_norm}'")
 
-        # Unique property types for filter checkboxes
-        tipos_unicos = sorted(df_analyzed['Tipo'].dropna().unique().tolist())
-
-        logger.info(f"[FLIPPING] Scan complete: {len(results)} listings from {agencies_with_data} agencies")
-
-        return templates.TemplateResponse("partials/flipping_results.html", {
-            "request": request,
-            "results": results,
-            "results_json": json.dumps(results, ensure_ascii=False, default=str),
-            "agencies": agencies_for_template,
-            "stats": stats,
-            "tipos": tipos_unicos,
-            "city": city
-        })
+        return _build_response(request, results, agencies_for_template, city_norm)
 
     except Exception as e:
         logger.error(f"[FLIPPING] Scan failed for '{city}': {e}", exc_info=True)

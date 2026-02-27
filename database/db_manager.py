@@ -12,7 +12,7 @@ from typing import List, Optional, Dict
 import pandas as pd
 import numpy as np
 
-from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB, SystemSettingsDB, FlippingCityDB, InvestorPersonaDB
+from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB, SystemSettingsDB, FlippingCityDB, FlippingListingDB, InvestorPersonaDB
 
 logger = logging.getLogger(__name__)
 
@@ -655,8 +655,86 @@ class DatabaseManager:
         finally:
             db.close()
     
+    # ==================== FLIPPING LISTINGS (CACHE) ====================
+
+    def save_flipping_listings(self, city: str, results: List[Dict]) -> int:
+        """Save flipping scan results for a city (replaces old data)"""
+        db = self.SessionLocal()
+        try:
+            city_norm = city.strip().title()
+
+            # Delete old listings for this city
+            db.query(FlippingListingDB).filter(
+                FlippingListingDB.city == city_norm
+            ).delete()
+
+            now = datetime.now()
+            new_objects = []
+            for r in results:
+                new_objects.append(FlippingListingDB(
+                    city=city_norm,
+                    bairro=r.get('Bairro'),
+                    tipo=r.get('Tipo'),
+                    imobiliaria=r.get('Imobiliaria'),
+                    referencia=r.get('Referencia'),
+                    area_m2=r.get('Area (m2)'),
+                    valor_total=r.get('Valor Total'),
+                    valor_m2=r.get('Valor/m2'),
+                    media_setor_m2=r.get('Media Setor (m2)'),
+                    desconto_pct=r.get('Dif vs Med (%)'),
+                    link=r.get('Link'),
+                    scraped_at=now,
+                ))
+
+            if new_objects:
+                db.bulk_save_objects(new_objects)
+
+            # Update last_scraped_at on the city record
+            city_record = db.query(FlippingCityDB).filter(
+                FlippingCityDB.city == city_norm
+            ).first()
+            if city_record:
+                city_record.last_scraped_at = now
+            else:
+                # Auto-add city if not tracked yet
+                db.add(FlippingCityDB(city=city_norm, active=1, added_at=now, last_scraped_at=now))
+
+            db.commit()
+            logger.info(f"Saved {len(new_objects)} flipping listings for '{city_norm}'")
+            return len(new_objects)
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error saving flipping listings: {e}", exc_info=True)
+            raise
+        finally:
+            db.close()
+
+    def get_flipping_listings(self, city: str) -> List[Dict]:
+        """Get cached flipping listings for a city"""
+        db = self.SessionLocal()
+        try:
+            city_norm = city.strip().title()
+            listings = db.query(FlippingListingDB).filter(
+                FlippingListingDB.city == city_norm
+            ).order_by(FlippingListingDB.desconto_pct.asc()).all()
+            return [l.to_dict() for l in listings]
+        finally:
+            db.close()
+
+    def get_flipping_last_update(self, city: str) -> Optional[datetime]:
+        """Get the timestamp of the last scan for a city"""
+        db = self.SessionLocal()
+        try:
+            city_norm = city.strip().title()
+            record = db.query(FlippingCityDB).filter(
+                FlippingCityDB.city == city_norm
+            ).first()
+            return record.last_scraped_at if record else None
+        finally:
+            db.close()
+
     # ==================== INVESTOR PERSONAS ====================
-    
+
     def get_investors(self) -> List[Dict]:
         """Get all active investor personas"""
         db = self.SessionLocal()

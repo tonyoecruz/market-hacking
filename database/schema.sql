@@ -84,6 +84,24 @@ CREATE TABLE IF NOT EXISTS update_logs (
     duration_seconds INTEGER
 );
 
+-- Table: flipping_listings (cached property scan results)
+CREATE TABLE IF NOT EXISTS flipping_listings (
+    id SERIAL PRIMARY KEY,
+    city VARCHAR(200) NOT NULL,
+    bairro VARCHAR(200),
+    tipo VARCHAR(100),
+    imobiliaria VARCHAR(300),
+    referencia VARCHAR(200),
+    area_m2 FLOAT,
+    valor_total FLOAT,
+    valor_m2 FLOAT,
+    media_setor_m2 FLOAT,
+    desconto_pct FLOAT,
+    link VARCHAR(500),
+    scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_stocks_market ON stocks(market);
 CREATE INDEX IF NOT EXISTS idx_update_logs_status ON update_logs(status);
+CREATE INDEX IF NOT EXISTS idx_flipping_city ON flipping_listings(city);

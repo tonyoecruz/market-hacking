@@ -11,39 +11,38 @@
     <div class="flex-1 overflow-y-auto">
         <header class="bg-dark-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
             <h2 class="text-2xl font-bold text-white flex items-center gap-2">
-                🏠 House Flipping <span class="text-primary text-sm bg-primary/10 px-2 py-1 rounded">Beta</span>
+                &#127968; House Flipping <span class="text-primary text-sm bg-primary/10 px-2 py-1 rounded">Beta</span>
             </h2>
         </header>
 
         <main class="p-6 max-w-7xl mx-auto">
             <!-- Search Section -->
-            <!-- Search Section -->
-            <div class="bg-dark-800 rounded-xl p-8 border border-gray-700 shadow-lg mb-8">
-                <h3 class="text-xl font-bold text-white mb-4">🔍 Varredura de Oportunidades</h3>
-                <p class="text-gray-400 mb-6">
-                    O sistema descobre imobiliarias locais via busca inteligente, visita seus sites,
-                    e compara o preco do m&#178; com a media da regiao para encontrar arbitragens.
-                </p>
+            <div class="bg-dark-800 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
+                <div class="flex items-center gap-3 mb-4">
+                    <h3 class="text-lg font-bold text-white">&#128269; Varredura de Oportunidades</h3>
+                    <span class="text-gray-500 text-xs">Descobre imobiliarias, visita sites e compara precos</span>
+                </div>
 
-                <form id="scanForm" class="flex gap-4 items-end" onsubmit="handleScan(event)">
-                    <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Cidade Alvo</label>
-                        <input type="text" name="city" id="cityInput"
-                            class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                            placeholder="Ex: Sorocaba, Campinas..." required value="Sorocaba">
+                <form id="scanForm" class="flex gap-3 items-end" onsubmit="handleScan(event)">
+                    <div class="relative" style="width: 320px;">
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Cidade Alvo</label>
+                        <input type="text" name="city" id="cityInput" autocomplete="off"
+                            class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm"
+                            placeholder="Selecione ou digite uma cidade..." required>
+                        <!-- Autocomplete dropdown -->
+                        <div id="cityDropdown" class="hidden absolute left-0 right-0 mt-1 bg-dark-900 border border-gray-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                        </div>
                     </div>
                     <button type="submit" id="scanBtn"
-                        class="bg-primary hover:bg-green-400 text-dark-900 font-bold py-3 px-8 rounded-lg transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,157,0.3)]">
-                        🚀 Iniciar Varredura
+                        class="bg-primary hover:bg-green-400 text-dark-900 font-bold py-2.5 px-6 rounded-lg transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,157,0.3)] text-sm">
+                        &#128640; Iniciar Varredura
                     </button>
                 </form>
             </div>
 
             <!-- Loading State -->
             <div id="loadingState" class="hidden text-center py-12">
-                <div
-                    class="inline-block w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4">
-                </div>
+                <div class="inline-block w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
                 <h3 class="text-xl font-bold text-white">Descobrindo Imobiliarias e Analisando...</h3>
                 <p class="text-gray-400 mt-2">Buscando imobiliarias locais e extraindo dados dos sites. Isso pode levar ate 1 minuto.</p>
             </div>
@@ -59,6 +58,66 @@
 
 {% block scripts %}
 <script>
+    // ===================== CITY AUTOCOMPLETE =====================
+    let monitoredCities = [];
+
+    async function loadCities() {
+        try {
+            const res = await fetch('/flipping/api/cities');
+            const data = await res.json();
+            monitoredCities = data.cities || [];
+        } catch (e) {
+            console.error('Error loading cities:', e);
+        }
+    }
+
+    function renderCityDropdown(filter) {
+        const dd = document.getElementById('cityDropdown');
+        const filterLower = (filter || '').toLowerCase();
+
+        let cities = monitoredCities;
+        if (filterLower) {
+            cities = cities.filter(c => c.toLowerCase().includes(filterLower));
+        }
+
+        if (cities.length === 0) {
+            dd.classList.add('hidden');
+            return;
+        }
+
+        let html = '';
+        for (const city of cities) {
+            html += `<div class="px-4 py-2.5 text-sm text-gray-300 hover:bg-primary/10 hover:text-white cursor-pointer transition-colors"
+                onclick="selectCity('${city.replace(/'/g, "\\'")}')">${city}</div>`;
+        }
+        dd.innerHTML = html;
+        dd.classList.remove('hidden');
+    }
+
+    function selectCity(city) {
+        document.getElementById('cityInput').value = city;
+        document.getElementById('cityDropdown').classList.add('hidden');
+    }
+
+    // Wire up events
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCities();
+
+        const input = document.getElementById('cityInput');
+        const dd = document.getElementById('cityDropdown');
+
+        input.addEventListener('focus', () => renderCityDropdown(input.value));
+        input.addEventListener('input', () => renderCityDropdown(input.value));
+
+        // Close dropdown on click outside
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !dd.contains(e.target)) {
+                dd.classList.add('hidden');
+            }
+        });
+    });
+
+    // ===================== SCAN =====================
     async function handleScan(e) {
         e.preventDefault();
 
@@ -67,13 +126,14 @@
         const container = document.getElementById('resultsContainer');
         const loader = document.getElementById('loadingState');
 
+        document.getElementById('cityDropdown').classList.add('hidden');
+
         // UI State: Loading
         btn.disabled = true;
         btn.classList.add('opacity-50', 'cursor-not-allowed');
         loader.classList.remove('hidden');
-        container.innerHTML = ''; // Clear previous
+        container.innerHTML = '';
 
-        // Create FormData
         const formData = new FormData();
         formData.append('city', city);
 
@@ -84,15 +144,15 @@
             });
 
             const html = await response.text();
-
-            // UI State: Success
             container.innerHTML = html;
+
+            // Refresh cities list (new city may have been added)
+            loadCities();
 
         } catch (error) {
             console.error(error);
             container.innerHTML = `<div class="p-4 bg-red-500/20 text-red-200 rounded-lg border border-red-500/50">Erro ao realizar varredura: ${error.message}</div>`;
         } finally {
-            // UI State: Reset
             loader.classList.add('hidden');
             btn.disabled = false;
             btn.classList.remove('opacity-50', 'cursor-not-allowed');

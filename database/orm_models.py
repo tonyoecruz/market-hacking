@@ -230,6 +230,40 @@ class FlippingCityDB(Base):
         }
 
 
+class FlippingListingDB(Base):
+    """SQLAlchemy model for cached House Flipping property listings"""
+    __tablename__ = 'flipping_listings'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    city = Column(String(200), nullable=False, index=True)
+    bairro = Column(String(200))
+    tipo = Column(String(100))
+    imobiliaria = Column(String(300))
+    referencia = Column(String(200))
+    area_m2 = Column(Float)
+    valor_total = Column(Float)
+    valor_m2 = Column(Float)
+    media_setor_m2 = Column(Float)
+    desconto_pct = Column(Float)
+    link = Column(String(500))
+    scraped_at = Column(DateTime, default=func.now())
+
+    def to_dict(self):
+        return {
+            'Cidade': self.city,
+            'Bairro': self.bairro or 'N/A',
+            'Tipo': self.tipo or 'Outro',
+            'Imobiliaria': self.imobiliaria or '',
+            'Referencia': self.referencia or '',
+            'Area (m2)': self.area_m2,
+            'Valor Total': self.valor_total,
+            'Valor/m2': self.valor_m2,
+            'Media Setor (m2)': self.media_setor_m2,
+            'Dif vs Med (%)': self.desconto_pct,
+            'Link': self.link or '',
+        }
+
+
 class InvestorPersonaDB(Base):
     """SQLAlchemy model for investor personas (e.g. Warren Buffett, Luiz Barsi)"""
     __tablename__ = 'investor_personas'
