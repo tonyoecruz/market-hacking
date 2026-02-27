@@ -146,6 +146,13 @@
             const html = await response.text();
             container.innerHTML = html;
 
+            // Execute scripts injected via innerHTML (browsers block them by default)
+            container.querySelectorAll('script').forEach(oldScript => {
+                const newScript = document.createElement('script');
+                newScript.textContent = oldScript.textContent;
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
+
             // Refresh cities list (new city may have been added)
             loadCities();
 
