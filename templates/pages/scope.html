@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}Scope — Hábito Diário de Investimento | SCOPE3{% endblock %}
+
+{% block head %}
+<style>
+    .scope-glow {
+        box-shadow: 0 0 30px rgba(0, 255, 157, 0.08);
+    }
+    .medal-1 { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); }
+    .medal-2 { background: linear-gradient(135deg, #C0C0C0 0%, #A0A0A0 100%); }
+    .medal-3 { background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%); }
+    .medal-4, .medal-5 { background: linear-gradient(135deg, #374151 0%, #1f2937 100%); }
+
+    .candidate-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .candidate-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0, 255, 157, 0.15);
+    }
+    .candidate-card.winner {
+        border-color: #00FF9D;
+        box-shadow: 0 0 0 1px rgba(0,255,157,0.4), 0 8px 40px rgba(0,255,157,0.12);
+    }
+
+    @keyframes pulse-green {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    .pulse-green { animation: pulse-green 2s ease-in-out infinite; }
+
+    @keyframes count-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .count-anim { animation: count-up 0.5s ease forwards; }
+
+    .bar-fill { transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    .streak-flame { font-size: 1.5rem; filter: drop-shadow(0 0 6px #ff6b00); }
+    .habit-ring { stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 1.5s ease; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-dark-900">
+    {% include "components/sidebar.html" %}
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- Header -->
+        <header class="bg-dark-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-primary/10 rounded-lg">
+                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Scope — Hábito Diário</h1>
+                    <p class="text-xs text-gray-400">Invista todos os dias. Veja crescer.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="streak-badge" class="hidden items-center gap-2 px-3 py-1.5 bg-orange-500/10 border border-orange-500/30 rounded-lg text-sm text-orange-400 font-semibold">
+                    <span class="streak-flame">🔥</span>
+                    <span id="streak-count">0</span> dias seguidos
+                </span>
+                <button onclick="runRecommendation()" id="btn-recommend"
+                    class="px-5 py-2 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/90 transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Encontrar hoje
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-6 space-y-6">
+
+            <!-- ── BUDGET INPUT ────────────────────────────────────────────── -->
+            <div class="bg-dark-800 border border-gray-700 rounded-2xl p-6 scope-glow">
+                <p class="text-sm text-gray-400 mb-4 uppercase tracking-wider font-semibold">
+                    Quanto você vai investir hoje?
+                </p>
+                <div class="flex flex-col md:flex-row gap-4 items-start md:items-end">
+                    <div class="flex-1">
+                        <label class="block text-xs text-gray-500 mb-1">Valor disponível (R$)</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-bold text-lg">R$</span>
+                            <input type="number" id="budget-input" value="50" min="1" step="1"
+                                placeholder="50"
+                                class="w-full pl-12 pr-4 py-4 bg-dark-700 border border-gray-600 rounded-xl text-white text-2xl font-bold
+                                       focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                                onkeydown="if(event.key==='Enter') runRecommendation()">
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            O sistema filtra ativos que você consegue comprar com este valor hoje.
+                        </p>
+                    </div>
+
+                    <!-- Quick presets -->
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs text-gray-500 w-full mb-1">Atalhos:</span>
+                        {% for v in [10, 20, 50, 100, 200, 500] %}
+                        <button onclick="setBudget({{ v }})"
+                            class="px-3 py-1.5 bg-dark-700 border border-gray-600 rounded-lg text-sm text-gray-300 hover:border-primary hover:text-primary transition">
+                            R$ {{ v }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── LOADING ─────────────────────────────────────────────────── -->
+            <div id="loading" class="hidden text-center py-16">
+                <div class="inline-block animate-spin rounded-full h-14 w-14 border-b-2 border-primary mb-4"></div>
+                <p class="text-gray-400 text-lg">Analisando o mercado para você...</p>
+                <p class="text-gray-600 text-sm mt-1">Comparando centenas de ativos</p>
+            </div>
+
+            <!-- ── EMPTY STATE ─────────────────────────────────────────────── -->
+            <div id="empty-state" class="text-center py-16 text-gray-500">
+                <svg class="w-20 h-20 mx-auto mb-4 opacity-20 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                </svg>
+                <p class="text-xl font-semibold text-gray-400">Pronto para encontrar a melhor oportunidade?</p>
+                <p class="text-sm mt-2">Digite seu valor acima e clique em <strong class="text-primary">Encontrar hoje</strong></p>
+            </div>
+
+            <!-- ── ERROR STATE ─────────────────────────────────────────────── -->
+            <div id="error-state" class="hidden bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+                <p class="text-red-400 font-semibold" id="error-msg">Erro ao carregar recomendações.</p>
+            </div>
+
+            <!-- ── RESULTS ─────────────────────────────────────────────────── -->
+            <div id="results-area" class="hidden space-y-4">
+
+                <!-- Summary bar -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Melhores opções para você hoje</h2>
+                        <p class="text-xs text-gray-500" id="results-subtitle"></p>
+                    </div>
+                    <span class="text-xs text-gray-500 px-3 py-1 bg-dark-700 rounded-full" id="results-count"></span>
+                </div>
+
+                <!-- Candidates list -->
+                <div id="candidates-list" class="space-y-3"></div>
+
+                <!-- ── PROJECTION PANEL ────────────────────────────────────── -->
+                <div id="projection-panel" class="hidden bg-dark-800 border border-gray-700 rounded-2xl p-6">
+                    <h3 class="text-base font-bold text-white mb-4">
+                        Projeção do seu hábito diário
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-dark-700 rounded-xl p-4 text-center">
+                            <p class="text-xs text-gray-500 mb-1">Dividendo/mês (1 cota)</p>
+                            <p class="text-xl font-bold text-primary" id="proj-div-month">—</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-xl p-4 text-center">
+                            <p class="text-xs text-gray-500 mb-1">Acum. em 30 dias</p>
+                            <p class="text-xl font-bold text-secondary" id="proj-30d">—</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-xl p-4 text-center">
+                            <p class="text-xs text-gray-500 mb-1">Acum. em 365 dias</p>
+                            <p class="text-xl font-bold text-white" id="proj-1y">—</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-xl p-4 text-center">
+                            <p class="text-xs text-gray-500 mb-1">Dividend Yield</p>
+                            <p class="text-xl font-bold text-yellow-400" id="proj-dy">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Simple visual bar -->
+                    <div class="space-y-2">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Crescimento projetado (dividendos acumulados)</p>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-gray-500 w-14">30d</span>
+                            <div class="flex-1 bg-dark-700 rounded-full h-3">
+                                <div id="bar-30d" class="bar-fill h-3 rounded-full bg-primary" style="width:0%"></div>
+                            </div>
+                            <span class="text-xs text-primary font-bold w-20 text-right" id="bar-30d-lbl">R$ —</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-gray-500 w-14">180d</span>
+                            <div class="flex-1 bg-dark-700 rounded-full h-3">
+                                <div id="bar-180d" class="bar-fill h-3 rounded-full bg-secondary" style="width:0%"></div>
+                            </div>
+                            <span class="text-xs text-secondary font-bold w-20 text-right" id="bar-180d-lbl">R$ —</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-gray-500 w-14">1 ano</span>
+                            <div class="flex-1 bg-dark-700 rounded-full h-3">
+                                <div id="bar-1y" class="bar-fill h-3 rounded-full bg-gradient-to-r from-primary to-secondary" style="width:0%"></div>
+                            </div>
+                            <span class="text-xs text-white font-bold w-20 text-right" id="bar-1y-lbl">R$ —</span>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-600 mt-4">
+                        * Projeção estimada com base no DY histórico. Rendimentos passados não garantem resultados futuros.
+                    </p>
+                </div>
+
+                <!-- ── ADD TO WALLET ───────────────────────────────────────── -->
+                <div id="wallet-panel" class="hidden bg-dark-800 border border-primary/20 rounded-2xl p-6">
+                    <h3 class="text-base font-bold text-white mb-4">Registrar compra de hoje</h3>
+                    <div class="flex flex-col md:flex-row gap-4 items-end">
+                        <div class="flex-1">
+                            <label class="block text-xs text-gray-500 mb-1">Carteira</label>
+                            <select id="wallet-select"
+                                class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="">Nova carteira "Scope — Hábito Diário"</option>
+                                {% if wallets %}
+                                {% for w in wallets %}
+                                <option value="{{ w.id }}">{{ w.name }}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="w-32">
+                            <label class="block text-xs text-gray-500 mb-1">Quantidade</label>
+                            <input type="number" id="qty-input" value="1" min="1"
+                                class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <button onclick="addToWallet()"
+                            class="px-6 py-3 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/90 transition whitespace-nowrap">
+                            + Adicionar à carteira
+                        </button>
+                    </div>
+                    <div id="wallet-feedback" class="hidden mt-3 text-sm font-semibold"></div>
+                </div>
+
+            </div>
+            <!-- /results-area -->
+
+        </main>
+    </div>
+</div>
+
+<!-- Chart.js already in base.html -->
+<script>
+let _currentWinner = null;
+let _budget = 50;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function fmt(v, decimals = 2) {
+    if (v == null || isNaN(v)) return '—';
+    return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function fmtPct(v) {
+    if (v == null || isNaN(v)) return '—';
+    return Number(v).toFixed(2) + '%';
+}
+
+function setBudget(v) {
+    document.getElementById('budget-input').value = v;
+    runRecommendation();
+}
+
+// ── Streak (localStorage) ────────────────────────────────────────────────────
+function updateStreak() {
+    const today = new Date().toISOString().split('T')[0];
+    const data = JSON.parse(localStorage.getItem('scope_streak') || '{"last":"","count":0}');
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    if (data.last === today) {
+        // Already counted today
+    } else if (data.last === yesterday) {
+        data.count += 1;
+        data.last = today;
+    } else {
+        data.count = 1;
+        data.last = today;
+    }
+    localStorage.setItem('scope_streak', JSON.stringify(data));
+
+    if (data.count >= 2) {
+        const badge = document.getElementById('streak-badge');
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+        document.getElementById('streak-count').textContent = data.count;
+    }
+}
+
+// ── Medal HTML ───────────────────────────────────────────────────────────────
+function medalBadge(rank) {
+    const labels = ['', '🥇', '🥈', '🥉', '4º', '5º'];
+    const classes = ['', 'medal-1', 'medal-2', 'medal-3', 'medal-4', 'medal-5'];
+    return `<span class="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm ${classes[rank] || 'medal-5'}">${labels[rank] || rank}</span>`;
+}
+
+// ── Recommendation ───────────────────────────────────────────────────────────
+async function runRecommendation() {
+    _budget = parseFloat(document.getElementById('budget-input').value) || 50;
+
+    document.getElementById('empty-state').classList.add('hidden');
+    document.getElementById('error-state').classList.add('hidden');
+    document.getElementById('results-area').classList.add('hidden');
+    document.getElementById('projection-panel').classList.add('hidden');
+    document.getElementById('wallet-panel').classList.add('hidden');
+    document.getElementById('loading').classList.remove('hidden');
+
+    try {
+        const res = await fetch(`/scope/api/recommend?budget=${_budget}`);
+        const data = await res.json();
+        document.getElementById('loading').classList.add('hidden');
+
+        if (data.status === 'error') {
+            showError(data.message || 'Erro desconhecido.');
+            return;
+        }
+        if (data.status === 'empty' || !data.recommendations?.length) {
+            showError(data.message || `Nenhum ativo disponível abaixo de R$ ${_budget.toFixed(2)}.`);
+            return;
+        }
+
+        renderResults(data.recommendations, _budget);
+        updateStreak();
+
+    } catch (e) {
+        document.getElementById('loading').classList.add('hidden');
+        showError('Falha de comunicação com o servidor.');
+    }
+}
+
+function showError(msg) {
+    document.getElementById('error-msg').textContent = msg;
+    document.getElementById('error-state').classList.remove('hidden');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderResults(recs, budget) {
+    const list = document.getElementById('candidates-list');
+    list.innerHTML = '';
+
+    recs.forEach((r, i) => {
+        const rank = i + 1;
+        const isWinner = i === 0;
+        const typeTag = r.asset_type === 'FII'
+            ? '<span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded font-semibold">FII</span>'
+            : '<span class="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded font-semibold">AÇÃO</span>';
+
+        const reasonsHtml = (r.reasons || []).map(rs =>
+            `<li class="flex items-start gap-2 text-sm text-gray-300">
+                <svg class="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                ${rs}
+            </li>`
+        ).join('');
+
+        const winnerBanner = isWinner ? `
+            <div class="flex items-center gap-2 mb-3 p-3 bg-primary/10 border border-primary/30 rounded-lg">
+                <span class="pulse-green text-primary">●</span>
+                <span class="text-primary font-bold text-sm">Melhor escolha para você hoje com R$ ${budget.toFixed(2)}</span>
+            </div>` : '';
+
+        const addBtn = isWinner ? `
+            <button onclick="prepareWallet(${JSON.stringify(r).replace(/"/g, '&quot;')})"
+                class="mt-3 w-full py-2.5 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/90 transition text-sm">
+                + Adicionar à carteira
+            </button>` : `
+            <button onclick="prepareWallet(${JSON.stringify(r).replace(/"/g, '&quot;')})"
+                class="mt-3 w-full py-2.5 bg-dark-700 border border-gray-600 text-gray-300 font-semibold rounded-lg hover:border-primary hover:text-primary transition text-sm">
+                Escolher este ativo
+            </button>`;
+
+        const card = document.createElement('div');
+        card.className = `candidate-card bg-dark-800 border ${isWinner ? 'winner border-primary/50' : 'border-gray-700'} rounded-2xl p-5`;
+        card.innerHTML = `
+            ${winnerBanner}
+            <div class="flex items-start gap-4">
+                ${medalBadge(rank)}
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <span class="text-xl font-bold text-white">${r.ticker}</span>
+                        ${typeTag}
+                        <span class="text-gray-400 text-sm truncate">${r.empresa || ''}</span>
+                    </div>
+
+                    <!-- Metric pills -->
+                    <div class="flex flex-wrap gap-2 mt-2 mb-3">
+                        <span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-yellow-400">
+                            DY ${fmtPct(r.dy)}
+                        </span>
+                        <span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-white">
+                            Preço ${fmt(r.price)}
+                        </span>
+                        ${r.pvp ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.pvp < 1 ? 'text-primary' : 'text-gray-300'}">P/VP ${r.pvp.toFixed(2)}</span>` : ''}
+                        ${r.roic ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-secondary">ROIC ${(r.roic*100).toFixed(0)}%</span>` : ''}
+                        ${r.margem ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.margem > 0 ? 'text-green-400' : 'text-red-400'}">Graham ${(r.margem*100).toFixed(0)}%</span>` : ''}
+                    </div>
+
+                    <!-- Technical reasons (only for winner) -->
+                    ${isWinner ? `<ul class="space-y-1.5 mt-2">${reasonsHtml}</ul>` : ''}
+                </div>
+                <!-- Shares info -->
+                <div class="text-right flex-shrink-0">
+                    <p class="text-2xl font-bold text-primary">${r.shares_buyable}</p>
+                    <p class="text-xs text-gray-500">cota${r.shares_buyable !== 1 ? 's' : ''}</p>
+                    <p class="text-xs text-gray-500 mt-1">com R$ ${budget.toFixed(2)}</p>
+                </div>
+            </div>
+            ${addBtn}
+        `;
+        list.appendChild(card);
+    });
+
+    // Subtitle
+    document.getElementById('results-subtitle').textContent =
+        `Ativos com preço ≤ R$ ${budget.toFixed(2)}, com dividendos, ordenados por score de renda e segurança`;
+    document.getElementById('results-count').textContent = `${recs.length} opções encontradas`;
+
+    document.getElementById('results-area').classList.remove('hidden');
+
+    // Render projection for winner
+    renderProjection(recs[0], budget);
+}
+
+function renderProjection(winner, budget) {
+    const dy = winner.dy || 0;
+    const price = winner.price || 1;
+    const shares30 = Math.floor((budget * 30) / price);
+    const shares180 = Math.floor((budget * 180) / price);
+    const shares365 = Math.floor((budget * 365) / price);
+
+    const divPerShareMonth = (dy / 100) * price / 12;
+    const div30  = divPerShareMonth * shares30;
+    const div180 = divPerShareMonth * shares180;
+    const div365 = divPerShareMonth * shares365;
+
+    document.getElementById('proj-div-month').textContent = fmt(winner.proj_monthly_per_share, 4);
+    document.getElementById('proj-30d').textContent  = fmt(div30);
+    document.getElementById('proj-1y').textContent   = fmt(div365);
+    document.getElementById('proj-dy').textContent   = fmtPct(dy);
+
+    // Bars (relative to 1y)
+    const max = div365 || 1;
+    setTimeout(() => {
+        document.getElementById('bar-30d').style.width  = Math.min(100, (div30/max)*100)  + '%';
+        document.getElementById('bar-180d').style.width = Math.min(100, (div180/max)*100) + '%';
+        document.getElementById('bar-1y').style.width   = '100%';
+    }, 100);
+    document.getElementById('bar-30d-lbl').textContent  = fmt(div30);
+    document.getElementById('bar-180d-lbl').textContent = fmt(div180);
+    document.getElementById('bar-1y-lbl').textContent   = fmt(div365);
+
+    document.getElementById('projection-panel').classList.remove('hidden');
+}
+
+// ── Wallet ────────────────────────────────────────────────────────────────────
+function prepareWallet(r) {
+    _currentWinner = r;
+    document.getElementById('qty-input').value = r.shares_buyable || 1;
+    const panel = document.getElementById('wallet-panel');
+    panel.classList.remove('hidden');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('wallet-feedback').classList.add('hidden');
+}
+
+async function addToWallet() {
+    if (!_currentWinner) return;
+    const walletId = document.getElementById('wallet-select').value || null;
+    const qty = parseInt(document.getElementById('qty-input').value) || 1;
+    const fb = document.getElementById('wallet-feedback');
+
+    try {
+        const res = await fetch('/scope/api/add-to-wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticker: _currentWinner.ticker,
+                asset_type: _currentWinner.asset_type,
+                quantity: qty,
+                price: _currentWinner.price,
+                wallet_id: walletId,
+            })
+        });
+        const data = await res.json();
+        fb.classList.remove('hidden', 'text-red-400', 'text-primary');
+        if (data.status === 'success') {
+            fb.classList.add('text-primary');
+            fb.textContent = '✓ ' + data.message;
+            // Update streak visually
+            updateStreak();
+        } else {
+            fb.classList.add('text-red-400');
+            fb.textContent = '✗ ' + (data.message || 'Erro ao adicionar.');
+        }
+    } catch (e) {
+        fb.classList.remove('hidden');
+        fb.classList.add('text-red-400');
+        fb.textContent = '✗ Falha de comunicação.';
+    }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(function init() {
+    // Show streak if exists
+    const data = JSON.parse(localStorage.getItem('scope_streak') || '{"count":0}');
+    if (data.count >= 2) {
+        const badge = document.getElementById('streak-badge');
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+        document.getElementById('streak-count').textContent = data.count;
+    }
+})();
+</script>
+{% endblock %}

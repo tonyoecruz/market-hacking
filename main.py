@@ -15,7 +15,7 @@ import uvicorn
 import logging
 
 # Import routes
-from routes import auth, dashboard, acoes, etfs, elite_mix, fiis, arena, admin, admin_auth, admin_panel, renda_fixa
+from routes import auth, dashboard, acoes, etfs, scope, fiis, arena, admin, admin_auth, admin_panel, renda_fixa
 from routes import admin_logs  # Real-time logs
 
 # Import database and scheduler
@@ -57,7 +57,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 app.include_router(acoes.router, prefix="/acoes", tags=["Ações"])
 app.include_router(etfs.router, prefix="/etfs", tags=["ETFs"])
-app.include_router(elite_mix.router, prefix="/elite-mix", tags=["Elite Mix"])
+app.include_router(scope.router, prefix="/scope", tags=["Scope"])
 app.include_router(fiis.router, prefix="/fiis", tags=["FIIs"])
 app.include_router(arena.router, prefix="/arena", tags=["Arena"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
