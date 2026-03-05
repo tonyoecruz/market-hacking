@@ -211,6 +211,49 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# YOLO MODE — "Faca na Caveira": no safety filters, pure DY ranking
+# ---------------------------------------------------------------------------
+
+def _yolo_score_stocks(df: pd.DataFrame, budget: float) -> pd.DataFrame:
+    df = df.copy()
+    for col in ["price", "dy", "pl", "pvp", "roic", "liquidezmediadiaria",
+                 "margem", "liq_corrente", "div_liq_ebitda", "roe", "margem_liquida"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+        else:
+            df[col] = 0.0
+
+    # Only basic filters: price > 0, within budget, has some DY
+    df = df[(df["price"] > 0) & (df["price"] <= budget) & (df["dy"] > 0)]
+    if df.empty:
+        return df
+
+    # Score = pure DY ranking (highest DY wins)
+    df["score"] = _norm(df["dy"]).fillna(0)
+    df["asset_type"] = "Acao"
+    return df
+
+
+def _yolo_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
+    df = df.copy()
+    for col in ["price", "dy", "pvp", "liquidezmediadiaria"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+        else:
+            df[col] = 0.0
+
+    df = df[(df["price"] > 0) & (df["price"] <= budget) & (df["dy"] > 0)]
+    if df.empty:
+        return df
+
+    df["score"] = _norm(df["dy"]).fillna(0)
+    df["asset_type"] = "FII"
+    for col in ["margem", "roic", "liq_corrente", "div_liq_ebitda", "margem_liquida", "roe", "pl"]:
+        df[col] = 0
+    return df
+
+
+# ---------------------------------------------------------------------------
 # Justification builder
 # ---------------------------------------------------------------------------
 
@@ -316,8 +359,16 @@ async def scope_page(request: Request, user: dict = Depends(get_optional_user)):
 
 
 @router.get("/api/recommend")
-async def recommend(budget: float = 50.0, user: dict = Depends(get_optional_user)):
-    """Conservative daily investment recommendations. Safety first."""
+async def recommend(
+    budget: float = 50.0,
+    yolo: bool = False,
+    user: dict = Depends(get_optional_user),
+):
+    """
+    Daily investment recommendations.
+    yolo=false (default) → conservative, safety-first filters.
+    yolo=true  → "Faca na Caveira" — raw DY ranking, no safety filters.
+    """
     try:
         if budget <= 0:
             return _json_response({"status": "error", "message": "Informe um valor positivo."})
@@ -327,25 +378,33 @@ async def recommend(budget: float = 50.0, user: dict = Depends(get_optional_user
         # Stocks (BR)
         stocks_raw = db.get_stocks(market="BR") or []
         if stocks_raw:
-            df_s = _filter_and_score_stocks(pd.DataFrame(stocks_raw), budget)
+            df_raw = pd.DataFrame(stocks_raw)
+            if yolo:
+                df_s = _yolo_score_stocks(df_raw, budget)
+            else:
+                df_s = _filter_and_score_stocks(df_raw, budget)
             if not df_s.empty:
                 candidates.append(df_s)
 
         # FIIs
         fiis_raw = db.get_fiis() or []
         if fiis_raw:
-            df_f = _filter_and_score_fiis(pd.DataFrame(fiis_raw), budget)
+            df_raw = pd.DataFrame(fiis_raw)
+            if yolo:
+                df_f = _yolo_score_fiis(df_raw, budget)
+            else:
+                df_f = _filter_and_score_fiis(df_raw, budget)
             if not df_f.empty:
                 candidates.append(df_f)
 
         if not candidates:
-            return _json_response({
-                "status": "empty",
-                "message": (
-                    f"Nenhum ativo saudavel com dividendos encontrado abaixo de R$ {budget:.2f}. "
-                    f"Tente aumentar o valor — muitos ativos seguros custam acima de R$ 10."
-                ),
-            })
+            msg = (
+                f"Nenhum ativo com dividendos encontrado abaixo de R$ {budget:.2f}."
+                if yolo else
+                f"Nenhum ativo saudavel com dividendos encontrado abaixo de R$ {budget:.2f}. "
+                f"Tente aumentar o valor — muitos ativos seguros custam acima de R$ 10."
+            )
+            return _json_response({"status": "empty", "message": msg})
 
         combined = pd.concat(candidates, ignore_index=True)
         combined = combined.replace([np.inf, -np.inf], np.nan).fillna(0)
@@ -360,6 +419,7 @@ async def recommend(budget: float = 50.0, user: dict = Depends(get_optional_user
         return _json_response({
             "status": "success",
             "budget": float(budget),
+            "mode": "yolo" if yolo else "safe",
             "count": len(results),
             "recommendations": results,
         })

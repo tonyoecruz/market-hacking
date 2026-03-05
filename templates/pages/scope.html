@@ -111,6 +111,31 @@
                 </div>
             </div>
 
+            <!-- ── FACA NA CAVEIRA TOGGLE ──────────────────────────────────── -->
+            <div id="yolo-toggle-area" class="bg-dark-800 border border-gray-700 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl mt-0.5" id="yolo-icon">🛡️</span>
+                    <div>
+                        <p class="text-white font-bold text-sm" id="yolo-title">Modo Conservador</p>
+                        <p class="text-xs text-gray-500" id="yolo-desc">
+                            Apenas ativos saudaveis: sem dividas excessivas, lucrativos, com boa liquidez e sem problemas juridicos.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <span class="text-xs font-semibold text-gray-400" id="lbl-safe">🛡️ Seguro</span>
+                    <button id="yolo-toggle-btn" onclick="toggleYolo()"
+                        class="relative w-14 h-7 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-600"
+                        aria-label="Alternar modo Faca na Caveira">
+                        <span id="yolo-toggle-knob"
+                            class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center text-xs">
+                            🛡️
+                        </span>
+                    </button>
+                    <span class="text-xs font-semibold text-gray-500" id="lbl-yolo">🔪 Faca na Caveira</span>
+                </div>
+            </div>
+
             <!-- ── LOADING ─────────────────────────────────────────────────── -->
             <div id="loading" class="hidden text-center py-16">
                 <div class="inline-block animate-spin rounded-full h-14 w-14 border-b-2 border-primary mb-4"></div>
@@ -275,6 +300,7 @@
 <script>
 let _currentWinner = null;
 let _budget = 50;
+let _yoloMode = false;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(v, decimals = 2) {
@@ -289,6 +315,61 @@ function fmtPct(v) {
 function setBudget(v) {
     document.getElementById('budget-input').value = v;
     runRecommendation();
+}
+
+// ── YOLO Toggle ──────────────────────────────────────────────────────────────
+function toggleYolo() {
+    _yoloMode = !_yoloMode;
+
+    const btn = document.getElementById('yolo-toggle-btn');
+    const knob = document.getElementById('yolo-toggle-knob');
+    const icon = document.getElementById('yolo-icon');
+    const title = document.getElementById('yolo-title');
+    const desc = document.getElementById('yolo-desc');
+    const lblSafe = document.getElementById('lbl-safe');
+    const lblYolo = document.getElementById('lbl-yolo');
+    const area = document.getElementById('yolo-toggle-area');
+
+    if (_yoloMode) {
+        btn.style.background = 'linear-gradient(135deg, #dc2626, #991b1b)';
+        knob.style.transform = 'translateX(1.75rem)';
+        knob.textContent = '🔪';
+        icon.textContent = '💀';
+        title.textContent = 'Faca na Caveira';
+        title.classList.add('text-red-400');
+        title.classList.remove('text-white');
+        desc.textContent = 'ALTO RISCO! Sem filtros de saude financeira. Apenas ordenado por quem paga mais dividendos. Empresas podem ter problemas graves.';
+        desc.classList.add('text-red-400/70');
+        desc.classList.remove('text-gray-500');
+        lblSafe.classList.remove('text-gray-400');
+        lblSafe.classList.add('text-gray-600');
+        lblYolo.classList.remove('text-gray-500');
+        lblYolo.classList.add('text-red-400');
+        area.classList.remove('border-gray-700');
+        area.classList.add('border-red-500/30');
+    } else {
+        btn.style.background = '#4b5563';
+        knob.style.transform = 'translateX(0)';
+        knob.textContent = '🛡️';
+        icon.textContent = '🛡️';
+        title.textContent = 'Modo Conservador';
+        title.classList.remove('text-red-400');
+        title.classList.add('text-white');
+        desc.textContent = 'Apenas ativos saudaveis: sem dividas excessivas, lucrativos, com boa liquidez e sem problemas juridicos.';
+        desc.classList.remove('text-red-400/70');
+        desc.classList.add('text-gray-500');
+        lblSafe.classList.add('text-gray-400');
+        lblSafe.classList.remove('text-gray-600');
+        lblYolo.classList.add('text-gray-500');
+        lblYolo.classList.remove('text-red-400');
+        area.classList.add('border-gray-700');
+        area.classList.remove('border-red-500/30');
+    }
+
+    // Auto-refresh if there are results visible
+    if (!document.getElementById('results-area').classList.contains('hidden')) {
+        runRecommendation();
+    }
 }
 
 // ── Streak (localStorage) ────────────────────────────────────────────────────
@@ -335,7 +416,7 @@ async function runRecommendation() {
     document.getElementById('loading').classList.remove('hidden');
 
     try {
-        const res = await fetch(`/scope/api/recommend?budget=${_budget}`);
+        const res = await fetch(`/scope/api/recommend?budget=${_budget}&yolo=${_yoloMode}`);
         const data = await res.json();
         document.getElementById('loading').classList.add('hidden');
 
@@ -383,11 +464,15 @@ function renderResults(recs, budget) {
             </li>`
         ).join('');
 
-        const winnerBanner = isWinner ? `
+        const winnerBanner = isWinner ? (_yoloMode ? `
+            <div class="flex items-center gap-2 mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <span class="text-red-400">💀</span>
+                <span class="text-red-400 font-bold text-sm">Maior dividendo encontrado — SEM garantia de saude financeira!</span>
+            </div>` : `
             <div class="flex items-center gap-2 mb-3 p-3 bg-primary/10 border border-primary/30 rounded-lg">
                 <span class="pulse-green text-primary">●</span>
                 <span class="text-primary font-bold text-sm">Ativo mais seguro e rentavel para voce hoje com R$ ${budget.toFixed(2)}</span>
-            </div>` : '';
+            </div>`) : '';
 
         const addBtn = isWinner ? `
             <button onclick="prepareWallet(${JSON.stringify(r).replace(/"/g, '&quot;')})"
@@ -445,8 +530,9 @@ function renderResults(recs, budget) {
     });
 
     // Subtitle
-    document.getElementById('results-subtitle').textContent =
-        `Apenas ativos saudaveis (sem problemas juridicos, endividamento controlado, lucrativos) com dividendos ate R$ ${budget.toFixed(2)}`;
+    document.getElementById('results-subtitle').textContent = _yoloMode
+        ? `⚠️ FACA NA CAVEIRA — sem filtros de saude. Ordenado por dividendo bruto ate R$ ${budget.toFixed(2)}`
+        : `Apenas ativos saudaveis (sem problemas juridicos, endividamento controlado, lucrativos) com dividendos ate R$ ${budget.toFixed(2)}`;
     document.getElementById('results-count').textContent = `${recs.length} opções encontradas`;
 
     document.getElementById('results-area').classList.remove('hidden');
