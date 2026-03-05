@@ -150,31 +150,62 @@
 
                 <!-- ── PROJECTION PANEL ────────────────────────────────────── -->
                 <div id="projection-panel" class="hidden bg-dark-800 border border-gray-700 rounded-2xl p-6">
-                    <h3 class="text-base font-bold text-white mb-4">
-                        Projeção do seu hábito diário
+                    <h3 class="text-base font-bold text-white mb-1">
+                        Se você investir <span class="text-primary" id="proj-budget-lbl">R$ 50</span> por dia neste ativo:
                     </h3>
+                    <p class="text-xs text-gray-500 mb-5">Simulando compras diarias de <span id="proj-shares-day">1</span> cota(s) a <span id="proj-price-lbl">—</span></p>
+
+                    <!-- Investment summary -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="bg-dark-700 rounded-xl p-4 text-center">
-                            <p class="text-xs text-gray-500 mb-1">Dividendo/mês (1 cota)</p>
-                            <p class="text-xl font-bold text-primary" id="proj-div-month">—</p>
+                            <p class="text-xs text-gray-500 mb-1">Cotas acumuladas (30d)</p>
+                            <p class="text-xl font-bold text-white" id="proj-shares-30d">—</p>
                         </div>
                         <div class="bg-dark-700 rounded-xl p-4 text-center">
-                            <p class="text-xs text-gray-500 mb-1">Acum. em 30 dias</p>
-                            <p class="text-xl font-bold text-secondary" id="proj-30d">—</p>
+                            <p class="text-xs text-gray-500 mb-1">Valor investido (30d)</p>
+                            <p class="text-xl font-bold text-white" id="proj-invested-30d">—</p>
                         </div>
                         <div class="bg-dark-700 rounded-xl p-4 text-center">
-                            <p class="text-xs text-gray-500 mb-1">Acum. em 365 dias</p>
-                            <p class="text-xl font-bold text-white" id="proj-1y">—</p>
+                            <p class="text-xs text-gray-500 mb-1">Dividendos estimados (30d)</p>
+                            <p class="text-xl font-bold text-primary" id="proj-div-30d">—</p>
                         </div>
                         <div class="bg-dark-700 rounded-xl p-4 text-center">
-                            <p class="text-xs text-gray-500 mb-1">Dividend Yield</p>
+                            <p class="text-xs text-gray-500 mb-1">Dividend Yield do ativo</p>
                             <p class="text-xl font-bold text-yellow-400" id="proj-dy">—</p>
                         </div>
                     </div>
 
-                    <!-- Simple visual bar -->
+                    <!-- Detailed breakdown -->
+                    <div class="bg-dark-700 rounded-xl p-4 mb-4">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Como funciona o crescimento</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-400">Em <strong class="text-white">30 dias</strong> (1 mes)</span>
+                                <div class="text-right">
+                                    <span class="text-gray-500" id="proj-detail-inv-30d">investido: —</span>
+                                    <span class="text-primary font-bold ml-3" id="proj-detail-div-30d">dividendos: —</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-400">Em <strong class="text-white">180 dias</strong> (6 meses)</span>
+                                <div class="text-right">
+                                    <span class="text-gray-500" id="proj-detail-inv-180d">investido: —</span>
+                                    <span class="text-secondary font-bold ml-3" id="proj-detail-div-180d">dividendos: —</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-400">Em <strong class="text-white">365 dias</strong> (1 ano)</span>
+                                <div class="text-right">
+                                    <span class="text-gray-500" id="proj-detail-inv-1y">investido: —</span>
+                                    <span class="text-white font-bold ml-3" id="proj-detail-div-1y">dividendos: —</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual bars -->
                     <div class="space-y-2">
-                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Crescimento projetado (dividendos acumulados)</p>
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Dividendos acumulados ao longo do tempo</p>
                         <div class="flex items-center gap-3">
                             <span class="text-xs text-gray-500 w-14">30d</span>
                             <div class="flex-1 bg-dark-700 rounded-full h-3">
@@ -199,7 +230,8 @@
                     </div>
 
                     <p class="text-xs text-gray-600 mt-4">
-                        * Projeção estimada com base no DY histórico. Rendimentos passados não garantem resultados futuros.
+                        * Projecao simplificada baseada no DY historico atual. Dividendos sao estimativas e podem variar.
+                        Rendimentos passados nao garantem resultados futuros. Impostos nao estao considerados.
                     </p>
                 </div>
 
@@ -354,7 +386,7 @@ function renderResults(recs, budget) {
         const winnerBanner = isWinner ? `
             <div class="flex items-center gap-2 mb-3 p-3 bg-primary/10 border border-primary/30 rounded-lg">
                 <span class="pulse-green text-primary">●</span>
-                <span class="text-primary font-bold text-sm">Melhor escolha para você hoje com R$ ${budget.toFixed(2)}</span>
+                <span class="text-primary font-bold text-sm">Ativo mais seguro e rentavel para voce hoje com R$ ${budget.toFixed(2)}</span>
             </div>` : '';
 
         const addBtn = isWinner ? `
@@ -382,19 +414,23 @@ function renderResults(recs, budget) {
 
                     <!-- Metric pills -->
                     <div class="flex flex-wrap gap-2 mt-2 mb-3">
+                        <span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-white">
+                            ${fmt(r.price)}
+                        </span>
                         <span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-yellow-400">
                             DY ${fmtPct(r.dy)}
                         </span>
-                        <span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-white">
-                            Preço ${fmt(r.price)}
-                        </span>
+                        ${r.pl ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.pl <= 15 ? 'text-primary' : 'text-gray-300'}">P/L ${r.pl.toFixed(1)}</span>` : ''}
                         ${r.pvp ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.pvp < 1 ? 'text-primary' : 'text-gray-300'}">P/VP ${r.pvp.toFixed(2)}</span>` : ''}
+                        ${r.liq_corrente ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.liq_corrente >= 1.5 ? 'text-green-400' : 'text-gray-300'}">Liq.Corr ${r.liq_corrente.toFixed(1)}</span>` : ''}
+                        ${r.div_liq_ebitda ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.div_liq_ebitda <= 2 ? 'text-green-400' : 'text-orange-400'}">Div/EBITDA ${r.div_liq_ebitda.toFixed(1)}x</span>` : ''}
+                        ${r.roe ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-secondary">ROE ${(r.roe*100).toFixed(0)}%</span>` : ''}
                         ${r.roic ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-secondary">ROIC ${(r.roic*100).toFixed(0)}%</span>` : ''}
                         ${r.margem ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.margem > 0 ? 'text-green-400' : 'text-red-400'}">Graham ${(r.margem*100).toFixed(0)}%</span>` : ''}
                     </div>
 
-                    <!-- Technical reasons (only for winner) -->
-                    ${isWinner ? `<ul class="space-y-1.5 mt-2">${reasonsHtml}</ul>` : ''}
+                    <!-- Technical reasons (top 2 candidates) -->
+                    ${rank <= 2 ? `<ul class="space-y-1.5 mt-2">${reasonsHtml}</ul>` : ''}
                 </div>
                 <!-- Shares info -->
                 <div class="text-right flex-shrink-0">
@@ -410,7 +446,7 @@ function renderResults(recs, budget) {
 
     // Subtitle
     document.getElementById('results-subtitle').textContent =
-        `Ativos com preço ≤ R$ ${budget.toFixed(2)}, com dividendos, ordenados por score de renda e segurança`;
+        `Apenas ativos saudaveis (sem problemas juridicos, endividamento controlado, lucrativos) com dividendos ate R$ ${budget.toFixed(2)}`;
     document.getElementById('results-count').textContent = `${recs.length} opções encontradas`;
 
     document.getElementById('results-area').classList.remove('hidden');
@@ -422,30 +458,62 @@ function renderResults(recs, budget) {
 function renderProjection(winner, budget) {
     const dy = winner.dy || 0;
     const price = winner.price || 1;
-    const shares30 = Math.floor((budget * 30) / price);
-    const shares180 = Math.floor((budget * 180) / price);
-    const shares365 = Math.floor((budget * 365) / price);
+    const sharesPerDay = Math.floor(budget / price);
 
-    const divPerShareMonth = (dy / 100) * price / 12;
-    const div30  = divPerShareMonth * shares30;
-    const div180 = divPerShareMonth * shares180;
-    const div365 = divPerShareMonth * shares365;
+    if (sharesPerDay < 1) {
+        document.getElementById('projection-panel').classList.add('hidden');
+        return;
+    }
 
-    document.getElementById('proj-div-month').textContent = fmt(winner.proj_monthly_per_share, 4);
-    document.getElementById('proj-30d').textContent  = fmt(div30);
-    document.getElementById('proj-1y').textContent   = fmt(div365);
-    document.getElementById('proj-dy').textContent   = fmtPct(dy);
+    // How many shares accumulated over time (buying daily)
+    const shares30  = sharesPerDay * 30;
+    const shares180 = sharesPerDay * 180;
+    const shares365 = sharesPerDay * 365;
+
+    const invested30  = shares30  * price;
+    const invested180 = shares180 * price;
+    const invested365 = shares365 * price;
+
+    // Dividends: DY% * invested capital / 12 * months_held
+    // Simplification: each share held for average half the period
+    // More intuitive: total shares * annual div per share * fraction of year
+    const annualDivPerShare = (dy / 100) * price;
+
+    // Accumulated dividends: shares bought day 1 earn for whole period,
+    // shares bought last day earn ~0. Average = half.
+    const div30  = shares30  * annualDivPerShare * (30/365)  * 0.5;
+    const div180 = shares180 * annualDivPerShare * (180/365) * 0.5;
+    const div365 = shares365 * annualDivPerShare * (365/365) * 0.5;
+
+    // Header labels
+    document.getElementById('proj-budget-lbl').textContent = fmt(budget);
+    document.getElementById('proj-shares-day').textContent = sharesPerDay;
+    document.getElementById('proj-price-lbl').textContent = fmt(price);
+
+    // Summary cards
+    document.getElementById('proj-shares-30d').textContent = shares30;
+    document.getElementById('proj-invested-30d').textContent = fmt(invested30);
+    document.getElementById('proj-div-30d').textContent = fmt(div30);
+    document.getElementById('proj-dy').textContent = fmtPct(dy);
+
+    // Detail breakdown
+    document.getElementById('proj-detail-inv-30d').textContent  = 'investido: ' + fmt(invested30);
+    document.getElementById('proj-detail-div-30d').textContent  = 'dividendos: ~' + fmt(div30);
+    document.getElementById('proj-detail-inv-180d').textContent = 'investido: ' + fmt(invested180);
+    document.getElementById('proj-detail-div-180d').textContent = 'dividendos: ~' + fmt(div180);
+    document.getElementById('proj-detail-inv-1y').textContent   = 'investido: ' + fmt(invested365);
+    document.getElementById('proj-detail-div-1y').textContent   = 'dividendos: ~' + fmt(div365);
 
     // Bars (relative to 1y)
-    const max = div365 || 1;
+    const maxDiv = div365 || 1;
     setTimeout(() => {
-        document.getElementById('bar-30d').style.width  = Math.min(100, (div30/max)*100)  + '%';
-        document.getElementById('bar-180d').style.width = Math.min(100, (div180/max)*100) + '%';
+        document.getElementById('bar-30d').style.width  = Math.min(100, (div30/maxDiv)*100)  + '%';
+        document.getElementById('bar-180d').style.width = Math.min(100, (div180/maxDiv)*100) + '%';
         document.getElementById('bar-1y').style.width   = '100%';
     }, 100);
-    document.getElementById('bar-30d-lbl').textContent  = fmt(div30);
-    document.getElementById('bar-180d-lbl').textContent = fmt(div180);
-    document.getElementById('bar-1y-lbl').textContent   = fmt(div365);
+    document.getElementById('bar-30d-lbl').textContent  = '~' + fmt(div30);
+    document.getElementById('bar-180d-lbl').textContent = '~' + fmt(div180);
+    document.getElementById('bar-1y-lbl').textContent   = '~' + fmt(div365);
 
     document.getElementById('projection-panel').classList.remove('hidden');
 }
