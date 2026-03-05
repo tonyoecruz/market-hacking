@@ -886,7 +886,37 @@ class DatabaseManager:
             raise e
         finally:
             db.close()
-    
+
+    def update_investor(self, investor_id: int, name: str = None, description: str = None,
+                        style_prompt: str = None, voice_id: str = None) -> Optional[Dict]:
+        """Update an existing investor persona"""
+        db = self.SessionLocal()
+        try:
+            investor = db.query(InvestorPersonaDB).filter(
+                InvestorPersonaDB.id == investor_id
+            ).first()
+
+            if not investor:
+                return None
+
+            if name is not None:
+                investor.name = name
+            if description is not None:
+                investor.description = description
+            if style_prompt is not None:
+                investor.style_prompt = style_prompt
+            if voice_id is not None:
+                investor.voice_id = voice_id
+
+            db.commit()
+            db.refresh(investor)
+            return investor.to_dict()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+
     def init_default_investors(self):
         """Initialize default investor personas"""
         defaults = [

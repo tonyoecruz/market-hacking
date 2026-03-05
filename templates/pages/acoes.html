@@ -47,7 +47,6 @@
                 </div>
             </div>
 
-            <!-- Filters Row -->
             <div class="bg-dark-800 rounded-lg p-6 mb-6">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <!-- Country Selector -->
@@ -101,6 +100,20 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Investor Selector Row -->
+                <div class="mt-4 pt-4 border-t border-gray-700/50 flex items-center gap-4">
+                    <label class="text-sm font-medium text-gray-400 whitespace-nowrap">🧠 Analisar como:</label>
+                    <select id="investor-selector-acoes"
+                        class="flex-1 max-w-xs px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        onchange="saveInvestorSelection()">
+                        <option value="">-- Selecionar Investidor --</option>
+                    </select>
+                    <span id="investor-badge-acoes"
+                        class="hidden px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-semibold"></span>
+                    <p class="text-xs text-gray-500">A IA usará o estilo e filosofia deste investidor para analisar as
+                        ações.</p>
                 </div>
             </div>
 
@@ -178,6 +191,7 @@
                     </div>
                 </div>
             </div>
+            {% include "components/legal_footer.html" %}
         </main>
     </div>
 
@@ -327,6 +341,7 @@
     // ══════════════════════════════════════════════════════════════════════
     window.addEventListener('DOMContentLoaded', () => {
         renderStrategyCards();
+        loadInvestors();
     });
 
     // ══════════════════════════════════════════════════════════════════════
@@ -520,9 +535,9 @@
         const fmtLiqA = (v) => {
             if (!v) return '-';
             const n = Number(v);
-            if (n >= 1e9) return 'R$ ' + (n/1e9).toFixed(1) + 'B';
-            if (n >= 1e6) return 'R$ ' + (n/1e6).toFixed(1) + 'M';
-            if (n >= 1e3) return 'R$ ' + (n/1e3).toFixed(0) + 'K';
+            if (n >= 1e9) return 'R$ ' + (n / 1e9).toFixed(1) + 'B';
+            if (n >= 1e6) return 'R$ ' + (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return 'R$ ' + (n / 1e3).toFixed(0) + 'K';
             return 'R$ ' + n.toFixed(0);
         };
         let rows = audit.map(a => {
@@ -697,8 +712,14 @@
         document.getElementById('analysis-modal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
 
+        // Get selected investor from the selector
+        const investorSel = document.getElementById('investor-selector-acoes');
+        const investor = investorSel ? investorSel.value : (localStorage.getItem('investor_persona') || '');
+
         try {
-            const res = await fetch(`/acoes/api/decode/${ticker}`);
+            let url = `/acoes/api/decode/${ticker}`;
+            if (investor) url += `?investor=${encodeURIComponent(investor)}`;
+            const res = await fetch(url);
             const data = await res.json();
             if (data.status === 'success') {
                 const stock = data.data;
@@ -706,7 +727,12 @@
                 document.getElementById('modal-empresa').textContent = stock.empresa || '';
                 renderModalData(stock);
                 currentAnalysisText = data.analysis || 'Análise não disponível';
-                document.getElementById('modal-analysis').innerHTML = `<p>${currentAnalysisText.replace(/\n/g, '<br>')}</p>`;
+                // Show investor persona used
+                let analysisHeader = '';
+                if (investor) {
+                    analysisHeader = `<p class="text-xs text-primary/80 mb-3 flex items-center gap-1"><span>🧠</span> Análise no estilo de <strong>${investor}</strong></p>`;
+                }
+                document.getElementById('modal-analysis').innerHTML = analysisHeader + `<p>${currentAnalysisText.replace(/\n/g, '<br>')}</p>`;
                 if (stock.price) document.getElementById('wallet-price').value = Number(stock.price).toFixed(2);
                 await loadWallets();
             }
@@ -862,6 +888,51 @@
         toast.textContent = msg;
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // INVESTOR PERSONA SELECTOR
+    // ══════════════════════════════════════════════════════════════════════
+    async function loadInvestors() {
+        try {
+            const res = await fetch('/api/investors');
+            const data = await res.json();
+            const sel = document.getElementById('investor-selector-acoes');
+            if (!sel) return;
+            const savedInvestor = localStorage.getItem('investor_persona') || '';
+            if (data.investors && data.investors.length > 0) {
+                sel.innerHTML = '<option value="">-- Selecionar Investidor --</option>' +
+                    data.investors.map(inv =>
+                        `<option value="${inv.name}" ${inv.name === savedInvestor ? 'selected' : ''}>${inv.name}${inv.description ? ' — ' + inv.description : ''}</option>`
+                    ).join('');
+                if (savedInvestor) updateInvestorBadge(savedInvestor);
+            } else {
+                sel.innerHTML = '<option value="">Nenhum investidor cadastrado — configure no Admin</option>';
+            }
+        } catch (e) {
+            console.warn('Não foi possível carregar investidores:', e);
+        }
+    }
+
+    function saveInvestorSelection() {
+        const sel = document.getElementById('investor-selector-acoes');
+        const value = sel ? sel.value : '';
+        if (value) {
+            localStorage.setItem('investor_persona', value);
+            updateInvestorBadge(value);
+        } else {
+            localStorage.removeItem('investor_persona');
+            const badge = document.getElementById('investor-badge-acoes');
+            if (badge) badge.classList.add('hidden');
+        }
+    }
+
+    function updateInvestorBadge(name) {
+        const badge = document.getElementById('investor-badge-acoes');
+        if (badge && name) {
+            badge.textContent = '🧠 ' + name;
+            badge.classList.remove('hidden');
+        }
     }
 </script>
 {% endblock %}

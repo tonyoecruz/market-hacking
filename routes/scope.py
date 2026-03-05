@@ -133,13 +133,17 @@ def _filter_and_score_stocks(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         df = df[~df["ticker"].str.replace(".SA", "", regex=False).str.upper().isin(_RISKY_SET)]
 
     df = df[(df["price"] > 0) & (df["price"] <= budget)]
+    logger.info(f"[scope] Stocks after price filter (<=R${budget}): {len(df)}")
     df = df[(df["dy"] >= STOCK_MIN_DY) & (df["dy"] <= STOCK_MAX_DY)]
-    df = df[(df["pl"] >= STOCK_MIN_PL) & (df["pl"] <= STOCK_MAX_PL)]
-    df = df[df["liquidezmediadiaria"] >= STOCK_MIN_LIQ]
+    logger.info(f"[scope] Stocks after DY filter ({STOCK_MIN_DY}-{STOCK_MAX_DY}%): {len(df)}")
+    df = df[((df["pl"] >= STOCK_MIN_PL) & (df["pl"] <= STOCK_MAX_PL)) | (df["pl"] == 0)]
+    logger.info(f"[scope] Stocks after P/L filter: {len(df)}")
+    df = df[(df["liquidezmediadiaria"] >= STOCK_MIN_LIQ) | (df["liquidezmediadiaria"] == 0)]
     df = df[(df["div_liq_ebitda"] <= STOCK_MAX_DIV_EBITDA) | (df["div_liq_ebitda"] == 0)]
     df = df[(df["liq_corrente"] >= STOCK_MIN_LIQ_CORR) | (df["liq_corrente"] == 0)]
     df = df[(df["roe"] >= STOCK_MIN_ROE) | (df["roe"] == 0)]
     df = df[(df["margem_liquida"] >= STOCK_MIN_MARGEM_LIQ) | (df["margem_liquida"] == 0)]
+    logger.info(f"[scope] Stocks after ALL filters: {len(df)}")
 
     if df.empty:
         return df
@@ -184,9 +188,13 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         df = df[~df["ticker"].str.replace(".SA", "", regex=False).str.upper().isin(_RISKY_SET)]
 
     df = df[(df["price"] > 0) & (df["price"] <= budget)]
+    logger.info(f"[scope] FIIs after price filter (<=R${budget}): {len(df)}")
     df = df[(df["dy"] >= FII_MIN_DY) & (df["dy"] <= FII_MAX_DY)]
-    df = df[(df["pvp"] >= FII_MIN_PVP) & (df["pvp"] <= FII_MAX_PVP)]
-    df = df[df["liquidezmediadiaria"] >= FII_MIN_LIQ]
+    logger.info(f"[scope] FIIs after DY filter ({FII_MIN_DY}-{FII_MAX_DY}%): {len(df)}")
+    df = df[((df["pvp"] >= FII_MIN_PVP) & (df["pvp"] <= FII_MAX_PVP)) | (df["pvp"] == 0)]
+    logger.info(f"[scope] FIIs after P/VP filter: {len(df)}")
+    df = df[(df["liquidezmediadiaria"] >= FII_MIN_LIQ) | (df["liquidezmediadiaria"] == 0)]
+    logger.info(f"[scope] FIIs after ALL filters: {len(df)}")
 
     if df.empty:
         return df

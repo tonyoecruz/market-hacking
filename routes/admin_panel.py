@@ -821,6 +821,60 @@ async def remove_investor(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/api/investors/{investor_id}")
+async def get_investor_by_id(
+    investor_id: int,
+    session: dict = Depends(verify_admin_session)
+):
+    """Get a single investor persona by ID"""
+    try:
+        db = db_manager.SessionLocal()
+        try:
+            from database.orm_models import InvestorPersonaDB
+            investor = db.query(InvestorPersonaDB).filter(
+                InvestorPersonaDB.id == investor_id
+            ).first()
+            if not investor:
+                raise HTTPException(status_code=404, detail="Investidor nao encontrado")
+            return JSONResponse({"status": "success", "investor": investor.to_dict()})
+        finally:
+            db.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/api/investors/{investor_id}")
+async def update_investor(
+    investor_id: int,
+    request: Request,
+    session: dict = Depends(verify_admin_session)
+):
+    """Update an existing investor persona"""
+    try:
+        data = await request.json()
+        name = data.get('name', '').strip() or None
+        description = data.get('description', '').strip() if data.get('description') is not None else None
+        style_prompt = data.get('style_prompt', '').strip() if data.get('style_prompt') is not None else None
+        voice_id = data.get('voice_id', '').strip() or None
+
+        updated = db_manager.update_investor(
+            investor_id=investor_id,
+            name=name,
+            description=description,
+            style_prompt=style_prompt,
+            voice_id=voice_id
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="Investidor nao encontrado")
+        return JSONResponse({"status": "success", "investor": updated})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/api/investors/generate-style")
 async def generate_investor_style(
     request: Request,

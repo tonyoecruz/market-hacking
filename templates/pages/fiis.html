@@ -26,10 +26,21 @@
                 class="bg-dark-800 border border-gray-700 rounded-xl p-4 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <p class="text-white font-bold text-base">🏢 Estratégias de FIIs — Fórmulas da Literatura</p>
-                    <p class="text-gray-400 text-sm">Filtros rígidos + fórmulas matemáticas absolutas para Fundos Imobiliários.</p>
+                    <p class="text-gray-400 text-sm">Filtros rígidos + fórmulas matemáticas absolutas para Fundos
+                        Imobiliários.</p>
                 </div>
-                <div class="flex items-center gap-3 flex-shrink-0">
-                    <span class="text-sm text-gray-400">Ativos: <strong id="stock-count" class="text-primary text-lg">0</strong></span>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <!-- Investor Selector -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs text-gray-400 whitespace-nowrap">🧠 Como:</label>
+                        <select id="investor-selector-fiis"
+                            class="px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                            onchange="saveInvestorFii()">
+                            <option value="">-- Investidor --</option>
+                        </select>
+                    </div>
+                    <span class="text-sm text-gray-400">Ativos: <strong id="stock-count"
+                            class="text-primary text-lg">0</strong></span>
                 </div>
             </div>
 
@@ -102,6 +113,7 @@
                     </div>
                 </div>
             </div>
+            {% include "components/legal_footer.html" %}
         </main>
     </div>
 </div>
@@ -116,7 +128,8 @@
                 </div>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-white p-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
                     </svg>
                 </button>
             </div>
@@ -143,6 +156,7 @@
     // ══════════════════════════════════════════════════════════════════════
     window.addEventListener('DOMContentLoaded', () => {
         renderStrategyCards();
+        loadInvestors();
     });
 
     // ══════════════════════════════════════════════════════════════════════
@@ -329,7 +343,9 @@
         document.body.style.overflow = 'hidden';
 
         try {
-            const investor = localStorage.getItem('investor_persona') || '';
+            // Get investor from the visual selector first, fallback to localStorage
+            const investorSel = document.getElementById('investor-selector-fiis');
+            const investor = (investorSel && investorSel.value) ? investorSel.value : (localStorage.getItem('investor_persona') || '');
             const res = await fetch(`/fiis/api/decode/${ticker}?investor=${encodeURIComponent(investor)}`);
             const data = await res.json();
 
@@ -525,6 +541,36 @@
         toast.textContent = message;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
+    }
+
+    async function loadInvestors() {
+        try {
+            const res = await fetch('/api/investors');
+            const data = await res.json();
+            const sel = document.getElementById('investor-selector-fiis');
+            if (!sel) return;
+            const savedInvestor = localStorage.getItem('investor_persona') || '';
+            if (data.investors && data.investors.length > 0) {
+                sel.innerHTML = '<option value="">-- Investidor --</option>' +
+                    data.investors.map(inv =>
+                        `<option value="${inv.name}" ${inv.name === savedInvestor ? 'selected' : ''}>${inv.name}</option>`
+                    ).join('');
+            } else {
+                sel.innerHTML = '<option value="">Nenhum cadastrado (Admin)</option>';
+            }
+        } catch (e) {
+            console.warn('Erro ao carregar investidores:', e);
+        }
+    }
+
+    function saveInvestorFii() {
+        const sel = document.getElementById('investor-selector-fiis');
+        const value = sel ? sel.value : '';
+        if (value) {
+            localStorage.setItem('investor_persona', value);
+        } else {
+            localStorage.removeItem('investor_persona');
+        }
     }
 </script>
 {% endblock %}
