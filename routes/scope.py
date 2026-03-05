@@ -18,20 +18,58 @@ from routes.auth import get_optional_user
 from database.db_manager import DatabaseManager
 from database.queries import WalletQueries, AssetQueries
 import pandas as pd
+import numpy as np
 import logging
 import math
+import json
 
 
 def _clean(v):
     """Return None for NaN/Inf so JSONResponse doesn't choke."""
     if v is None:
         return None
-    try:
-        if math.isnan(v) or math.isinf(v):
+    if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+        return None
+    # numpy scalars
+    if isinstance(v, (np.floating, np.integer)):
+        v2 = float(v)
+        if math.isnan(v2) or math.isinf(v2):
             return None
-    except (TypeError, ValueError):
-        pass
+        return v2
     return v
+
+
+def _safe_dict(d: dict) -> dict:
+    """Recursively clean every value in a dict for JSON serialisation."""
+    out = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            out[k] = _safe_dict(v)
+        elif isinstance(v, list):
+            out[k] = [_safe_dict(i) if isinstance(i, dict) else _clean(i) for i in v]
+        else:
+            out[k] = _clean(v)
+    return out
+
+
+def _safe_json(obj) -> JSONResponse:
+    """JSONResponse that replaces NaN/Inf with null at serialisation time."""
+    body = json.loads(json.dumps(obj, default=str, allow_nan=False))
+    return JSONResponse(body)
+
+
+class _NanSafeEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, float) and (math.isnan(o) or math.isinf(o)):
+            return None
+        if isinstance(o, (np.floating, np.integer)):
+            f = float(o)
+            if math.isnan(f) or math.isinf(f):
+                return None
+            return f
+        if isinstance(o, np.bool_):
+            return bool(o)
+        return super().default(o)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -99,8 +137,8 @@ def _score_fiis(df: pd.DataFrame) -> pd.DataFrame:
         FII_W["liq"]       * df["n_liq"]
     ).fillna(0)
     df["asset_type"] = "FII"
-    df["margem"] = None
-    df["roic"]   = None
+    df["margem"] = 0
+    df["roic"]   = 0
     df["pvp"]    = df["pvp"]
     return df
 
@@ -219,6 +257,8 @@ async def recommend(budget: float = 50.0, user: dict = Depends(get_optional_user
             })
 
         combined = pd.concat(candidates, ignore_index=True)
+        # Replace ALL NaN/Inf in the DataFrame BEFORE iterating
+        combined = combined.replace([np.inf, -np.inf], np.nan).fillna(0)
         combined = combined.sort_values("score", ascending=False).head(5)
 
         results = []
@@ -230,16 +270,21 @@ async def recommend(budget: float = 50.0, user: dict = Depends(get_optional_user
             shares = math.floor(budget / p) if p > 0 else 0
             proj_monthly_total = round(proj_monthly_per_share * shares, 4)
             info["shares_buyable"] = shares
-            info["proj_monthly_per_share"] = _clean(proj_monthly_per_share) or 0
-            info["proj_monthly_total"] = _clean(proj_monthly_total) or 0
+            info["proj_monthly_per_share"] = proj_monthly_per_share
+            info["proj_monthly_total"] = proj_monthly_total
+            # Sanitise every value
+            info = _safe_dict(info)
             results.append(info)
 
-        return JSONResponse({
+        payload = {
             "status": "success",
-            "budget": budget,
+            "budget": float(budget),
             "count": len(results),
             "recommendations": results,
-        })
+        }
+        # Final safety: serialise with allow_nan=False fallback
+        body = json.loads(json.dumps(payload, cls=_NanSafeEncoder))
+        return JSONResponse(body)
 
     except Exception as e:
         logger.error(f"[scope] recommend error: {e}", exc_info=True)
