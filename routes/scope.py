@@ -21,6 +21,18 @@ import pandas as pd
 import logging
 import math
 
+
+def _clean(v):
+    """Return None for NaN/Inf so JSONResponse doesn't choke."""
+    if v is None:
+        return None
+    try:
+        if math.isnan(v) or math.isinf(v):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return v
+
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 logger = logging.getLogger(__name__)
@@ -60,7 +72,7 @@ def _score_stocks(df: pd.DataFrame) -> pd.DataFrame:
         STOCK_W["margem"] * df["n_mg"]   +
         STOCK_W["roic"]   * df["n_roic"] +
         STOCK_W["liq"]    * df["n_liq"]
-    )
+    ).fillna(0)
     df["asset_type"] = "Acao"
     return df
 
@@ -76,16 +88,16 @@ def _score_fiis(df: pd.DataFrame) -> pd.DataFrame:
         return (s - mn) / (mx - mn) if mx > mn else pd.Series(0.5, index=s.index)
 
     # PVP score: lower PVP is better (below 1 = bargain); invert
-    df["pvp_inv"] = 1 / df["pvp"].replace(0, float("nan")).clip(0.1, 5)
+    df["pvp_inv"] = (1 / df["pvp"].replace(0, float("nan")).clip(0.1, 5)).fillna(0)
     df["n_dy"]    = norm(df["dy"].clip(0))
-    df["n_pvp"]   = norm(df["pvp_inv"].fillna(0))
+    df["n_pvp"]   = norm(df["pvp_inv"])
     df["n_liq"]   = norm(df["liquidezmediadiaria"].clip(0))
 
     df["score"] = (
         FII_W["dy"]        * df["n_dy"]  +
         FII_W["pvp_score"] * df["n_pvp"] +
         FII_W["liq"]       * df["n_liq"]
-    )
+    ).fillna(0)
     df["asset_type"] = "FII"
     df["margem"] = None
     df["roic"]   = None
@@ -98,11 +110,11 @@ def _build_justification(row: dict) -> dict:
     atype = row.get("asset_type", "Ativo")
     ticker = row.get("ticker", "")
     empresa = row.get("empresa", ticker)
-    dy = row.get("dy") or 0
-    price = row.get("price") or 0
-    pvp = row.get("pvp") or 0
-    roic = row.get("roic") or 0
-    margem = row.get("margem") or 0
+    dy    = _clean(row.get("dy"))    or 0
+    price = _clean(row.get("price")) or 0
+    pvp   = _clean(row.get("pvp"))   or 0
+    roic  = _clean(row.get("roic"))  or 0
+    margem= _clean(row.get("margem"))or 0
 
     reasons = []
 
@@ -127,12 +139,12 @@ def _build_justification(row: dict) -> dict:
         "ticker": ticker,
         "empresa": empresa,
         "asset_type": atype,
-        "price": price,
-        "dy": dy,
-        "pvp": pvp if pvp else None,
-        "roic": roic if roic else None,
-        "margem": margem if margem else None,
-        "score": round(row.get("score", 0), 4),
+        "price": _clean(price),
+        "dy": _clean(dy),
+        "pvp": _clean(pvp) or None,
+        "roic": _clean(roic) or None,
+        "margem": _clean(margem) or None,
+        "score": _clean(round(row.get("score") or 0, 4)),
         "reasons": reasons,
     }
 
@@ -212,15 +224,14 @@ async def recommend(budget: float = 50.0, user: dict = Depends(get_optional_user
         results = []
         for _, row in combined.iterrows():
             info = _build_justification(row.to_dict())
-            # Projected monthly dividend per share
             dy_pct = info["dy"] or 0
-            proj_monthly_per_share = round((dy_pct / 100) * (info["price"] or 0) / 12, 4)
-            # How many shares user can buy
-            shares = math.floor(budget / info["price"]) if info["price"] > 0 else 0
+            p = info["price"] or 0
+            proj_monthly_per_share = round((dy_pct / 100) * p / 12, 4) if p > 0 else 0
+            shares = math.floor(budget / p) if p > 0 else 0
             proj_monthly_total = round(proj_monthly_per_share * shares, 4)
             info["shares_buyable"] = shares
-            info["proj_monthly_per_share"] = proj_monthly_per_share
-            info["proj_monthly_total"] = proj_monthly_total
+            info["proj_monthly_per_share"] = _clean(proj_monthly_per_share) or 0
+            info["proj_monthly_total"] = _clean(proj_monthly_total) or 0
             results.append(info)
 
         return JSONResponse({
