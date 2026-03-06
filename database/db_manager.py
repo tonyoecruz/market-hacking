@@ -240,39 +240,48 @@ class DatabaseManager:
         finally:
             db.close()
     
-    def search_assets(self, query: str, limit: int = 20) -> List[Dict]:
-        """Search stocks, ETFs, and FIIs by ticker across all markets"""
+    def search_assets(self, query: str, limit: int = 20, market: str = '', asset_type: str = '') -> List[Dict]:
+        """Search stocks, ETFs, and FIIs by ticker across all markets.
+        Optional filters: market (BR/US), asset_type (stock/etf/fii)"""
         db = self.SessionLocal()
         try:
             pattern = f"%{query.upper()}%"
             results = []
             
-            # Search stocks
-            stocks = db.query(StockDB).filter(
-                StockDB.ticker.ilike(pattern)
-            ).limit(limit).all()
-            for s in stocks:
-                d = s.to_dict()
-                d['asset_type'] = 'stock'
-                results.append(d)
+            # Search stocks (if no asset_type filter or asset_type == 'stock')
+            if not asset_type or asset_type == 'stock':
+                q = db.query(StockDB).filter(StockDB.ticker.ilike(pattern))
+                if market:
+                    q = q.filter(StockDB.market == market.upper())
+                stocks = q.limit(limit).all()
+                for s in stocks:
+                    d = s.to_dict()
+                    d['asset_type'] = 'stock'
+                    results.append(d)
             
-            # Search ETFs
-            etfs = db.query(ETFDB).filter(
-                ETFDB.ticker.ilike(pattern)
-            ).limit(limit).all()
-            for e in etfs:
-                d = e.to_dict()
-                d['asset_type'] = 'etf'
-                results.append(d)
+            # Search ETFs (if no asset_type filter or asset_type == 'etf')
+            if not asset_type or asset_type == 'etf':
+                q = db.query(ETFDB).filter(ETFDB.ticker.ilike(pattern))
+                if market:
+                    if hasattr(ETFDB, 'market'):
+                        q = q.filter(ETFDB.market == market.upper())
+                etfs = q.limit(limit).all()
+                for e in etfs:
+                    d = e.to_dict()
+                    d['asset_type'] = 'etf'
+                    results.append(d)
             
-            # Search FIIs
-            fiis = db.query(FIIDB).filter(
-                FIIDB.ticker.ilike(pattern)
-            ).limit(limit).all()
-            for f in fiis:
-                d = f.to_dict()
-                d['asset_type'] = 'fii'
-                results.append(d)
+            # Search FIIs (if no asset_type filter or asset_type == 'fii')
+            if not asset_type or asset_type == 'fii':
+                q = db.query(FIIDB).filter(FIIDB.ticker.ilike(pattern))
+                if market:
+                    if hasattr(FIIDB, 'market'):
+                        q = q.filter(FIIDB.market == market.upper())
+                fiis = q.limit(limit).all()
+                for f in fiis:
+                    d = f.to_dict()
+                    d['asset_type'] = 'fii'
+                    results.append(d)
             
             return results[:limit]
         finally:

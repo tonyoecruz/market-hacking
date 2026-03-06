@@ -15,12 +15,13 @@ async def arena_page(request: Request):
     return templates.TemplateResponse("pages/arena.html", {"request": request, "title": "Arena"})
 
 @router.get("/api/search")
-async def arena_search(q: str = ''):
-    """Search assets for arena battle autocomplete"""
+async def arena_search(q: str = '', market: str = '', asset_type: str = ''):
+    """Search assets for arena battle autocomplete.
+    Optional: market (BR/US) and asset_type (stock/etf/fii) filters."""
     if len(q) < 1:
         return JSONResponse({'status': 'success', 'results': []})
     try:
-        results = db_instance.search_assets(q, limit=10)
+        results = db_instance.search_assets(q, limit=10, market=market, asset_type=asset_type)
         simplified = [{'ticker': r.get('ticker', ''), 'empresa': r.get('empresa', ''), 
                        'market': r.get('market', ''), 'asset_type': r.get('asset_type', '')} for r in results]
         return JSONResponse({'status': 'success', 'results': simplified})

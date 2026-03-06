@@ -114,6 +114,11 @@
 
 <script>
     let arenaSearchTimeout = null;
+    let ticker1AssetType = '';  // Stores asset_type of first selected ticker
+
+    function getGlobalMarket() {
+        return localStorage.getItem('selected_market') || 'BR';
+    }
 
     function onArenaSearch(num) {
         const q = document.getElementById(`ticker${num}`).value.trim();
@@ -121,25 +126,38 @@
 
         if (q.length < 1) {
             document.getElementById(`dropdown${num}`).classList.add('hidden');
+            // If clearing ticker1, reset asset_type filter
+            if (num === 1) { ticker1AssetType = ''; }
             return;
         }
 
         arenaSearchTimeout = setTimeout(async () => {
             try {
-                const response = await fetch(`/arena/api/search?q=${encodeURIComponent(q)}`);
+                const market = getGlobalMarket();
+                // For ticker2, filter by same asset_type as ticker1
+                const typeFilter = (num === 2 && ticker1AssetType) ? ticker1AssetType : '';
+                let url = `/arena/api/search?q=${encodeURIComponent(q)}`;
+                if (market) url += `&market=${encodeURIComponent(market)}`;
+                if (typeFilter) url += `&asset_type=${encodeURIComponent(typeFilter)}`;
+
+                const response = await fetch(url);
                 const data = await response.json();
                 if (data.status === 'success' && data.results.length > 0) {
                     const dropdown = document.getElementById(`dropdown${num}`);
                     const typeEmoji = { 'stock': '📈', 'etf': '🌐', 'fii': '🏢' };
+                    const typeLabel = { 'stock': 'Ação', 'etf': 'ETF', 'fii': 'FII' };
                     dropdown.innerHTML = data.results.map(r => `
                         <div class="flex items-center justify-between px-4 py-2 hover:bg-dark-600 cursor-pointer transition"
-                             onclick="selectArenaResult(${num}, '${r.ticker}')">
+                             onclick="selectArenaResult(${num}, '${r.ticker}', '${r.asset_type}')">
                             <div class="flex items-center space-x-2">
                                 <span>${typeEmoji[r.asset_type] || '📊'}</span>
                                 <span class="text-white font-semibold">${r.ticker}</span>
                                 <span class="text-xs text-gray-400">${r.empresa || ''}</span>
                             </div>
-                            <span class="text-xs text-gray-500">${r.market}</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-dark-600 text-gray-300">${typeLabel[r.asset_type] || r.asset_type}</span>
+                                <span class="text-xs text-gray-500">${r.market}</span>
+                            </div>
                         </div>
                     `).join('');
                     dropdown.classList.remove('hidden');
@@ -152,9 +170,15 @@
         }, 300);
     }
 
-    function selectArenaResult(num, ticker) {
+    function selectArenaResult(num, ticker, assetType) {
         document.getElementById(`ticker${num}`).value = ticker;
         document.getElementById(`dropdown${num}`).classList.add('hidden');
+        // Save asset_type when selecting ticker1
+        if (num === 1) {
+            ticker1AssetType = assetType || '';
+            // Clear ticker2 when changing ticker1 type (forces re-selection)
+            document.getElementById('ticker2').value = '';
+        }
         // Auto-focus next field
         if (num === 1) document.getElementById('ticker2').focus();
     }
