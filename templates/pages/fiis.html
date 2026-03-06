@@ -113,9 +113,11 @@
 <div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
     <div class="bg-dark-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
         <div class="p-6">
+            <!-- Header -->
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h3 class="text-2xl font-bold text-white" id="modal-ticker"></h3>
+                    <p class="text-gray-400 text-sm" id="modal-empresa"></p>
                 </div>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-white p-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +126,101 @@
                     </svg>
                 </button>
             </div>
-            <div id="modal-content" class="text-gray-300"></div>
+
+            <!-- Valuation Card (P/VP based) -->
+            <div id="valuation-card" class="mb-6 rounded-xl p-5 border-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">Valuation P/VP</p>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="text-lg font-bold" id="modal-price"></span>
+                            <span class="text-gray-400">→ P/VP</span>
+                            <span class="text-lg font-bold text-primary" id="modal-pvp-value"></span>
+                        </div>
+                    </div>
+                    <div id="valuation-badge" class="px-4 py-2 rounded-full font-bold text-sm"></div>
+                </div>
+                <div class="mt-3">
+                    <div class="w-full bg-dark-700 rounded-full h-2">
+                        <div id="valuation-bar" class="h-2 rounded-full transition-all duration-500"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1" id="valuation-detail"></p>
+                </div>
+            </div>
+
+            <!-- Data Grid -->
+            <div id="modal-data-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
+
+            <!-- AI Analysis -->
+            <div class="bg-dark-700 rounded-xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <span>🤖</span>
+                        <span>Análise IA</span>
+                    </h4>
+                    <button onclick="speakAnalysis()" id="tts-btn"
+                        class="flex items-center space-x-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z">
+                            </path>
+                        </svg>
+                        <span>Ouvir</span>
+                    </button>
+                </div>
+                <div id="modal-analysis" class="text-gray-300 whitespace-pre-line leading-relaxed">
+                    <div class="text-center py-8">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <p class="text-gray-400 mt-2">Gerando análise IA...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add to Portfolio -->
+            <div id="portfolio-section" class="bg-dark-700 rounded-xl p-5 mt-4">
+                <h4 class="text-lg font-bold text-white flex items-center space-x-2 mb-3">
+                    <span>💼</span>
+                    <span>Adicionar à Carteira</span>
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Carteira</label>
+                        <input type="text" id="wallet-input" list="wallet-options" placeholder="Principal"
+                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
+                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        <datalist id="wallet-options"></datalist>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Quantidade</label>
+                        <input type="number" id="wallet-qty" value="1" min="0.01" step="1"
+                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
+                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Preço (R$)</label>
+                        <input type="number" id="wallet-price" value="0" min="0.01" step="0.01"
+                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
+                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Data Compra</label>
+                        <input type="date" id="wallet-date"
+                            style="background-color: #1a1a2e; color: #ffffff; border: 1px solid #555;"
+                            class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="addToPortfolio()" id="add-portfolio-btn"
+                            class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition text-sm flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Adicionar</span>
+                        </button>
+                    </div>
+                </div>
+                <p id="portfolio-msg" class="text-xs text-gray-400 mt-2 hidden"></p>
+            </div>
         </div>
     </div>
 </div>
@@ -334,108 +430,130 @@
     // ══════════════════════════════════════════════════════════════════════
     // ANALYSIS MODAL
     // ══════════════════════════════════════════════════════════════════════
+    let currentAnalysisText = '';
+    let currentAudio = null;
+
+    function fmtNum(v) { return v != null && !isNaN(v) ? Number(v).toFixed(2) : '-'; }
+    function fmtPct(v) { return v != null && !isNaN(v) ? (Number(v) * 100).toFixed(1) + '%' : '-'; }
+
     async function analyzeFII(ticker) {
         currentModalTicker = ticker;
+        currentAnalysisText = '';
         document.getElementById('modal-ticker').textContent = `Análise: ${ticker}`;
-        document.getElementById('modal-content').innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>';
+        document.getElementById('modal-empresa').textContent = '';
+        document.getElementById('modal-analysis').innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div><p class="text-gray-400 mt-2">Gerando análise IA...</p></div>';
+        document.getElementById('modal-data-grid').innerHTML = '';
         document.getElementById('analysis-modal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
 
+        // Get investor from Dashboard localStorage
+        let investor = '';
         try {
-            // Get investor from Dashboard localStorage
-            let investor = '';
-            try {
-                const saved = localStorage.getItem('investor_persona');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    investor = parsed.name || '';
-                }
-            } catch (e) {
-                investor = localStorage.getItem('investor_persona') || '';
+            const saved = localStorage.getItem('investor_persona');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                investor = parsed.name || '';
             }
+        } catch (e) {
+            investor = localStorage.getItem('investor_persona') || '';
+        }
+
+        try {
             const res = await fetch(`/fiis/api/decode/${ticker}?investor=${encodeURIComponent(investor)}`);
             const data = await res.json();
 
             if (data.status === 'success') {
-                currentModalPrice = data.data.price || 0;
-
-                document.getElementById('modal-content').innerHTML = `
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div class="bg-dark-700 rounded-lg p-3 text-center">
-                            <p class="text-gray-400 text-xs mb-1">Preço</p>
-                            <p class="text-white font-bold text-sm">R$ ${(data.data.price || 0).toFixed(2)}</p>
-                        </div>
-                        <div class="bg-dark-700 rounded-lg p-3 text-center">
-                            <p class="text-gray-400 text-xs mb-1">DY</p>
-                            <p class="text-green-400 font-bold text-sm">${((data.data.dy || 0) * 100).toFixed(2)}%</p>
-                        </div>
-                        <div class="bg-dark-700 rounded-lg p-3 text-center">
-                            <p class="text-gray-400 text-xs mb-1">P/VP</p>
-                            <p class="text-white font-bold text-sm ${(data.data.pvp || 0) < 1 ? 'text-green-400' : ''}">${(data.data.pvp || 0).toFixed(2)}</p>
-                        </div>
-                        <div class="bg-dark-700 rounded-lg p-3 text-center">
-                            <p class="text-gray-400 text-xs mb-1">Liquidez</p>
-                            <p class="text-primary font-bold text-sm">${fmtLiq(data.data.liquidezmediadiaria)}</p>
-                        </div>
-                    </div>
-                    <div class="bg-dark-700 rounded-xl p-5">
-                        <h4 class="text-lg font-bold text-white flex items-center space-x-2 mb-3">
-                            <span>🤖</span><span>Análise IA</span>
-                        </h4>
-                        <p class="text-gray-300 whitespace-pre-line leading-relaxed">${data.analysis}</p>
-                    </div>
-                    <!-- Portfolio Section -->
-                    <div class="bg-dark-700 rounded-xl p-5">
-                        <h4 class="text-lg font-bold text-white flex items-center space-x-2 mb-3">
-                            <span>💼</span><span>Adicionar à Carteira</span>
-                        </h4>
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Carteira</label>
-                                <input type="text" id="wallet-input" list="wallet-options" placeholder="Principal"
-                                    class="w-full px-3 py-2 bg-dark-600 border border-gray-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                                <datalist id="wallet-options"></datalist>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Quantidade</label>
-                                <input type="number" id="wallet-qty" value="1" min="1" step="1"
-                                    class="w-full px-3 py-2 bg-dark-600 border border-gray-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Preço (R$)</label>
-                                <input type="number" id="wallet-price" value="${(data.data.price || 0).toFixed(2)}" min="0.01" step="0.01"
-                                    class="w-full px-3 py-2 bg-dark-600 border border-gray-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Data Compra</label>
-                                <input type="date" id="wallet-date"
-                                    class="w-full px-3 py-2 bg-dark-600 border border-gray-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                            </div>
-                            <div class="flex items-end">
-                                <button onclick="addToPortfolio()" id="add-portfolio-btn"
-                                    class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition text-sm flex items-center justify-center space-x-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                    </svg>
-                                    <span>Adicionar</span>
-                                </button>
-                            </div>
-                        </div>
-                        <p id="portfolio-msg" class="text-xs text-gray-400 mt-2 hidden"></p>
-                    </div>
-                </div>`;
-
-                loadWallets();
+                const fii = data.data;
+                currentModalPrice = fii.price || 0;
+                document.getElementById('modal-ticker').textContent = ticker;
+                document.getElementById('modal-empresa').textContent = fii.empresa || 'Fundo Imobiliário';
+                renderModalData(fii);
+                currentAnalysisText = data.analysis || 'Análise não disponível';
+                // Show investor persona used
+                let analysisHeader = '';
+                if (investor) {
+                    analysisHeader = `<p class="text-xs text-primary/80 mb-3 flex items-center gap-1"><span>🧠</span> Análise no estilo de <strong>${investor}</strong></p>`;
+                }
+                document.getElementById('modal-analysis').innerHTML = analysisHeader + `<p>${currentAnalysisText.replace(/\n/g, '<br>')}</p>`;
+                if (fii.price) document.getElementById('wallet-price').value = Number(fii.price).toFixed(2);
+                await loadWallets();
             }
         } catch (e) {
-            document.getElementById('modal-content').innerHTML = '<p class="text-red-500">Erro ao carregar análise</p>';
+            document.getElementById('modal-analysis').textContent = 'Erro ao carregar análise.';
         }
+    }
+
+    function renderModalData(fii) {
+        const price = fii.price || 0;
+        const pvp = fii.pvp || 0;
+        const card = document.getElementById('valuation-card');
+        const badge = document.getElementById('valuation-badge');
+        const bar = document.getElementById('valuation-bar');
+
+        document.getElementById('modal-price').textContent = price ? `R$ ${fmtNum(price)}` : '-';
+        document.getElementById('modal-pvp-value').textContent = pvp ? fmtNum(pvp) : '-';
+
+        // P/VP valuation: < 0.9 = desconto, 0.9-1.1 = justo, > 1.1 = caro
+        if (pvp > 0) {
+            const pct = Math.min((pvp / 1.5) * 100, 100);
+            bar.style.width = pct + '%';
+            if (pvp < 0.9) {
+                card.className = 'mb-6 rounded-xl p-5 border-2 border-green-500/50 bg-green-900/10';
+                badge.className = 'px-4 py-2 rounded-full font-bold text-sm bg-green-500/20 text-green-400';
+                badge.textContent = '✅ Com Desconto';
+                bar.className = 'h-2 rounded-full bg-green-500 transition-all duration-500';
+                document.getElementById('valuation-detail').textContent = `P/VP ${fmtNum(pvp)} — Negociando abaixo do valor patrimonial`;
+            } else if (pvp <= 1.1) {
+                card.className = 'mb-6 rounded-xl p-5 border-2 border-yellow-500/50 bg-yellow-900/10';
+                badge.className = 'px-4 py-2 rounded-full font-bold text-sm bg-yellow-500/20 text-yellow-400';
+                badge.textContent = '⚡ Preço Justo';
+                bar.className = 'h-2 rounded-full bg-yellow-500 transition-all duration-500';
+                document.getElementById('valuation-detail').textContent = `P/VP ${fmtNum(pvp)} — Próximo do valor patrimonial`;
+            } else {
+                card.className = 'mb-6 rounded-xl p-5 border-2 border-red-500/50 bg-red-900/10';
+                badge.className = 'px-4 py-2 rounded-full font-bold text-sm bg-red-500/20 text-red-400';
+                badge.textContent = '❌ Acima do Justo';
+                bar.className = 'h-2 rounded-full bg-red-500 transition-all duration-500';
+                document.getElementById('valuation-detail').textContent = `P/VP ${fmtNum(pvp)} — Negociando ${((pvp - 1) * 100).toFixed(0)}% acima do valor patrimonial`;
+            }
+        } else {
+            card.className = 'mb-6 rounded-xl p-5 border-2 border-gray-600 bg-gray-900/10';
+            badge.textContent = '— Sem dado';
+            badge.className = 'px-4 py-2 rounded-full font-bold text-sm bg-gray-600/20 text-gray-400';
+            document.getElementById('valuation-detail').textContent = 'P/VP não disponível';
+        }
+
+        // Data grid with FII-specific metrics
+        const grid = document.getElementById('modal-data-grid');
+        const dy = fii.dy || 0;
+        const liq = fii.liquidezmediadiaria || 0;
+        const items = [
+            { label: 'Preço', val: price ? `R$ ${fmtNum(price)}` : '-' },
+            { label: 'P/VP', val: fmtNum(pvp), color: pvp < 1 ? 'text-green-400' : pvp > 1.2 ? 'text-red-400' : 'text-white' },
+            { label: 'DY', val: fmtPct(dy), color: dy > 0.08 ? 'text-green-400' : dy > 0.05 ? 'text-yellow-400' : 'text-white' },
+            { label: 'Liquidez', val: fmtLiq(liq), color: 'text-primary' },
+        ];
+        grid.innerHTML = items.map(i => `
+            <div class="bg-dark-700 rounded-lg p-3 text-center">
+                <p class="text-gray-400 text-xs mb-1">${i.label}</p>
+                <p class="${i.color || 'text-white'} font-bold text-sm">${i.val}</p>
+            </div>`).join('');
     }
 
     function closeModal() {
         document.getElementById('analysis-modal').classList.add('hidden');
         document.body.style.overflow = '';
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        speechSynthesis.cancel();
+    }
+
+    function speakAnalysis() {
+        if (!currentAnalysisText) return;
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        speechSynthesis.cancel();
+        const utt = new SpeechSynthesisUtterance(currentAnalysisText);
+        utt.lang = 'pt-BR';
+        speechSynthesis.speak(utt);
     }
 
     // ══════════════════════════════════════════════════════════════════════
