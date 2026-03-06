@@ -82,29 +82,14 @@ db = DatabaseManager()
 _RISKY_SET = {t.replace('.SA', '').upper() for t in RISKY_TICKERS}
 
 # ---------------------------------------------------------------------------
-# HARD FILTERS — assets MUST pass ALL of these to be considered
+# SCORING-BASED APPROACH — soft penalties instead of hard elimination
 # ---------------------------------------------------------------------------
-# Stocks
-STOCK_MIN_LIQ       = 200_000   # R$ daily liquidity
-STOCK_MAX_DY        = 15.0      # % — above = unsustainable or error
-STOCK_MIN_DY        = 1.0       # % — must pay dividends
-STOCK_MAX_PL        = 25.0      # P/L — too expensive above
-STOCK_MIN_PL        = 3.0       # P/L — likely problem below
-STOCK_MAX_DIV_EBITDA= 3.5       # leverage ceiling
-STOCK_MIN_LIQ_CORR  = 1.0       # can pay short-term debts
-STOCK_MIN_ROE       = 0.05      # 5% minimum profitability
-STOCK_MIN_MARGEM_LIQ= 0.0       # not losing money
+# Only 3 hard filters: price within budget, DY > 0, not in blacklist.
+# Everything else is scored: good values earn points, bad values lose points.
+# This guarantees results while still ranking safe assets at the top.
+# ---------------------------------------------------------------------------
 
-# FIIs
-FII_MIN_LIQ         = 100_000
-FII_MAX_DY          = 14.0
-FII_MIN_DY          = 3.0
-FII_MIN_PVP         = 0.70
-FII_MAX_PVP         = 1.40
-
-# ---------------------------------------------------------------------------
-# SCORING — balanced safety + income (NOT income-only!)
-# ---------------------------------------------------------------------------
+# Scoring weights
 STOCK_W = {"safety": 0.40, "income": 0.30, "value": 0.30}
 FII_W   = {"safety": 0.35, "income": 0.40, "value": 0.25}
 
@@ -112,6 +97,18 @@ FII_W   = {"safety": 0.35, "income": 0.40, "value": 0.25}
 def _norm(s: pd.Series) -> pd.Series:
     mn, mx = s.min(), s.max()
     return (s - mn) / (mx - mn) if mx > mn else pd.Series(0.5, index=s.index)
+
+
+def _penalty(val: float, ideal_min: float, ideal_max: float) -> float:
+    """Return 0.0-1.0 score: 1.0 if within ideal range, tapering off outside."""
+    if val == 0:
+        return 0.5  # unknown data = neutral
+    if ideal_min <= val <= ideal_max:
+        return 1.0
+    if val < ideal_min:
+        return max(0.0, 1.0 - (ideal_min - val) / max(ideal_min, 1))
+    # val > ideal_max
+    return max(0.0, 1.0 - (val - ideal_max) / max(ideal_max, 1))
 
 
 def _filter_and_score_stocks(df: pd.DataFrame, budget: float) -> pd.DataFrame:
@@ -128,37 +125,57 @@ def _filter_and_score_stocks(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         else:
             df[col] = 0.0
 
-    # --- HARD FILTERS ---
+    # --- HARD FILTERS (minimal — only absolute deal-breakers) ---
     if "ticker" in df.columns:
         df = df[~df["ticker"].str.replace(".SA", "", regex=False).str.upper().isin(_RISKY_SET)]
 
     df = df[(df["price"] > 0) & (df["price"] <= budget)]
-    logger.info(f"[scope] Stocks after price filter (<=R${budget}): {len(df)}")
-    df = df[(df["dy"] >= STOCK_MIN_DY) & (df["dy"] <= STOCK_MAX_DY)]
-    logger.info(f"[scope] Stocks after DY filter ({STOCK_MIN_DY}-{STOCK_MAX_DY}%): {len(df)}")
-    df = df[((df["pl"] >= STOCK_MIN_PL) & (df["pl"] <= STOCK_MAX_PL)) | (df["pl"] == 0)]
-    logger.info(f"[scope] Stocks after P/L filter: {len(df)}")
-    df = df[(df["liquidezmediadiaria"] >= STOCK_MIN_LIQ) | (df["liquidezmediadiaria"] == 0)]
-    df = df[(df["div_liq_ebitda"] <= STOCK_MAX_DIV_EBITDA) | (df["div_liq_ebitda"] == 0)]
-    df = df[(df["liq_corrente"] >= STOCK_MIN_LIQ_CORR) | (df["liq_corrente"] == 0)]
-    df = df[(df["roe"] >= STOCK_MIN_ROE) | (df["roe"] == 0)]
-    df = df[(df["margem_liquida"] >= STOCK_MIN_MARGEM_LIQ) | (df["margem_liquida"] == 0)]
-    logger.info(f"[scope] Stocks after ALL filters: {len(df)}")
+    df = df[df["dy"] > 0]  # must pay SOME dividend
+    logger.info(f"[scope] Stocks after hard filters (price<={budget}, DY>0): {len(df)}")
 
     if df.empty:
         return df
 
-    # --- SCORING ---
-    df["_debt_inv"] = (1 / df["div_liq_ebitda"].replace(0, float("nan")).clip(0.1, 10)).fillna(1)
+    # --- SOFT SCORING — everything is a score, nothing eliminates ---
+
+    # Safety sub-scores (each 0-1):
+    # 1. P/L in healthy range (3-25 = ideal)
+    df["_pl_score"] = df["pl"].apply(lambda v: _penalty(v, 3.0, 25.0))
+    # 2. Debt/EBITDA low is better (0-3 = ideal)
+    df["_debt_score"] = df["div_liq_ebitda"].apply(lambda v: _penalty(v, 0, 3.5))
+    # 3. Liquidez corrente >= 1.0 is healthy
+    df["_liq_corr_score"] = df["liq_corrente"].apply(
+        lambda v: 0.5 if v == 0 else min(1.0, v / 2.0)
+    )
+    # 4. ROE positive and decent (5%+ ideal)
+    df["_roe_score"] = df["roe"].apply(
+        lambda v: 0.5 if v == 0 else min(1.0, max(0.0, v / 0.15))
+    )
+    # 5. Margem liquida positive
+    df["_ml_score"] = df["margem_liquida"].apply(
+        lambda v: 0.5 if v == 0 else (1.0 if v > 0.05 else max(0.0, 0.5 + v * 5))
+    )
+    # 6. Liquidity (volume)
+    df["_vol_score"] = _norm(df["liquidezmediadiaria"].clip(0)).fillna(0.5)
+    # 7. DY ceiling penalty (>15% suspicious)
+    df["_dy_ceil_score"] = df["dy"].apply(
+        lambda v: 1.0 if v <= 12.0 else max(0.0, 1.0 - (v - 12.0) / 10.0)
+    )
+
     df["safety_score"] = (
-        0.30 * _norm(df["liq_corrente"].clip(0, 10)) +
-        0.30 * _norm(df["_debt_inv"]) +
-        0.20 * _norm(df["margem_liquida"].clip(-0.5, 1)) +
-        0.20 * _norm(df["liquidezmediadiaria"])
+        0.20 * df["_pl_score"] +
+        0.20 * df["_debt_score"] +
+        0.15 * df["_liq_corr_score"] +
+        0.15 * df["_roe_score"] +
+        0.10 * df["_ml_score"] +
+        0.10 * df["_vol_score"] +
+        0.10 * df["_dy_ceil_score"]
     ).fillna(0)
 
-    df["income_score"] = _norm(df["dy"].clip(0)).fillna(0)
+    # Income score (DY — more is better, but capped)
+    df["income_score"] = _norm(df["dy"].clip(0, 15)).fillna(0)
 
+    # Value score (Graham margin + ROIC)
     df["value_score"] = (
         0.5 * _norm(df["margem"].clip(-1, 5)) +
         0.5 * _norm(df["roic"].clip(0, 1))
@@ -171,6 +188,7 @@ def _filter_and_score_stocks(df: pd.DataFrame, budget: float) -> pd.DataFrame:
     ).fillna(0)
 
     df["asset_type"] = "Acao"
+    logger.info(f"[scope] Stocks scored: {len(df)} candidates")
     return df
 
 
@@ -183,25 +201,37 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         else:
             df[col] = 0.0
 
-    # --- HARD FILTERS ---
+    # --- HARD FILTERS (minimal) ---
     if "ticker" in df.columns:
         df = df[~df["ticker"].str.replace(".SA", "", regex=False).str.upper().isin(_RISKY_SET)]
 
     df = df[(df["price"] > 0) & (df["price"] <= budget)]
-    logger.info(f"[scope] FIIs after price filter (<=R${budget}): {len(df)}")
-    df = df[(df["dy"] >= FII_MIN_DY) & (df["dy"] <= FII_MAX_DY)]
-    logger.info(f"[scope] FIIs after DY filter ({FII_MIN_DY}-{FII_MAX_DY}%): {len(df)}")
-    df = df[((df["pvp"] >= FII_MIN_PVP) & (df["pvp"] <= FII_MAX_PVP)) | (df["pvp"] == 0)]
-    logger.info(f"[scope] FIIs after P/VP filter: {len(df)}")
-    df = df[(df["liquidezmediadiaria"] >= FII_MIN_LIQ) | (df["liquidezmediadiaria"] == 0)]
-    logger.info(f"[scope] FIIs after ALL filters: {len(df)}")
+    df = df[df["dy"] > 0]  # must pay SOME dividend
+    logger.info(f"[scope] FIIs after hard filters (price<={budget}, DY>0): {len(df)}")
 
     if df.empty:
         return df
 
-    # --- SCORING ---
-    df["safety_score"] = _norm(df["liquidezmediadiaria"]).fillna(0)
-    df["income_score"] = _norm(df["dy"].clip(0)).fillna(0)
+    # --- SOFT SCORING ---
+    # Safety: volume + DY ceiling + P/VP healthy range
+    df["_vol_score"] = _norm(df["liquidezmediadiaria"].clip(0)).fillna(0.5)
+    df["_dy_ceil_score"] = df["dy"].apply(
+        lambda v: 1.0 if v <= 12.0 else max(0.0, 1.0 - (v - 12.0) / 10.0)
+    )
+    df["_pvp_score"] = df["pvp"].apply(
+        lambda v: 0.5 if v == 0 else _penalty(v, 0.70, 1.30)
+    )
+
+    df["safety_score"] = (
+        0.40 * df["_vol_score"] +
+        0.30 * df["_dy_ceil_score"] +
+        0.30 * df["_pvp_score"]
+    ).fillna(0)
+
+    # Income
+    df["income_score"] = _norm(df["dy"].clip(0, 14)).fillna(0)
+
+    # Value (P/VP discount)
     df["_pvp_inv"] = (1 / df["pvp"].clip(0.3, 3)).fillna(0)
     df["value_score"] = _norm(df["_pvp_inv"]).fillna(0)
 
@@ -215,6 +245,7 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
     # Fill columns that stocks have but FIIs don't
     for col in ["margem", "roic", "liq_corrente", "div_liq_ebitda", "margem_liquida", "roe", "pl"]:
         df[col] = 0
+    logger.info(f"[scope] FIIs scored: {len(df)} candidates")
     return df
 
 
@@ -341,11 +372,24 @@ def _build_justification(row: dict, budget: float) -> dict:
         "margem_liquida": _clean(m_liq) or None,
         "roe": _clean(roe) or None,
         "score": _clean(round(row.get("score") or 0, 4)),
+        "safety_score": _clean(round(row.get("safety_score") or 0, 4)),
         "shares_buyable": shares,
         "proj_monthly_per_share": _clean(proj_monthly) or 0,
         "proj_monthly_total": _clean(round(proj_monthly * shares, 4)) or 0,
         "reasons": reasons,
+        "health_grade": _health_grade(row.get("safety_score") or 0),
     }
+
+
+def _health_grade(safety_score: float) -> str:
+    """Convert safety_score (0-1) to a letter grade."""
+    if safety_score >= 0.75:
+        return "A"
+    if safety_score >= 0.55:
+        return "B"
+    if safety_score >= 0.35:
+        return "C"
+    return "D"
 
 
 # ---------------------------------------------------------------------------

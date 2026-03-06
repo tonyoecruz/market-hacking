@@ -495,6 +495,12 @@ function renderResults(recs, budget) {
                     <div class="flex flex-wrap items-center gap-2 mb-1">
                         <span class="text-xl font-bold text-white">${r.ticker}</span>
                         ${typeTag}
+                        ${r.health_grade ? `<span class="px-2 py-0.5 rounded text-xs font-bold ${
+                            r.health_grade === 'A' ? 'bg-green-500/20 text-green-400' :
+                            r.health_grade === 'B' ? 'bg-blue-500/20 text-blue-400' :
+                            r.health_grade === 'C' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/20 text-red-400'
+                        }">Saude ${r.health_grade}</span>` : ''}
                         <span class="text-gray-400 text-sm truncate">${r.empresa || ''}</span>
                     </div>
 
@@ -533,7 +539,7 @@ function renderResults(recs, budget) {
     // Subtitle
     document.getElementById('results-subtitle').textContent = _yoloMode
         ? `⚠️ FACA NA CAVEIRA — sem filtros de saude. Ordenado por dividendo bruto ate R$ ${budget.toFixed(2)}`
-        : `Apenas ativos saudaveis (sem problemas juridicos, endividamento controlado, lucrativos) com dividendos ate R$ ${budget.toFixed(2)}`;
+        : `Ranqueados por saude financeira + dividendos. Ativos mais seguros aparecem primeiro. Ate R$ ${budget.toFixed(2)}`;
     document.getElementById('results-count').textContent = `${recs.length} opções encontradas`;
 
     document.getElementById('results-area').classList.remove('hidden');
