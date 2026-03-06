@@ -263,12 +263,13 @@
                 <!-- ── ADD TO WALLET ───────────────────────────────────────── -->
                 <div id="wallet-panel" class="hidden bg-dark-800 border border-primary/20 rounded-2xl p-6">
                     <h3 class="text-base font-bold text-white mb-4">Registrar compra de hoje</h3>
-                    <div class="flex flex-col md:flex-row gap-4 items-end">
-                        <div class="flex-1">
+                    <div class="flex flex-col gap-4">
+                        <!-- Wallet selection -->
+                        <div>
                             <label class="block text-xs text-gray-500 mb-1">Carteira</label>
-                            <select id="wallet-select"
+                            <select id="wallet-select" onchange="toggleNewWalletInput()"
                                 class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                                <option value="">Nova carteira "Scope — Hábito Diário"</option>
+                                <option value="__new__">+ Criar nova carteira</option>
                                 {% if wallets %}
                                 {% for w in wallets %}
                                 <option value="{{ w.id }}">{{ w.name }}</option>
@@ -276,15 +277,25 @@
                                 {% endif %}
                             </select>
                         </div>
-                        <div class="w-32">
-                            <label class="block text-xs text-gray-500 mb-1">Quantidade</label>
-                            <input type="number" id="qty-input" value="1" min="1"
+                        <!-- New wallet name input (shown when "Criar nova" is selected) -->
+                        <div id="new-wallet-row">
+                            <label class="block text-xs text-gray-500 mb-1">Nome da nova carteira</label>
+                            <input type="text" id="new-wallet-name" value="Scope — Habito Diario"
+                                placeholder="Ex: Minha carteira de dividendos"
                                 class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
                         </div>
-                        <button onclick="addToWallet()"
-                            class="px-6 py-3 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/90 transition whitespace-nowrap">
-                            + Adicionar à carteira
-                        </button>
+                        <!-- Quantity + Button -->
+                        <div class="flex flex-row gap-4 items-end">
+                            <div class="w-32">
+                                <label class="block text-xs text-gray-500 mb-1">Quantidade</label>
+                                <input type="number" id="qty-input" value="1" min="1"
+                                    class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            <button onclick="addToWallet()"
+                                class="flex-1 px-6 py-3 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/90 transition whitespace-nowrap">
+                                + Adicionar à carteira
+                            </button>
+                        </div>
                     </div>
                     <div id="wallet-feedback" class="hidden mt-3 text-sm font-semibold"></div>
                 </div>
@@ -612,6 +623,12 @@ function renderProjection(winner, budget) {
 }
 
 // ── Wallet ────────────────────────────────────────────────────────────────────
+function toggleNewWalletInput() {
+    const sel = document.getElementById('wallet-select');
+    const row = document.getElementById('new-wallet-row');
+    row.style.display = sel.value === '__new__' ? 'block' : 'none';
+}
+
 function prepareWallet(r) {
     _currentWinner = r;
     document.getElementById('qty-input').value = r.shares_buyable || 1;
@@ -619,11 +636,15 @@ function prepareWallet(r) {
     panel.classList.remove('hidden');
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     document.getElementById('wallet-feedback').classList.add('hidden');
+    toggleNewWalletInput();
 }
 
 async function addToWallet() {
     if (!_currentWinner) return;
-    const walletId = document.getElementById('wallet-select').value || null;
+    const selVal = document.getElementById('wallet-select').value;
+    const isNew = selVal === '__new__';
+    const walletId = isNew ? null : selVal;
+    const newWalletName = isNew ? (document.getElementById('new-wallet-name').value.trim() || 'Scope — Habito Diario') : null;
     const qty = parseInt(document.getElementById('qty-input').value) || 1;
     const fb = document.getElementById('wallet-feedback');
 
@@ -637,6 +658,7 @@ async function addToWallet() {
                 quantity: qty,
                 price: _currentWinner.price,
                 wallet_id: walletId,
+                wallet_name: newWalletName,
             })
         });
         const data = await res.json();

@@ -1632,9 +1632,10 @@
         const styleEl = document.getElementById('inv-style-prompt');
         const descEl = document.getElementById('inv-description');
         const sourcesEl = document.getElementById('inv-sources');
-        styleEl.value = '⏳ Gerando análise completa com IA... aguarde.';
-        descEl.value = '';
-        sourcesEl.value = '';
+        const voiceEl = document.getElementById('inv-voice');
+        styleEl.value = '⏳ Gerando análise completa com IA... aguarde (pode levar alguns segundos).';
+        descEl.value = '⏳ Gerando...';
+        sourcesEl.value = '⏳ Gerando...';
         try {
             const response = await fetch('/admin/api/investors/generate-full', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -1642,12 +1643,16 @@
             });
             if (handleAuthError(response)) return;
             const data = await response.json();
-            if (data.status === 'success' || data.status === 'partial') {
+            if (data.status === 'success') {
                 if (data.description) descEl.value = data.description;
+                else descEl.value = '';
                 if (data.style_prompt) styleEl.value = data.style_prompt;
+                else styleEl.value = '';
                 if (data.sources) sourcesEl.value = data.sources;
-            } else { styleEl.value = ''; alert(data.message || 'Erro ao gerar'); }
-        } catch (e) { styleEl.value = ''; alert('Erro ao gerar análise com IA'); }
+                else sourcesEl.value = '';
+                if (data.voice_id) voiceEl.value = data.voice_id;
+            } else { styleEl.value = ''; descEl.value = ''; sourcesEl.value = ''; alert(data.detail || 'Erro ao gerar'); }
+        } catch (e) { styleEl.value = ''; descEl.value = ''; sourcesEl.value = ''; alert('Erro ao gerar análise com IA'); }
     }
 
     // Legacy: kept for backward compat
@@ -1663,21 +1668,6 @@
         } catch (e) { alert('Erro ao remover investidor'); }
     }
 
-    async function autoGenerateStyle() {
-        const name = document.getElementById('inv-name').value.trim();
-        if (!name) { alert('Preencha o nome do investidor primeiro'); return; }
-        document.getElementById('inv-style-prompt').value = 'Gerando estilo com IA...';
-        try {
-            const response = await fetch('/admin/api/investors/generate-style', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ name })
-            });
-            if (handleAuthError(response)) return;
-            const data = await response.json();
-            if (data.status === 'success') document.getElementById('inv-style-prompt').value = data.style_prompt;
-            else { document.getElementById('inv-style-prompt').value = ''; alert(data.message || 'Erro ao gerar estilo'); }
-        } catch (e) { document.getElementById('inv-style-prompt').value = ''; alert('Erro ao gerar estilo'); }
-    }
 
     // ==================== INVESTOR EDIT MODAL ====================
     async function editInvestor(id) {
@@ -1783,13 +1773,14 @@
         finally { textarea.disabled = false; }
     }
 
-    // Generate ALL fields (description + style_prompt + sources) in the edit modal
+    // Generate ALL fields (description + style_prompt + sources + voice) in the edit modal
     async function autoGenerateAllModal() {
         const name = document.getElementById('edit-inv-name').value.trim();
         if (!name) { alert('Preencha o nome do investidor primeiro'); return; }
         const styleEl = document.getElementById('edit-inv-style-prompt');
         const descEl = document.getElementById('edit-inv-description');
         const sourcesEl = document.getElementById('edit-inv-sources');
+        const voiceEl = document.getElementById('edit-inv-voice');
         styleEl.value = '⏳ Gerando análise completa com IA... aguarde (pode levar alguns segundos).';
         styleEl.disabled = true; descEl.disabled = true; sourcesEl.disabled = true;
         try {
@@ -1799,11 +1790,12 @@
             });
             if (handleAuthError(response)) return;
             const data = await response.json();
-            if (data.status === 'success' || data.status === 'partial') {
+            if (data.status === 'success') {
                 if (data.description) descEl.value = data.description;
                 if (data.style_prompt) styleEl.value = data.style_prompt;
                 if (data.sources) sourcesEl.value = data.sources;
-            } else { styleEl.value = ''; alert(data.message || 'Erro ao gerar'); }
+                if (data.voice_id) voiceEl.value = data.voice_id;
+            } else { styleEl.value = ''; alert(data.detail || 'Erro ao gerar'); }
         } catch (e) { styleEl.value = ''; alert('Erro ao gerar análise com IA'); }
         finally { styleEl.disabled = false; descEl.disabled = false; sourcesEl.disabled = false; }
     }

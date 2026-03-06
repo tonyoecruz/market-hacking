@@ -537,11 +537,12 @@ async def add_to_wallet(request: Request, user: dict = Depends(get_optional_user
 
     try:
         body = await request.json()
-        ticker     = body.get("ticker", "").upper()
-        asset_type = body.get("asset_type", "Acao")
-        quantity   = int(body.get("quantity", 1))
-        price      = float(body.get("price", 0))
-        wallet_id  = body.get("wallet_id")
+        ticker      = body.get("ticker", "").upper()
+        asset_type  = body.get("asset_type", "Acao")
+        quantity    = int(body.get("quantity", 1))
+        price       = float(body.get("price", 0))
+        wallet_id   = body.get("wallet_id")
+        wallet_name = body.get("wallet_name") or "Scope — Habito Diario"
 
         if not ticker or quantity <= 0 or price <= 0:
             return JSONResponse({"status": "error", "message": "Dados invalidos."})
@@ -552,8 +553,8 @@ async def add_to_wallet(request: Request, user: dict = Depends(get_optional_user
         if not wallet_id:
             new_wallet = WalletQueries.create_wallet(
                 user_id=user["id"],
-                name="Scope — Habito Diario",
-                description="Carteira criada automaticamente pelo modulo Scope"
+                name=wallet_name,
+                description=f"Carteira criada pelo modulo Scope"
             )
             wallet_id = new_wallet["id"] if new_wallet else None
 

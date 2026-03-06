@@ -918,7 +918,9 @@ async def generate_investor_full(
     request: Request,
     session: dict = Depends(verify_admin_session)
 ):
-    """Generate description, style_prompt AND sources for an investor using AI."""
+    """Generate all investor profile fields using AI.
+    field: 'all' | 'description' | 'style_prompt' | 'sources' | 'voice'
+    When field='all', generates all fields with separate AI calls for reliability."""
     try:
         data = await request.json()
         name = data.get("name", "").strip()
@@ -928,27 +930,100 @@ async def generate_investor_full(
 
         import data_utils as _du
 
+        # --- PROMPTS POR CAMPO ---
+        def gen_description():
+            p = (
+                f"Escreva uma descricao CURTA e objetiva (maximo 80 caracteres) "
+                f"sobre o estilo de investimento de {name}. "
+                f"Exemplo para Warren Buffett: 'Value Investing de longo prazo - O Oraculo de Omaha'. "
+                f"Responda APENAS com a descricao, sem aspas, sem explicacoes."
+            )
+            return _du.get_ai_generic_analysis(p).strip().strip('"').strip("'")
+
+        def gen_style_prompt():
+            p = (
+                f"Gere uma instrucao de sistema detalhada para uma IA que deve atuar como o investidor {name}.\n\n"
+                f"A instrucao DEVE comecar com 'Atue como {name}' e incluir:\n"
+                f"- Metodologia de investimento (value investing, growth, dividendos, etc.)\n"
+                f"- Metricas e indicadores que ele prioriza (P/L, ROE, DY, margem, etc.)\n"
+                f"- Setores e tipos de empresa/ativo preferidos\n"
+                f"- Nivel de tolerancia a risco e horizonte de tempo\n"
+                f"- Frases celebres e estilo de comunicacao\n"
+                f"- Conceitos-chave que ele utiliza\n\n"
+                f"Escreva em portugues brasileiro. Maximo 300 palavras.\n"
+                f"Seja ESPECIFICO e baseado em fatos reais sobre este investidor.\n"
+                f"Responda APENAS com a instrucao, sem titulo, sem explicacoes adicionais."
+            )
+            return _du.get_ai_generic_analysis(p).strip()
+
+        def gen_sources():
+            p = (
+                f"Liste as principais fontes de informacao REAIS e VERIFICAVEIS sobre "
+                f"a filosofia e metodologia de investimento de {name}.\n\n"
+                f"Inclua: livros escritos por ou sobre ele, cartas anuais, entrevistas "
+                f"famosas, documentarios, podcasts, artigos academicos, videos no YouTube.\n\n"
+                f"Para videos do YouTube, inclua o titulo do video e o canal.\n\n"
+                f"Formato por linha:\n"
+                f"- [Tipo] Titulo/Nome — breve descricao do conteudo\n\n"
+                f"Exemplos:\n"
+                f"- [Livro] The Intelligent Investor (Benjamin Graham) — base do value investing\n"
+                f"- [YouTube] 'Warren Buffett Interview' - Canal CNBC — entrevista sobre filosofia de longo prazo\n"
+                f"- [Carta Anual] Berkshire Hathaway Letters to Shareholders — filosofia de investimento\n\n"
+                f"Liste entre 6 e 12 fontes reais. Escreva em portugues brasileiro.\n"
+                f"Responda APENAS com a lista, sem introducao nem conclusao."
+            )
+            return _du.get_ai_generic_analysis(p).strip()
+
+        def gen_voice():
+            p = (
+                f"Para o investidor {name}, sugira qual voz TTS seria mais adequada "
+                f"considerando sua nacionalidade e idioma principal.\n\n"
+                f"Opcoes disponiveis:\n"
+                f"- pt-BR-AntonioNeural (portugues brasileiro, masculino)\n"
+                f"- pt-BR-FranciscaNeural (portugues brasileiro, feminino)\n"
+                f"- en-US-GuyNeural (ingles americano, masculino)\n"
+                f"- en-US-JennyNeural (ingles americano, feminino)\n\n"
+                f"Responda APENAS com o ID da voz (ex: pt-BR-AntonioNeural), "
+                f"sem explicacao, sem aspas."
+            )
+            result = _du.get_ai_generic_analysis(p).strip().strip('"').strip("'")
+            valid = ['pt-BR-AntonioNeural', 'pt-BR-FranciscaNeural', 'en-US-GuyNeural', 'en-US-JennyNeural']
+            for v in valid:
+                if v.lower() in result.lower():
+                    return v
+            return 'pt-BR-AntonioNeural'
+
+        # --- EXECUCAO ---
         if field == "description":
-            prompt = f"Escreva uma descricao curta e objetiva (maximo 120 caracteres) sobre o estilo de investimento de {name}. Exemplo: 'Value Investing de longo prazo - O Oraculo de Omaha'. Responda APENAS com a descricao, sem aspas."
-            result = _du.get_ai_generic_analysis(prompt)
-            return JSONResponse({"status": "success", "field": "description", "value": result.strip()})
+            return JSONResponse({"status": "success", "field": "description", "value": gen_description()})
 
         elif field == "sources":
-            prompt = f"Liste 5 a 10 fontes reais (livros, entrevistas, cartas, documentarios) sobre a filosofia de {name}. Formato por linha: - [Tipo] Titulo - descricao. Responda APENAS a lista em portugues, sem introducao."
-            result = _du.get_ai_generic_analysis(prompt)
-            return JSONResponse({"status": "success", "field": "sources", "value": result.strip()})
+            return JSONResponse({"status": "success", "field": "sources", "value": gen_sources()})
 
-        else:
-            prompt = f'Para o investidor "{name}", gere JSON com exatamente 3 chaves: "description" (ate 120 chars), "style_prompt" (instrucao começando com Atue como {name}..., ate 300 palavras), "sources" (5-10 fontes reais, uma por linha, formato: - [Tipo] Titulo - descricao). Responda APENAS com JSON valido, sem markdown. Portugues brasileiro.'
-            raw = _du.get_ai_generic_analysis(prompt)
-            import json as _json, re as _re
-            clean = _re.sub(r'^{3}(?:json)?\s*|\s*{3}$', '', raw.strip())
-            try:
-                parsed = _json.loads(clean)
-                return JSONResponse({"status": "success", "field": "all", "description": parsed.get("description", "").strip(), "style_prompt": parsed.get("style_prompt", "").strip(), "sources": parsed.get("sources", "").strip()})
-            except _json.JSONDecodeError:
-                return JSONResponse({"status": "partial", "field": "all", "style_prompt": raw.strip(), "description": "", "sources": ""})
+        elif field == "style_prompt":
+            return JSONResponse({"status": "success", "field": "style_prompt", "value": gen_style_prompt()})
+
+        elif field == "voice":
+            return JSONResponse({"status": "success", "field": "voice", "value": gen_voice()})
+
+        else:  # 'all' — gera tudo com chamadas separadas (mais confiavel que JSON)
+            description = gen_description()
+            style_prompt = gen_style_prompt()
+            sources = gen_sources()
+            voice_id = gen_voice()
+
+            return JSONResponse({
+                "status": "success",
+                "field": "all",
+                "description": description,
+                "style_prompt": style_prompt,
+                "sources": sources,
+                "voice_id": voice_id
+            })
+
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"[generate-full] Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
