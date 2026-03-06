@@ -309,6 +309,7 @@
 <!-- JS Engine Modules (must load before main script) -->
 <script src="/static/js/calc_spreadsheet_mode.js"></script>
 <script src="/static/js/calc_real_mode.js"></script>
+<script src="/static/js/wallet_quick_add.js"></script>
 
 <script>
     // ══════════════════════════════════════════════════════════════════════
@@ -652,10 +653,18 @@
                 <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[3])}">${getMetricValue(stock, cols[3])}</td>
                 <td class="px-3 py-3 text-right text-xs ${getMetricColor(stock, cols[4])}">${getMetricValue(stock, cols[4])}</td>
                 <td class="px-3 py-3 text-center">
-                    <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')"
-                        class="px-3 py-1 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 text-xs font-medium transition">
-                        Analisar
-                    </button>
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="event.stopPropagation(); walletQuickAdd.open('${stock.ticker}', ${stock.price || 0}, this)"
+                            class="p-1.5 bg-green-600/20 text-green-400 rounded-lg hover:bg-green-600/30 transition" title="Adicionar a carteira">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+                        <button onclick="event.stopPropagation(); analyzeStock('${stock.ticker}')"
+                            class="px-3 py-1 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 text-xs font-medium transition">
+                            Analisar
+                        </button>
+                    </div>
                 </td>
             </tr>`;
         }).join('');
@@ -826,7 +835,7 @@
     // ══════════════════════════════════════════════════════════════════════
     async function loadWallets() {
         try {
-            const res = await fetch('/carteira/api/wallets');
+            const res = await fetch('/dashboard/api/wallets');
             const data = await res.json();
             const opts = document.getElementById('wallet-options');
             if (opts && data.wallets) {
@@ -847,15 +856,35 @@
         btn.innerHTML = '<div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>';
 
         try {
-            const res = await fetch('/carteira/api/add-asset', {
+            // Ensure wallet exists, create if needed
+            let walletId = null;
+            const walletsRes = await fetch('/dashboard/api/wallets');
+            const walletsData = await walletsRes.json();
+            const existingW = (walletsData.wallets || []).find(w => w.name === walletName);
+            if (existingW) {
+                walletId = existingW.id;
+            } else {
+                const createRes = await fetch('/dashboard/api/wallet/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: walletName })
+                });
+                const createData = await createRes.json();
+                if (createRes.ok && createData.wallet_id) {
+                    walletId = createData.wallet_id;
+                } else {
+                    throw new Error(createData.detail || 'Erro ao criar carteira');
+                }
+            }
+            const res = await fetch('/dashboard/api/wallet/add-json', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    wallet_name: walletName,
                     ticker: currentModalTicker,
                     quantity: qty,
-                    purchase_price: price,
-                    purchase_date: date,
+                    price: price,
+                    wallet_id: walletId,
+                    date: date,
                 }),
             });
             const data = await res.json();

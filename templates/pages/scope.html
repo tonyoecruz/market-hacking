@@ -260,45 +260,7 @@
                     </p>
                 </div>
 
-                <!-- ── ADD TO WALLET ───────────────────────────────────────── -->
-                <div id="wallet-panel" class="hidden bg-dark-800 border border-primary/20 rounded-2xl p-6">
-                    <h3 class="text-base font-bold text-white mb-4">Registrar compra de hoje</h3>
-                    <div class="flex flex-col gap-4">
-                        <!-- Wallet selection -->
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">Carteira</label>
-                            <select id="wallet-select" onchange="toggleNewWalletInput()"
-                                class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                                <option value="__new__">+ Criar nova carteira</option>
-                                {% if wallets %}
-                                {% for w in wallets %}
-                                <option value="{{ w.id }}">{{ w.name }}</option>
-                                {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                        <!-- New wallet name input (shown when "Criar nova" is selected) -->
-                        <div id="new-wallet-row">
-                            <label class="block text-xs text-gray-500 mb-1">Nome da nova carteira</label>
-                            <input type="text" id="new-wallet-name" value="Scope — Habito Diario"
-                                placeholder="Ex: Minha carteira de dividendos"
-                                class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                        </div>
-                        <!-- Quantity + Button -->
-                        <div class="flex flex-row gap-4 items-end">
-                            <div class="w-32">
-                                <label class="block text-xs text-gray-500 mb-1">Quantidade</label>
-                                <input type="number" id="qty-input" value="1" min="1"
-                                    class="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                            </div>
-                            <button onclick="addToWallet()"
-                                class="flex-1 px-6 py-3 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/90 transition whitespace-nowrap">
-                                + Adicionar à carteira
-                            </button>
-                        </div>
-                    </div>
-                    <div id="wallet-feedback" class="hidden mt-3 text-sm font-semibold"></div>
-                </div>
+                <!-- Wallet panel is now injected inline below each card via JS -->
 
             </div>
             <!-- /results-area -->
@@ -424,7 +386,7 @@ async function runRecommendation() {
     document.getElementById('error-state').classList.add('hidden');
     document.getElementById('results-area').classList.add('hidden');
     document.getElementById('projection-panel').classList.add('hidden');
-    document.getElementById('wallet-panel').classList.add('hidden');
+    removeInlineWalletForm();
     document.getElementById('loading').classList.remove('hidden');
 
     try {
@@ -622,31 +584,106 @@ function renderProjection(winner, budget) {
     document.getElementById('projection-panel').classList.remove('hidden');
 }
 
-// ── Wallet ────────────────────────────────────────────────────────────────────
-function toggleNewWalletInput() {
-    const sel = document.getElementById('wallet-select');
-    const row = document.getElementById('new-wallet-row');
-    row.style.display = sel.value === '__new__' ? 'block' : 'none';
+// ── Wallet (inline form) ──────────────────────────────────────────────────────
+const _wallets = {{ wallets | tojson }};
+
+function removeInlineWalletForm() {
+    const old = document.getElementById('inline-wallet-form');
+    if (old) old.remove();
 }
 
 function prepareWallet(r) {
     _currentWinner = r;
-    document.getElementById('qty-input').value = r.shares_buyable || 1;
-    const panel = document.getElementById('wallet-panel');
-    panel.classList.remove('hidden');
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    document.getElementById('wallet-feedback').classList.add('hidden');
-    toggleNewWalletInput();
+    removeInlineWalletForm();
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Build wallet options
+    let walletOpts = '';
+    _wallets.forEach(w => {
+        walletOpts += `<option value="${w.id}">${w.name}</option>`;
+    });
+
+    const form = document.createElement('div');
+    form.id = 'inline-wallet-form';
+    form.className = 'bg-dark-700 border border-primary/30 rounded-xl p-5 mt-2 space-y-4';
+    form.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+            <h4 class="text-sm font-bold text-primary">Adicionar ${r.ticker} à carteira</h4>
+            <button onclick="removeInlineWalletForm()" class="text-gray-500 hover:text-gray-300 text-lg leading-none">&times;</button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Preco unitario (R$)</label>
+                <input type="number" id="wf-price" value="${r.price}" step="0.01" min="0.01"
+                    class="w-full px-3 py-2 bg-dark-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Data da compra</label>
+                <input type="date" id="wf-date" value="${today}"
+                    class="w-full px-3 py-2 bg-dark-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Quantidade</label>
+                <input type="number" id="wf-qty" value="1" min="1" step="1"
+                    class="w-full px-3 py-2 bg-dark-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            </div>
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">Carteira</label>
+            <select id="wf-wallet" onchange="document.getElementById('wf-new-name').parentElement.style.display = this.value==='__new__' ? 'block' : 'none'"
+                class="w-full px-3 py-2 bg-dark-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                ${walletOpts}
+                <option value="__new__">+ Criar nova carteira</option>
+            </select>
+        </div>
+        <div style="display:none">
+            <label class="block text-xs text-gray-500 mb-1">Nome da nova carteira</label>
+            <input type="text" id="wf-new-name" placeholder="Ex: Scope — Habito Diario"
+                class="w-full px-3 py-2 bg-dark-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="addToWallet()" class="px-5 py-2.5 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/90 transition text-sm">
+                Adicionar
+            </button>
+            <span id="wf-feedback" class="text-sm hidden"></span>
+        </div>
+    `;
+
+    // Find the card that was clicked — walk up from the button
+    // Since we call prepareWallet from onclick, we insert after the card in candidates-list
+    const cards = document.querySelectorAll('#candidates-list .candidate-card');
+    let targetCard = null;
+    for (const card of cards) {
+        if (card.textContent.includes(r.ticker)) {
+            targetCard = card;
+            break;
+        }
+    }
+    if (targetCard) {
+        targetCard.after(form);
+    } else {
+        document.getElementById('candidates-list').appendChild(form);
+    }
+
+    // If no existing wallets, auto-show new wallet name input
+    if (_wallets.length === 0) {
+        document.getElementById('wf-wallet').value = '__new__';
+        document.getElementById('wf-new-name').parentElement.style.display = 'block';
+    }
+
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 async function addToWallet() {
     if (!_currentWinner) return;
-    const selVal = document.getElementById('wallet-select').value;
+    const selVal = document.getElementById('wf-wallet').value;
     const isNew = selVal === '__new__';
     const walletId = isNew ? null : selVal;
-    const newWalletName = isNew ? (document.getElementById('new-wallet-name').value.trim() || 'Scope — Habito Diario') : null;
-    const qty = parseInt(document.getElementById('qty-input').value) || 1;
-    const fb = document.getElementById('wallet-feedback');
+    const newWalletName = isNew ? (document.getElementById('wf-new-name').value.trim() || 'Scope — Habito Diario') : null;
+    const qty = parseInt(document.getElementById('wf-qty').value) || 1;
+    const price = parseFloat(document.getElementById('wf-price').value) || _currentWinner.price;
+    const fb = document.getElementById('wf-feedback');
 
     try {
         const res = await fetch('/scope/api/add-to-wallet', {
@@ -656,7 +693,7 @@ async function addToWallet() {
                 ticker: _currentWinner.ticker,
                 asset_type: _currentWinner.asset_type,
                 quantity: qty,
-                price: _currentWinner.price,
+                price: price,
                 wallet_id: walletId,
                 wallet_name: newWalletName,
             })
@@ -665,17 +702,16 @@ async function addToWallet() {
         fb.classList.remove('hidden', 'text-red-400', 'text-primary');
         if (data.status === 'success') {
             fb.classList.add('text-primary');
-            fb.textContent = '✓ ' + data.message;
-            // Update streak visually
+            fb.textContent = data.message;
             updateStreak();
         } else {
             fb.classList.add('text-red-400');
-            fb.textContent = '✗ ' + (data.message || 'Erro ao adicionar.');
+            fb.textContent = data.message || 'Erro ao adicionar.';
         }
     } catch (e) {
         fb.classList.remove('hidden');
         fb.classList.add('text-red-400');
-        fb.textContent = '✗ Falha de comunicação.';
+        fb.textContent = 'Falha de comunicacao.';
     }
 }
 

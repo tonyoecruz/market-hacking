@@ -118,6 +118,7 @@
 </div>
 
 <script src="/static/js/calc_etfs.js"></script>
+<script src="/static/js/wallet_quick_add.js"></script>
 
 <script>
     let currentStrategy = null;
@@ -237,8 +238,16 @@
                 <td class="px-3 py-3 text-right text-xs ${etfMetricColor(item, cols[2])}">${etfMetricValue(item, cols[2])}</td>
                 <td class="px-3 py-3 text-right text-xs ${etfMetricColor(item, cols[3])}">${etfMetricValue(item, cols[3])}</td>
                 <td class="px-3 py-3 text-center">
-                    <button onclick="event.stopPropagation(); analyzeETF('${item.ticker}')"
-                        class="px-3 py-1 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 text-xs font-medium transition">Analisar</button>
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="event.stopPropagation(); walletQuickAdd.open('${item.ticker}', ${item.price || 0}, this)"
+                            class="p-1.5 bg-green-600/20 text-green-400 rounded-lg hover:bg-green-600/30 transition" title="Adicionar a carteira">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+                        <button onclick="event.stopPropagation(); analyzeETF('${item.ticker}')"
+                            class="px-3 py-1 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 text-xs font-medium transition">Analisar</button>
+                    </div>
                 </td>
             </tr>`;
         }).join('');

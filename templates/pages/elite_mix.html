@@ -116,6 +116,7 @@
     </div>
 </div>
 
+<script src="/static/js/wallet_quick_add.js"></script>
 <script>
     let eliteData = [];
 
@@ -158,10 +159,18 @@
             <td class="px-4 py-3 text-right text-green-500 font-semibold">${(stock.roic * 100).toFixed(1)}%</td>
             <td class="px-4 py-3 text-right text-primary font-semibold">#${Math.round(stock.magic_rank)}</td>
             <td class="px-4 py-3 text-right">
-                <button onclick="analyzeStock('${stock.ticker}')" 
-                    class="px-3 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 text-sm">
-                    Analisar
-                </button>
+                <div class="flex items-center justify-end gap-1">
+                    <button onclick="walletQuickAdd.open('${stock.ticker}', ${stock.price || 0}, this)"
+                        class="p-1.5 bg-green-600/20 text-green-400 rounded-lg hover:bg-green-600/30 transition" title="Adicionar a carteira">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                    </button>
+                    <button onclick="analyzeStock('${stock.ticker}')"
+                        class="px-3 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 text-sm">
+                        Analisar
+                    </button>
+                </div>
             </td>
         </tr>
     `).join('');
