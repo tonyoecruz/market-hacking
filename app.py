@@ -570,7 +570,7 @@ def generate_audio(text, key_suffix=""):
     if is_battle:
         voice = "pt-BR-FranciscaNeural" # Distinct female voice for Battle (Fabio/Donato unavailable)
     else:
-        voice = "pt-BR-AntonioNeural" # Standard professional execution
+        voice = "pt-BR-ThalitaNeural" # More natural and expressive voice
 
     # 2. Dynamic Intro (Only for Battle)
     final_text_content = text

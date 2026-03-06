@@ -393,12 +393,13 @@ def generate_audio(text, key_suffix="", voice_override=None):
     is_battle = "battle" in key_suffix
 
     # 1. Select Voice (investor voice takes priority)
+    # ThalitaNeural is more natural and expressive than AntonioNeural
     if voice_override:
         voice = voice_override
     elif is_battle:
         voice = "pt-BR-FranciscaNeural"
     else:
-        voice = "pt-BR-AntonioNeural"
+        voice = "pt-BR-ThalitaNeural"
 
     # 2. Dynamic Intro (Only for Battle)
     final_text_content = text

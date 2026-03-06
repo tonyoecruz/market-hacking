@@ -743,7 +743,7 @@
                 scales: {
                     y: {
                         grid: { color: 'rgba(255,255,255,0.03)' },
-                        ticks: { callback: v => 'R$ ' + (v / 1000).toFixed(0) + 'k' }
+                        ticks: { callback: function(v) { if (Math.abs(v) >= 1e6) return 'R$ ' + (v/1e6).toFixed(1) + 'M'; if (Math.abs(v) >= 1000) return 'R$ ' + (v/1000).toFixed(0) + 'k'; return 'R$ ' + v.toFixed(0); } }
                     },
                     x: { grid: { display: false } }
                 }
@@ -803,7 +803,7 @@
                 scales: {
                     y: {
                         grid: { color: 'rgba(255,255,255,0.03)' },
-                        ticks: { callback: v => 'R$ ' + (v / 1000).toFixed(0) + 'k' }
+                        ticks: { callback: function(v) { if (Math.abs(v) >= 1e6) return 'R$ ' + (v/1e6).toFixed(1) + 'M'; if (Math.abs(v) >= 1000) return 'R$ ' + (v/1000).toFixed(0) + 'k'; return 'R$ ' + v.toFixed(0); } }
                     },
                     x: { grid: { display: false } }
                 }
