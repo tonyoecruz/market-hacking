@@ -101,20 +101,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Investor Selector Row -->
-                <div class="mt-4 pt-4 border-t border-gray-700/50 flex items-center gap-4">
-                    <label class="text-sm font-medium text-gray-400 whitespace-nowrap">🧠 Analisar como:</label>
-                    <select id="investor-selector-acoes"
-                        class="flex-1 max-w-xs px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        onchange="saveInvestorSelection()">
-                        <option value="">-- Selecionar Investidor --</option>
-                    </select>
-                    <span id="investor-badge-acoes"
-                        class="hidden px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-semibold"></span>
-                    <p class="text-xs text-gray-500">A IA usará o estilo e filosofia deste investidor para analisar as
-                        ações.</p>
-                </div>
             </div>
 
             <!-- Strategy Selector + Ranking Area -->
@@ -341,7 +327,6 @@
     // ══════════════════════════════════════════════════════════════════════
     window.addEventListener('DOMContentLoaded', () => {
         renderStrategyCards();
-        loadInvestors();
     });
 
     // ══════════════════════════════════════════════════════════════════════
@@ -712,9 +697,17 @@
         document.getElementById('analysis-modal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
 
-        // Get selected investor from the selector
-        const investorSel = document.getElementById('investor-selector-acoes');
-        const investor = investorSel ? investorSel.value : (localStorage.getItem('investor_persona') || '');
+        // Get selected investor from Dashboard localStorage
+        let investor = '';
+        try {
+            const saved = localStorage.getItem('investor_persona');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                investor = parsed.name || '';
+            }
+        } catch (e) {
+            investor = localStorage.getItem('investor_persona') || '';
+        }
 
         try {
             let url = `/acoes/api/decode/${ticker}`;
@@ -890,49 +883,5 @@
         setTimeout(() => toast.remove(), 4000);
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // INVESTOR PERSONA SELECTOR
-    // ══════════════════════════════════════════════════════════════════════
-    async function loadInvestors() {
-        try {
-            const res = await fetch('/api/investors');
-            const data = await res.json();
-            const sel = document.getElementById('investor-selector-acoes');
-            if (!sel) return;
-            const savedInvestor = localStorage.getItem('investor_persona') || '';
-            if (data.investors && data.investors.length > 0) {
-                sel.innerHTML = '<option value="">-- Selecionar Investidor --</option>' +
-                    data.investors.map(inv =>
-                        `<option value="${inv.name}" ${inv.name === savedInvestor ? 'selected' : ''}>${inv.name}${inv.description ? ' — ' + inv.description : ''}</option>`
-                    ).join('');
-                if (savedInvestor) updateInvestorBadge(savedInvestor);
-            } else {
-                sel.innerHTML = '<option value="">Nenhum investidor cadastrado — configure no Admin</option>';
-            }
-        } catch (e) {
-            console.warn('Não foi possível carregar investidores:', e);
-        }
-    }
-
-    function saveInvestorSelection() {
-        const sel = document.getElementById('investor-selector-acoes');
-        const value = sel ? sel.value : '';
-        if (value) {
-            localStorage.setItem('investor_persona', value);
-            updateInvestorBadge(value);
-        } else {
-            localStorage.removeItem('investor_persona');
-            const badge = document.getElementById('investor-badge-acoes');
-            if (badge) badge.classList.add('hidden');
-        }
-    }
-
-    function updateInvestorBadge(name) {
-        const badge = document.getElementById('investor-badge-acoes');
-        if (badge && name) {
-            badge.textContent = '🧠 ' + name;
-            badge.classList.remove('hidden');
-        }
-    }
 </script>
 {% endblock %}
