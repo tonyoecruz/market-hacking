@@ -25,25 +25,27 @@
             <div
                 class="bg-dark-800 border border-gray-700 rounded-xl p-4 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <p class="text-white font-bold text-base" id="mode-banner-title">Modo Planilha — Ranking Relativo
+                    <p class="text-white font-bold text-base" id="mode-banner-title">Modo Teórico — Fórmulas da
+                        Literatura
                     </p>
-                    <p class="text-gray-400 text-sm" id="mode-banner-desc">Cada indicador é ranqueado globalmente. O
-                        menor somatório ponderado vence.</p>
+                    <p class="text-gray-400 text-sm" id="mode-banner-desc">Filtros rígidos + fórmulas matemáticas
+                        absolutas (Graham, Bazin, Greenblatt…).</p>
                 </div>
                 <!-- Mode Toggle -->
                 <div class="flex items-center gap-3 flex-shrink-0">
-                    <span class="text-sm font-semibold" id="lbl-planilha"
-                        style="color: var(--color-primary, #6366f1);">📊 Planilha</span>
+                    <span class="text-sm font-semibold" id="lbl-planilha" style="color: #6b7280; opacity: 0.5;">📊
+                        Planilha</span>
                     <button id="mode-toggle-btn" onclick="toggleMode()"
                         class="relative w-14 h-7 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary"
-                        style="background: linear-gradient(135deg, #6366f1, #7c3aed);"
+                        style="background: linear-gradient(135deg, #0891b2, #0e7490);"
                         aria-label="Alternar modo de cálculo">
                         <span id="mode-toggle-knob"
-                            class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center text-xs">
-                            📊
+                            class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center text-xs"
+                            style="transform: translateX(28px);">
+                            🧪
                         </span>
                     </button>
-                    <span class="text-sm font-semibold text-gray-500" id="lbl-teorico">🧪 Teórico</span>
+                    <span class="text-sm font-semibold" id="lbl-teorico" style="color: #22d3ee;">🧪 Teórico</span>
                 </div>
             </div>
 
@@ -312,7 +314,7 @@
     // ══════════════════════════════════════════════════════════════════════
     // STATE
     // ══════════════════════════════════════════════════════════════════════
-    let currentMode = 'planilha';   // 'planilha' | 'teorico'
+    let currentMode = 'teorico';   // 'planilha' | 'teorico'
     let currentStrategy = null;
     let currentAnalysisText = '';
     let currentAudio = null;
@@ -320,7 +322,7 @@
     let currentModalPrice = 0;
 
     // Active strategy list (switches on toggle)
-    let STRATEGIES = SPREADSHEET_STRATEGIES;
+    let STRATEGIES = TEORICO_STRATEGIES;
 
     // ══════════════════════════════════════════════════════════════════════
     // INIT

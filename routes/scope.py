@@ -547,31 +547,39 @@ async def add_to_wallet(request: Request, user: dict = Depends(get_optional_user
         if not ticker or quantity <= 0 or price <= 0:
             return JSONResponse({"status": "error", "message": "Dados invalidos."})
 
-        type_map = {"Acao": "stock", "FII": "fii"}
-        db_type = type_map.get(asset_type, "stock")
+        user_id = user["id"]
 
+        # Create new wallet if needed
         if not wallet_id:
-            new_wallet = WalletQueries.create_wallet(
-                user_id=user["id"],
-                name=wallet_name,
-                description=f"Carteira criada pelo modulo Scope"
-            )
-            wallet_id = new_wallet["id"] if new_wallet else None
+            success, msg = WalletQueries.create_wallet(user_id=user_id, name=wallet_name)
+            if not success:
+                return JSONResponse({"status": "error", "message": msg})
 
-        if not wallet_id:
-            return JSONResponse({"status": "error", "message": "Nao foi possivel criar/encontrar a carteira."})
+            # Find the newly created wallet by name
+            wallets = WalletQueries.get_wallets(user_id) or []
+            for w in wallets:
+                if w.get("name") == wallet_name:
+                    wallet_id = w.get("id")
+                    break
 
-        AssetQueries.add_asset(
-            wallet_id=wallet_id,
+            if not wallet_id:
+                return JSONResponse({"status": "error", "message": "Carteira criada mas nao encontrada. Tente novamente."})
+
+        # Add asset to wallet
+        success, msg = AssetQueries.add_to_wallet(
+            user_id=user_id,
             ticker=ticker,
-            asset_type=db_type,
             quantity=quantity,
-            avg_price=price,
+            price=price,
+            wallet_id=wallet_id,
         )
+
+        if not success:
+            return JSONResponse({"status": "error", "message": msg})
 
         return JSONResponse({
             "status": "success",
-            "message": f"{ticker} adicionado a carteira com sucesso!",
+            "message": f"{ticker} adicionado a carteira '{wallet_name}' com sucesso!",
             "wallet_id": wallet_id,
         })
 
