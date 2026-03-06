@@ -97,6 +97,7 @@ def init_database():
         ("stocks", "cagr_receitas", "FLOAT"),
         ("stocks", "queda_maximo", "FLOAT"),
         ("investor_personas", "voice_id", "VARCHAR(100) DEFAULT 'pt-BR-AntonioNeural'"),
+        ("investor_personas", "sources", "TEXT"),
         ("flipping_cities", "last_accessed_at", "TIMESTAMP"),
         ("flipping_listings", "regiao", "VARCHAR(50)"),
     ]
@@ -836,7 +837,7 @@ class DatabaseManager:
         finally:
             db.close()
 
-    def add_investor(self, name: str, description: str = None, style_prompt: str = None, voice_id: str = 'pt-BR-AntonioNeural') -> Dict:
+    def add_investor(self, name: str, description: str = None, style_prompt: str = None, voice_id: str = 'pt-BR-AntonioNeural', sources: str = None) -> Dict:
         """Add an investor persona"""
         db = self.SessionLocal()
         try:
@@ -854,6 +855,7 @@ class DatabaseManager:
                 name=name,
                 description=description,
                 style_prompt=style_prompt,
+                sources=sources,
                 voice_id=voice_id,
                 active=1,
                 added_at=datetime.now()
@@ -888,7 +890,8 @@ class DatabaseManager:
             db.close()
 
     def update_investor(self, investor_id: int, name: str = None, description: str = None,
-                        style_prompt: str = None, voice_id: str = None) -> Optional[Dict]:
+                        style_prompt: str = None, voice_id: str = None,
+                        sources: str = None) -> Optional[Dict]:
         """Update an existing investor persona"""
         db = self.SessionLocal()
         try:
@@ -907,6 +910,8 @@ class DatabaseManager:
                 investor.style_prompt = style_prompt
             if voice_id is not None:
                 investor.voice_id = voice_id
+            if sources is not None:
+                investor.sources = sources
 
             db.commit()
             db.refresh(investor)

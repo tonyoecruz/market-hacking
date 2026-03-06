@@ -792,11 +792,12 @@ async def add_investor(
         description = data.get('description', '').strip()
         style_prompt = data.get('style_prompt', '').strip()
         voice_id = data.get('voice_id', 'pt-BR-AntonioNeural').strip()
+        sources = data.get('sources', '').strip()
 
         if not name:
             raise HTTPException(status_code=400, detail="Nome obrigatorio")
 
-        investor = db_manager.add_investor(name, description, style_prompt, voice_id=voice_id)
+        investor = db_manager.add_investor(name, description, style_prompt, voice_id=voice_id, sources=sources)
         return JSONResponse({"status": "success", "investor": investor})
     except HTTPException:
         raise
@@ -858,13 +859,15 @@ async def update_investor(
         description = data.get('description', '').strip() if data.get('description') is not None else None
         style_prompt = data.get('style_prompt', '').strip() if data.get('style_prompt') is not None else None
         voice_id = data.get('voice_id', '').strip() or None
+        sources = data.get('sources', '').strip() if data.get('sources') is not None else None
 
         updated = db_manager.update_investor(
             investor_id=investor_id,
             name=name,
             description=description,
             style_prompt=style_prompt,
-            voice_id=voice_id
+            voice_id=voice_id,
+            sources=sources
         )
         if not updated:
             raise HTTPException(status_code=404, detail="Investidor nao encontrado")
@@ -908,3 +911,44 @@ Seja especifico e baseado em fatos reais sobre este investidor."""
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+@router.post("/api/investors/generate-full")
+async def generate_investor_full(
+    request: Request,
+    session: dict = Depends(verify_admin_session)
+):
+    """Generate description, style_prompt AND sources for an investor using AI."""
+    try:
+        data = await request.json()
+        name = data.get("name", "").strip()
+        field = data.get("field", "all")
+        if not name:
+            raise HTTPException(status_code=400, detail="Nome obrigatorio")
+
+        import data_utils as _du
+
+        if field == "description":
+            prompt = f"Escreva uma descricao curta e objetiva (maximo 120 caracteres) sobre o estilo de investimento de {name}. Exemplo: 'Value Investing de longo prazo - O Oraculo de Omaha'. Responda APENAS com a descricao, sem aspas."
+            result = _du.get_ai_generic_analysis(prompt)
+            return JSONResponse({"status": "success", "field": "description", "value": result.strip()})
+
+        elif field == "sources":
+            prompt = f"Liste 5 a 10 fontes reais (livros, entrevistas, cartas, documentarios) sobre a filosofia de {name}. Formato por linha: - [Tipo] Titulo - descricao. Responda APENAS a lista em portugues, sem introducao."
+            result = _du.get_ai_generic_analysis(prompt)
+            return JSONResponse({"status": "success", "field": "sources", "value": result.strip()})
+
+        else:
+            prompt = f'Para o investidor "{name}", gere JSON com exatamente 3 chaves: "description" (ate 120 chars), "style_prompt" (instrucao começando com Atue como {name}..., ate 300 palavras), "sources" (5-10 fontes reais, uma por linha, formato: - [Tipo] Titulo - descricao). Responda APENAS com JSON valido, sem markdown. Portugues brasileiro.'
+            raw = _du.get_ai_generic_analysis(prompt)
+            import json as _json, re as _re
+            clean = _re.sub(r'^{3}(?:json)?\s*|\s*{3}$', '', raw.strip())
+            try:
+                parsed = _json.loads(clean)
+                return JSONResponse({"status": "success", "field": "all", "description": parsed.get("description", "").strip(), "style_prompt": parsed.get("style_prompt", "").strip(), "sources": parsed.get("sources", "").strip()})
+            except _json.JSONDecodeError:
+                return JSONResponse({"status": "partial", "field": "all", "style_prompt": raw.strip(), "description": "", "sources": ""})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

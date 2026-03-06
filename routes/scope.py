@@ -366,6 +366,49 @@ async def scope_page(request: Request, user: dict = Depends(get_optional_user)):
     )
 
 
+@router.get("/api/debug")
+async def debug_data():
+    """Diagnostic endpoint — shows raw DB data stats to help debug empty results."""
+    try:
+        stocks_raw = db.get_stocks(market="BR") or []
+        fiis_raw = db.get_fiis() or []
+
+        def col_stats(data, col):
+            vals = [r.get(col) for r in data]
+            non_none = [v for v in vals if v is not None]
+            positives = [v for v in non_none if v > 0]
+            return {
+                "total": len(vals),
+                "non_none": len(non_none),
+                "positives": len(positives),
+                "samples": [round(v, 2) if isinstance(v, float) else v for v in non_none[:8]],
+            }
+
+        return _json_response({
+            "stocks_total": len(stocks_raw),
+            "fiis_total": len(fiis_raw),
+            "stocks": {
+                "price": col_stats(stocks_raw, "price"),
+                "dy": col_stats(stocks_raw, "dy"),
+                "pl": col_stats(stocks_raw, "pl"),
+                "pvp": col_stats(stocks_raw, "pvp"),
+                "liquidezmediadiaria": col_stats(stocks_raw, "liquidezmediadiaria"),
+                "liq_corrente": col_stats(stocks_raw, "liq_corrente"),
+                "div_liq_ebitda": col_stats(stocks_raw, "div_liq_ebitda"),
+                "roe": col_stats(stocks_raw, "roe"),
+                "margem_liquida": col_stats(stocks_raw, "margem_liquida"),
+            },
+            "fiis": {
+                "price": col_stats(fiis_raw, "price"),
+                "dy": col_stats(fiis_raw, "dy"),
+                "pvp": col_stats(fiis_raw, "pvp"),
+                "liquidezmediadiaria": col_stats(fiis_raw, "liquidezmediadiaria"),
+            },
+        })
+    except Exception as e:
+        return _json_response({"error": str(e)})
+
+
 @router.get("/api/recommend")
 async def recommend(
     budget: float = 50.0,
@@ -385,6 +428,7 @@ async def recommend(
 
         # Stocks (BR)
         stocks_raw = db.get_stocks(market="BR") or []
+        logger.info(f"[scope] Raw stocks from DB: {len(stocks_raw)}")
         if stocks_raw:
             df_raw = pd.DataFrame(stocks_raw)
             if yolo:
@@ -396,6 +440,7 @@ async def recommend(
 
         # FIIs
         fiis_raw = db.get_fiis() or []
+        logger.info(f"[scope] Raw FIIs from DB: {len(fiis_raw)}")
         if fiis_raw:
             df_raw = pd.DataFrame(fiis_raw)
             if yolo:

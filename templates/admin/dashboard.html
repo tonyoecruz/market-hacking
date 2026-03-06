@@ -743,9 +743,9 @@
                             </select>
                         </div>
                         <div class="flex items-end space-x-2">
-                            <button onclick="autoGenerateStyle()"
+                            <button onclick="autoGenerateAllForm()"
                                 class="px-4 py-3 bg-secondary/20 text-secondary font-semibold rounded-lg hover:bg-secondary/30 transition-all">
-                                Auto-Gerar Estilo (IA)
+                                🤖 Auto-Gerar Tudo com IA
                             </button>
                             <button onclick="addInvestor()"
                                 class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all">
@@ -753,18 +753,26 @@
                             </button>
                         </div>
                     </div>
-                    <div class="mb-6">
+                    <div class="mb-4">
                         <label class="block text-gray-300 text-sm font-semibold mb-2">Style Prompt (Instrucao
                             IA)</label>
                         <textarea id="inv-style-prompt" rows="4"
                             class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
                             placeholder="Atue como [nome do investidor]... descreva seu estilo de investimento..."></textarea>
                     </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-300 text-sm font-semibold mb-2">📚 Fontes de Informação</label>
+                        <textarea id="inv-sources" rows="4"
+                            class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                            placeholder="- [Livro] The Intelligent Investor...
+- [Carta Anual] Berkshire Hathaway Letters..."></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Fontes pesquisadas pela IA que embasam o perfil deste
+                            investidor.</p>
+                    </div>
                     <div id="investors-list">
                         <p class="text-gray-500">Carregando investidores...</p>
                     </div>
                 </div>
-            </div>
 
         </main>
     </div>
@@ -825,16 +833,38 @@
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <label class="block text-gray-300 text-sm font-semibold">Style Prompt (Instrução IA)</label>
-                    <button onclick="autoGenerateStyleInModal()"
-                        class="px-3 py-1.5 bg-secondary/20 text-secondary text-xs font-semibold rounded-lg hover:bg-secondary/30 transition-all">
-                        🤖 Auto-Gerar com IA
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="autoGenerateInModal('style_prompt')"
+                            class="px-3 py-1.5 bg-secondary/20 text-secondary text-xs font-semibold rounded-lg hover:bg-secondary/30 transition-all">
+                            🤖 Gerar Style
+                        </button>
+                        <button onclick="autoGenerateAllModal()"
+                            class="px-3 py-1.5 bg-primary/20 text-primary text-xs font-semibold rounded-lg hover:bg-primary/30 transition-all">
+                            ✨ Gerar Tudo com IA
+                        </button>
+                    </div>
                 </div>
-                <textarea id="edit-inv-style-prompt" rows="10"
+                <textarea id="edit-inv-style-prompt" rows="8"
                     class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary font-mono text-sm leading-relaxed"
                     placeholder="Atue como [nome do investidor]... descreva seu estilo de investimento..."></textarea>
                 <p class="text-xs text-gray-500 mt-1">Este é o prompt completo enviado à IA durante as análises. Quanto
                     mais detalhado, melhor a qualidade da análise.</p>
+            </div>
+
+            <!-- Sources -->
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-gray-300 text-sm font-semibold">📚 Fontes de Informação</label>
+                    <button onclick="autoGenerateInModal('sources')"
+                        class="px-3 py-1.5 bg-secondary/20 text-secondary text-xs font-semibold rounded-lg hover:bg-secondary/30 transition-all">
+                        🔍 Gerar Fontes com IA
+                    </button>
+                </div>
+                <textarea id="edit-inv-sources" rows="6"
+                    class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary text-sm leading-relaxed"
+                    placeholder="- [Livro] The Intelligent Investor (Benjamin Graham)&#10;- [Carta Anual] Berkshire Hathaway Letters..."></textarea>
+                <p class="text-xs text-gray-500 mt-1">Fontes pesquisadas pela IA que embasam o perfil deste investidor
+                    (livros, entrevistas, cartas, etc.).</p>
             </div>
 
             <!-- Actions -->
@@ -1577,11 +1607,12 @@
         const description = document.getElementById('inv-description').value.trim();
         const stylePrompt = document.getElementById('inv-style-prompt').value.trim();
         const voiceId = document.getElementById('inv-voice').value;
+        const sources = document.getElementById('inv-sources').value.trim();
         if (!name) { alert('Nome obrigatorio'); return; }
         try {
             const response = await fetch('/admin/api/investors', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ name, description, style_prompt: stylePrompt, voice_id: voiceId })
+                body: JSON.stringify({ name, description, style_prompt: stylePrompt, voice_id: voiceId, sources })
             });
             if (handleAuthError(response)) return;
             const data = await response.json();
@@ -1589,10 +1620,39 @@
                 document.getElementById('inv-name').value = '';
                 document.getElementById('inv-description').value = '';
                 document.getElementById('inv-style-prompt').value = '';
+                document.getElementById('inv-sources').value = '';
                 loadInvestorsList();
             } else { alert(data.message || 'Erro ao adicionar'); }
         } catch (e) { alert('Erro ao adicionar investidor'); }
     }
+
+    async function autoGenerateAllForm() {
+        const name = document.getElementById('inv-name').value.trim();
+        if (!name) { alert('Preencha o nome do investidor primeiro'); return; }
+        const styleEl = document.getElementById('inv-style-prompt');
+        const descEl = document.getElementById('inv-description');
+        const sourcesEl = document.getElementById('inv-sources');
+        styleEl.value = '⏳ Gerando análise completa com IA... aguarde.';
+        descEl.value = '';
+        sourcesEl.value = '';
+        try {
+            const response = await fetch('/admin/api/investors/generate-full', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ name, field: 'all' })
+            });
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+            if (data.status === 'success' || data.status === 'partial') {
+                if (data.description) descEl.value = data.description;
+                if (data.style_prompt) styleEl.value = data.style_prompt;
+                if (data.sources) sourcesEl.value = data.sources;
+            } else { styleEl.value = ''; alert(data.message || 'Erro ao gerar'); }
+        } catch (e) { styleEl.value = ''; alert('Erro ao gerar análise com IA'); }
+    }
+
+    // Legacy: kept for backward compat
+    async function autoGenerateStyle() { return autoGenerateAllForm(); }
+
 
     async function removeInvestor(id) {
         if (!confirm('Remover este investidor?')) return;
@@ -1636,6 +1696,7 @@
             document.getElementById('edit-inv-name').value = inv.name || '';
             document.getElementById('edit-inv-description').value = inv.description || '';
             document.getElementById('edit-inv-style-prompt').value = inv.style_prompt || '';
+            document.getElementById('edit-inv-sources').value = inv.sources || '';
             document.getElementById('edit-inv-voice').value = inv.voice_id || 'pt-BR-AntonioNeural';
 
             const addedAt = inv.added_at ? new Date(inv.added_at).toLocaleDateString('pt-BR') : 'N/A';
@@ -1660,6 +1721,7 @@
         const description = document.getElementById('edit-inv-description').value.trim();
         const stylePrompt = document.getElementById('edit-inv-style-prompt').value.trim();
         const voiceId = document.getElementById('edit-inv-voice').value;
+        const sources = document.getElementById('edit-inv-sources').value.trim();
 
         if (!name) { alert('Nome é obrigatório'); return; }
 
@@ -1676,7 +1738,7 @@
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ name, description, style_prompt: stylePrompt, voice_id: voiceId })
+                body: JSON.stringify({ name, description, style_prompt: stylePrompt, voice_id: voiceId, sources })
             });
             if (handleAuthError(response)) return;
             const data = await response.json();
@@ -1697,34 +1759,57 @@
         }
     }
 
-    async function autoGenerateStyleInModal() {
+    // Generate a specific field in the edit modal using AI
+    async function autoGenerateInModal(field) {
         const name = document.getElementById('edit-inv-name').value.trim();
         if (!name) { alert('Preencha o nome do investidor primeiro'); return; }
-        const textarea = document.getElementById('edit-inv-style-prompt');
-        textarea.value = '⏳ Gerando análise profunda com IA... aguarde.';
+
+        const targetId = field === 'style_prompt' ? 'edit-inv-style-prompt' : 'edit-inv-sources';
+        const textarea = document.getElementById(targetId);
+        const original = textarea.value;
+        textarea.value = '⏳ Gerando com IA... aguarde.';
         textarea.disabled = true;
         try {
-            const response = await fetch('/admin/api/investors/generate-style', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ name })
+            const response = await fetch('/admin/api/investors/generate-full', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ name, field })
             });
             if (handleAuthError(response)) return;
             const data = await response.json();
             if (data.status === 'success') {
-                textarea.value = data.style_prompt;
-            } else {
-                textarea.value = '';
-                alert(data.message || 'Erro ao gerar estilo');
-            }
-        } catch (e) {
-            textarea.value = '';
-            alert('Erro ao gerar estilo com IA');
-        } finally {
-            textarea.disabled = false;
-        }
+                textarea.value = data.value || '';
+            } else { textarea.value = original; alert(data.message || 'Erro ao gerar'); }
+        } catch (e) { textarea.value = original; alert('Erro ao gerar com IA'); }
+        finally { textarea.disabled = false; }
     }
+
+    // Generate ALL fields (description + style_prompt + sources) in the edit modal
+    async function autoGenerateAllModal() {
+        const name = document.getElementById('edit-inv-name').value.trim();
+        if (!name) { alert('Preencha o nome do investidor primeiro'); return; }
+        const styleEl = document.getElementById('edit-inv-style-prompt');
+        const descEl = document.getElementById('edit-inv-description');
+        const sourcesEl = document.getElementById('edit-inv-sources');
+        styleEl.value = '⏳ Gerando análise completa com IA... aguarde (pode levar alguns segundos).';
+        styleEl.disabled = true; descEl.disabled = true; sourcesEl.disabled = true;
+        try {
+            const response = await fetch('/admin/api/investors/generate-full', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ name, field: 'all' })
+            });
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+            if (data.status === 'success' || data.status === 'partial') {
+                if (data.description) descEl.value = data.description;
+                if (data.style_prompt) styleEl.value = data.style_prompt;
+                if (data.sources) sourcesEl.value = data.sources;
+            } else { styleEl.value = ''; alert(data.message || 'Erro ao gerar'); }
+        } catch (e) { styleEl.value = ''; alert('Erro ao gerar análise com IA'); }
+        finally { styleEl.disabled = false; descEl.disabled = false; sourcesEl.disabled = false; }
+    }
+
+    // Legacy kept for any existing calls
+    async function autoGenerateStyleInModal() { return autoGenerateInModal('style_prompt'); }
 
     // Close modal when clicking outside
     document.getElementById('investor-edit-modal').addEventListener('click', function (e) {
