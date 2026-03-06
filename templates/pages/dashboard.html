@@ -244,6 +244,21 @@
                         <input type="date" id="date-to" class="filter-date" onchange="loadAnalytics()">
                     </div>
 
+                    <!-- Investor Selector -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-400 text-sm whitespace-nowrap">🧠 Analisar como:</span>
+                        <select id="investor-selector-dashboard" onchange="saveInvestorSelectionDashboard()"
+                            class="filter-select text-sm min-w-[180px] max-w-[240px]">
+                            <option value="">Nenhum (padrão)</option>
+                        </select>
+                        <div id="investor-badge-dashboard"
+                            class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                            style="background: rgba(0,255,157,0.12); border: 1px solid rgba(0,255,157,0.3); color: #00FF9D;">
+                            <span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+                            <span id="investor-badge-name-dashboard"></span>
+                        </div>
+                    </div>
+
                     <!-- Refresh Button -->
                     <button onclick="loadAnalytics()" class="filter-btn" title="Atualizar">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1012,6 +1027,74 @@
     }
 
     // ===================== INIT =====================
-    window.addEventListener('DOMContentLoaded', loadAnalytics);
+    window.addEventListener('DOMContentLoaded', () => {
+        loadAnalytics();
+        loadInvestorsDashboard();
+    });
+
+    // ===================== INVESTOR SELECTOR =====================
+    async function loadInvestorsDashboard() {
+        try {
+            const resp = await fetch('/api/investors');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const select = document.getElementById('investor-selector-dashboard');
+            const saved = localStorage.getItem('investor_persona');
+
+            if (data.investors && data.investors.length > 0) {
+                data.investors.forEach(inv => {
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify(inv);
+                    opt.textContent = inv.name + (inv.description ? ' — ' + inv.description : '');
+                    select.appendChild(opt);
+                });
+
+                // Restore saved selection
+                if (saved) {
+                    try {
+                        const savedObj = JSON.parse(saved);
+                        for (const opt of select.options) {
+                            if (opt.value) {
+                                const obj = JSON.parse(opt.value);
+                                if (obj.id === savedObj.id) {
+                                    select.value = opt.value;
+                                    updateInvestorBadgeDashboard(savedObj.name);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (e) { }
+                }
+            }
+        } catch (e) {
+            console.error('[Dashboard] Error loading investors:', e);
+        }
+    }
+
+    function saveInvestorSelectionDashboard() {
+        const select = document.getElementById('investor-selector-dashboard');
+        const val = select.value;
+        if (val) {
+            const inv = JSON.parse(val);
+            localStorage.setItem('investor_persona', JSON.stringify(inv));
+            updateInvestorBadgeDashboard(inv.name);
+        } else {
+            localStorage.removeItem('investor_persona');
+            updateInvestorBadgeDashboard(null);
+        }
+    }
+
+    function updateInvestorBadgeDashboard(name) {
+        const badge = document.getElementById('investor-badge-dashboard');
+        const nameEl = document.getElementById('investor-badge-name-dashboard');
+        if (name) {
+            nameEl.textContent = name;
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+        } else {
+            badge.classList.add('hidden');
+            badge.classList.remove('flex');
+        }
+    }
 </script>
 {% endblock %}
