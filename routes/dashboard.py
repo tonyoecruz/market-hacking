@@ -154,13 +154,13 @@ async def get_analytics(
         wallet_invested[wname] += invested
         wallet_current[wname] += current_value
 
-        # Monthly timeline (by created_at)
+        # Daily timeline (by created_at)
         created = asset.get("created_at", "")
         if created:
             try:
-                month_key = created[:7]  # "YYYY-MM"
-                monthly_data[month_key]["invested"] += invested
-                monthly_data[month_key]["current"] += current_value
+                day_key = created[:10]  # "YYYY-MM-DD"
+                monthly_data[day_key]["invested"] += invested
+                monthly_data[day_key]["current"] += current_value
             except (IndexError, TypeError):
                 pass
 
@@ -182,17 +182,36 @@ async def get_analytics(
     assets_detail.sort(key=lambda x: x["current_value"], reverse=True)
 
     # 6. Build evolucao patrimonial (cumulative timeline)
-    sorted_months = sorted(monthly_data.keys())
+    sorted_days = sorted(monthly_data.keys())
+    
+    # Auto-aggregate to month if > 60 days
+    aggregate_by_month = len(sorted_days) > 60
+    
+    timeline_data = defaultdict(lambda: {"invested": 0.0, "current": 0.0})
+    for day in sorted_days:
+        k = day[:7] if aggregate_by_month else day
+        timeline_data[k]["invested"] += monthly_data[day]["invested"]
+        timeline_data[k]["current"] += monthly_data[day]["current"]
+
+    sorted_keys = sorted(timeline_data.keys())
     cumulative_invested = 0.0
     cumulative_current = 0.0
     evolucao_labels = []
     evolucao_aporte = []
     evolucao_valor = []
 
-    for month in sorted_months:
-        cumulative_invested += monthly_data[month]["invested"]
-        cumulative_current += monthly_data[month]["current"]
-        evolucao_labels.append(month)
+    for k in sorted_keys:
+        cumulative_invested += timeline_data[k]["invested"]
+        cumulative_current += timeline_data[k]["current"]
+        
+        # Format label if daily (BR format DD/MM/YYYY)
+        if len(k) == 10:
+            parts = k.split("-")
+            label = f"{parts[2]}/{parts[1]}"
+        else:
+            label = k # "YYYY-MM"
+            
+        evolucao_labels.append(label)
         evolucao_aporte.append(round(cumulative_invested, 2))
         evolucao_valor.append(round(cumulative_current, 2))
 

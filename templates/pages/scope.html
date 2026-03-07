@@ -7,36 +7,84 @@
     .scope-glow {
         box-shadow: 0 0 30px rgba(0, 255, 157, 0.08);
     }
-    .medal-1 { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); }
-    .medal-2 { background: linear-gradient(135deg, #C0C0C0 0%, #A0A0A0 100%); }
-    .medal-3 { background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%); }
-    .medal-4, .medal-5 { background: linear-gradient(135deg, #374151 0%, #1f2937 100%); }
+
+    .medal-1 {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    }
+
+    .medal-2 {
+        background: linear-gradient(135deg, #C0C0C0 0%, #A0A0A0 100%);
+    }
+
+    .medal-3 {
+        background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+    }
+
+    .medal-4,
+    .medal-5 {
+        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+    }
 
     .candidate-card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+
     .candidate-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 30px rgba(0, 255, 157, 0.15);
     }
+
     .candidate-card.winner {
         border-color: #00FF9D;
-        box-shadow: 0 0 0 1px rgba(0,255,157,0.4), 0 8px 40px rgba(0,255,157,0.12);
+        box-shadow: 0 0 0 1px rgba(0, 255, 157, 0.4), 0 8px 40px rgba(0, 255, 157, 0.12);
     }
 
     @keyframes pulse-green {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.6; }
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.6;
+        }
     }
-    .pulse-green { animation: pulse-green 2s ease-in-out infinite; }
 
-    @keyframes count-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    .count-anim { animation: count-up 0.5s ease forwards; }
+    .pulse-green {
+        animation: pulse-green 2s ease-in-out infinite;
+    }
 
-    .bar-fill { transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    @keyframes count-up {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
 
-    .streak-flame { font-size: 1.5rem; filter: drop-shadow(0 0 6px #ff6b00); }
-    .habit-ring { stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 1.5s ease; }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .count-anim {
+        animation: count-up 0.5s ease forwards;
+    }
+
+    .bar-fill {
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .streak-flame {
+        font-size: 1.5rem;
+        filter: drop-shadow(0 0 6px #ff6b00);
+    }
+
+    .habit-ring {
+        stroke-dasharray: 283;
+        stroke-dashoffset: 283;
+        transition: stroke-dashoffset 1.5s ease;
+    }
 </style>
 {% endblock %}
 
@@ -52,7 +100,7 @@
                 <div class="p-2 bg-primary/10 rounded-lg">
                     <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
                 </div>
                 <div>
@@ -61,14 +109,16 @@
                 </div>
             </div>
             <div class="flex items-center gap-3">
-                <span id="streak-badge" class="hidden items-center gap-2 px-3 py-1.5 bg-orange-500/10 border border-orange-500/30 rounded-lg text-sm text-orange-400 font-semibold">
+                <span id="streak-badge"
+                    class="hidden items-center gap-2 px-3 py-1.5 bg-orange-500/10 border border-orange-500/30 rounded-lg text-sm text-orange-400 font-semibold">
                     <span class="streak-flame">🔥</span>
                     <span id="streak-count">0</span> dias úteis seguidos
                 </span>
                 <button onclick="runRecommendation()" id="btn-recommend"
                     class="px-5 py-2 bg-primary text-dark-900 font-bold rounded-lg hover:bg-primary/90 transition-all flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     Encontrar hoje
                 </button>
@@ -82,14 +132,13 @@
                 <div class="flex flex-col lg:flex-row gap-4">
                     <!-- LEFT: Budget input + presets -->
                     <div class="flex-1">
-                        <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">Valor para analise</p>
+                        <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">Valor para analise
+                        </p>
                         <div class="relative">
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-bold">R$</span>
-                            <input type="number" id="budget-input" value="50" min="1" step="1"
-                                placeholder="50"
+                            <input type="number" id="budget-input" value="50" min="1" step="1" placeholder="50"
                                 class="w-full pl-10 pr-4 py-3 bg-dark-700 border border-gray-600 rounded-xl text-white text-xl font-bold
-                                       focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
-                                onkeydown="if(event.key==='Enter') runRecommendation()">
+                                       focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" onkeydown="if(event.key==='Enter') runRecommendation()">
                         </div>
                         <div class="flex flex-wrap gap-1.5 mt-2">
                             {% for v in [10, 20, 50, 100, 200, 500, 1000] %}
@@ -124,8 +173,8 @@
                         <div class="bg-dark-700 rounded-xl p-3">
                             <p class="text-xs text-gray-500 font-semibold mb-2 uppercase">Alocacao</p>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-semibold" id="lbl-alloc-unico"
-                                    style="color: #00FF9D;">Ativo Unico</span>
+                                <span class="text-xs font-semibold" id="lbl-alloc-unico" style="color: #00FF9D;">Ativo
+                                    Unico</span>
                                 <button id="alloc-toggle-btn" onclick="toggleAllocation()"
                                     class="relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none bg-primary/30"
                                     aria-label="Alternar alocacao">
@@ -133,7 +182,8 @@
                                         class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 text-xs flex items-center justify-center">
                                     </span>
                                 </button>
-                                <span class="text-xs font-semibold text-gray-500" id="lbl-alloc-mix">Mix de Ativos</span>
+                                <span class="text-xs font-semibold text-gray-500" id="lbl-alloc-mix">Mix de
+                                    Ativos</span>
                             </div>
                         </div>
                     </div>
@@ -169,12 +219,14 @@
 
             <!-- ── EMPTY STATE ─────────────────────────────────────────────── -->
             <div id="empty-state" class="text-center py-16 text-gray-500">
-                <svg class="w-20 h-20 mx-auto mb-4 opacity-20 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-20 h-20 mx-auto mb-4 opacity-20 text-primary" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
                 <p class="text-xl font-semibold text-gray-400">Pronto para analisar o mercado de hoje?</p>
-                <p class="text-sm mt-2">Digite seu valor acima e clique em <strong class="text-primary">Encontrar hoje</strong></p>
+                <p class="text-sm mt-2">Digite seu valor acima e clique em <strong class="text-primary">Encontrar
+                        hoje</strong></p>
             </div>
 
             <!-- ── ERROR STATE ─────────────────────────────────────────────── -->
@@ -200,9 +252,11 @@
                 <!-- ── PROJECTION PANEL ────────────────────────────────────── -->
                 <div id="projection-panel" class="hidden bg-dark-800 border border-gray-700 rounded-2xl p-6">
                     <h3 class="text-base font-bold text-white mb-1">
-                        Simulacao: aportes diarios de <span class="text-primary" id="proj-budget-lbl">R$ 50</span> neste ativo
+                        Simulacao: aportes diarios de <span class="text-primary" id="proj-budget-lbl">R$ 50</span> neste
+                        ativo
                     </h3>
-                    <p class="text-xs text-gray-500 mb-5">Simulando compras diarias de <span id="proj-shares-day">1</span> cota(s) a <span id="proj-price-lbl">—</span></p>
+                    <p class="text-xs text-gray-500 mb-5">Simulando compras diarias de <span
+                            id="proj-shares-day">1</span> cota(s) a <span id="proj-price-lbl">—</span></p>
 
                     <!-- Investment summary -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -226,24 +280,30 @@
 
                     <!-- Detailed breakdown -->
                     <div class="bg-dark-700 rounded-xl p-4 mb-4">
-                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Como funciona o crescimento</p>
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Como funciona o
+                            crescimento</p>
                         <div class="space-y-3">
                             <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-400">Em <strong class="text-white">30 dias</strong> (1 mes)</span>
+                                <span class="text-gray-400">Em <strong class="text-white">30 dias</strong> (1
+                                    mes)</span>
                                 <div class="text-right">
                                     <span class="text-gray-500" id="proj-detail-inv-30d">investido: —</span>
-                                    <span class="text-primary font-bold ml-3" id="proj-detail-div-30d">dividendos: —</span>
+                                    <span class="text-primary font-bold ml-3" id="proj-detail-div-30d">dividendos:
+                                        —</span>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-400">Em <strong class="text-white">180 dias</strong> (6 meses)</span>
+                                <span class="text-gray-400">Em <strong class="text-white">180 dias</strong> (6
+                                    meses)</span>
                                 <div class="text-right">
                                     <span class="text-gray-500" id="proj-detail-inv-180d">investido: —</span>
-                                    <span class="text-secondary font-bold ml-3" id="proj-detail-div-180d">dividendos: —</span>
+                                    <span class="text-secondary font-bold ml-3" id="proj-detail-div-180d">dividendos:
+                                        —</span>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-400">Em <strong class="text-white">365 dias</strong> (1 ano)</span>
+                                <span class="text-gray-400">Em <strong class="text-white">365 dias</strong> (1
+                                    ano)</span>
                                 <div class="text-right">
                                     <span class="text-gray-500" id="proj-detail-inv-1y">investido: —</span>
                                     <span class="text-white font-bold ml-3" id="proj-detail-div-1y">dividendos: —</span>
@@ -254,7 +314,8 @@
 
                     <!-- Visual bars -->
                     <div class="space-y-2">
-                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Dividendos acumulados ao longo do tempo</p>
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Dividendos acumulados ao
+                            longo do tempo</p>
                         <div class="flex items-center gap-3">
                             <span class="text-xs text-gray-500 w-14">30d</span>
                             <div class="flex-1 bg-dark-700 rounded-full h-3">
@@ -265,21 +326,25 @@
                         <div class="flex items-center gap-3">
                             <span class="text-xs text-gray-500 w-14">180d</span>
                             <div class="flex-1 bg-dark-700 rounded-full h-3">
-                                <div id="bar-180d" class="bar-fill h-3 rounded-full bg-secondary" style="width:0%"></div>
+                                <div id="bar-180d" class="bar-fill h-3 rounded-full bg-secondary" style="width:0%">
+                                </div>
                             </div>
                             <span class="text-xs text-secondary font-bold w-20 text-right" id="bar-180d-lbl">R$ —</span>
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="text-xs text-gray-500 w-14">1 ano</span>
                             <div class="flex-1 bg-dark-700 rounded-full h-3">
-                                <div id="bar-1y" class="bar-fill h-3 rounded-full bg-gradient-to-r from-primary to-secondary" style="width:0%"></div>
+                                <div id="bar-1y"
+                                    class="bar-fill h-3 rounded-full bg-gradient-to-r from-primary to-secondary"
+                                    style="width:0%"></div>
                             </div>
                             <span class="text-xs text-white font-bold w-20 text-right" id="bar-1y-lbl">R$ —</span>
                         </div>
                     </div>
 
                     <p class="text-xs text-gray-600 mt-4">
-                        * Projecao simplificada baseada no DY historico atual. Dividendos sao estimativas e podem variar.
+                        * Projecao simplificada baseada no DY historico atual. Dividendos sao estimativas e podem
+                        variar.
                         Rendimentos passados nao garantem resultados futuros. Impostos nao estao considerados.
                     </p>
                 </div>
@@ -291,11 +356,14 @@
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h3 class="text-base font-bold text-white">Projecao de Rendimentos do Mix</h3>
-                            <p class="text-xs text-gray-500">Estimativa de dividendos acumulados e patrimonio ao longo de 12 meses</p>
+                            <p class="text-xs text-gray-500">Estimativa de dividendos acumulados e patrimonio ao longo
+                                de 12 meses</p>
                         </div>
                         <div class="flex items-center gap-3 text-xs">
-                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-primary inline-block"></span> Valor investido</span>
-                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-yellow-400 inline-block"></span> Dividendos acum.</span>
+                            <span class="flex items-center gap-1"><span
+                                    class="w-3 h-3 rounded bg-primary inline-block"></span> Valor investido</span>
+                            <span class="flex items-center gap-1"><span
+                                    class="w-3 h-3 rounded bg-yellow-400 inline-block"></span> Dividendos acum.</span>
                         </div>
                     </div>
                     <div style="height: 260px;">
@@ -317,7 +385,8 @@
                         </div>
                     </div>
                     <p class="text-xs text-gray-600 mt-3">
-                        * Projecao simplificada baseada no DY historico atual. Dividendos e valorizacao sao estimativas e podem variar.
+                        * Projecao simplificada baseada no DY historico atual. Dividendos e valorizacao sao estimativas
+                        e podem variar.
                         Rendimentos passados nao garantem resultados futuros. Impostos nao considerados.
                     </p>
                 </div>
@@ -332,217 +401,217 @@
 
 <!-- Chart.js already in base.html -->
 <script>
-let _currentWinner = null;
-let _budget = 50;
-let _yoloMode = false;
-let _freqMode = 'diario';   // 'diario' | 'mensal'
-let _allocMode = 'unico';   // 'unico' | 'mix'
+    let _currentWinner = null;
+    let _budget = 50;
+    let _yoloMode = false;
+    let _freqMode = 'diario';   // 'diario' | 'mensal'
+    let _allocMode = 'unico';   // 'unico' | 'mix'
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function fmt(v, decimals = 2) {
-    if (v == null || isNaN(v)) return '—';
-    return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-function fmtPct(v) {
-    if (v == null || isNaN(v)) return '—';
-    return Number(v).toFixed(2) + '%';
-}
-
-function setBudget(v) {
-    document.getElementById('budget-input').value = v;
-    runRecommendation();
-}
-
-// ── Toggle helpers ───────────────────────────────────────────────────────────
-function _updateToggle(btnId, knobId, lblLeftId, lblRightId, isRight, colorOn, colorOff) {
-    const knob = document.getElementById(knobId);
-    const lblL = document.getElementById(lblLeftId);
-    const lblR = document.getElementById(lblRightId);
-    const btn = document.getElementById(btnId);
-    if (isRight) {
-        knob.style.transform = 'translateX(1.5rem)';
-        lblL.style.color = '#6b7280';
-        lblR.style.color = colorOn;
-        btn.style.background = colorOn + '40';
-    } else {
-        knob.style.transform = 'translateX(0)';
-        lblL.style.color = colorOn;
-        lblR.style.color = '#6b7280';
-        btn.style.background = colorOff || (colorOn + '40');
+    // ── Helpers ──────────────────────────────────────────────────────────────────
+    function fmt(v, decimals = 2) {
+        if (v == null || isNaN(v)) return '—';
+        return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
     }
-}
-
-// ── Frequency Toggle ─────────────────────────────────────────────────────────
-function toggleFrequency() {
-    _freqMode = (_freqMode === 'diario') ? 'mensal' : 'diario';
-    _updateToggle('freq-toggle-btn', 'freq-toggle-knob', 'lbl-freq-diario', 'lbl-freq-mensal',
-        _freqMode === 'mensal', '#00FF9D', 'rgba(0,255,157,0.25)');
-
-    // Auto-set allocation default based on frequency
-    if (_freqMode === 'mensal' && _allocMode === 'unico') {
-        _allocMode = 'mix';
-        _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
-            true, '#00FF9D', 'rgba(0,255,157,0.25)');
-    } else if (_freqMode === 'diario' && _allocMode === 'mix') {
-        _allocMode = 'unico';
-        _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
-            false, '#00FF9D', 'rgba(0,255,157,0.25)');
+    function fmtPct(v) {
+        if (v == null || isNaN(v)) return '—';
+        return Number(v).toFixed(2) + '%';
     }
 
-    if (!document.getElementById('results-area').classList.contains('hidden')) runRecommendation();
-}
-
-// ── Allocation Toggle ────────────────────────────────────────────────────────
-function toggleAllocation() {
-    _allocMode = (_allocMode === 'unico') ? 'mix' : 'unico';
-    _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
-        _allocMode === 'mix', '#00FF9D', 'rgba(0,255,157,0.25)');
-
-    if (!document.getElementById('results-area').classList.contains('hidden')) runRecommendation();
-}
-
-// ── YOLO Toggle ──────────────────────────────────────────────────────────────
-function toggleYolo() {
-    _yoloMode = !_yoloMode;
-
-    const btn = document.getElementById('yolo-toggle-btn');
-    const knob = document.getElementById('yolo-toggle-knob');
-    const desc = document.getElementById('yolo-desc');
-    const lblSafe = document.getElementById('lbl-safe');
-    const lblYolo = document.getElementById('lbl-yolo');
-
-    if (_yoloMode) {
-        btn.style.background = 'linear-gradient(135deg, #dc2626, #991b1b)';
-        knob.style.transform = 'translateX(1.5rem)';
-        knob.textContent = '🔪';
-        desc.textContent = 'ALTO RISCO! Sem filtros de saude financeira. Apenas dividendos.';
-        desc.classList.add('text-red-400/70');
-        desc.classList.remove('text-gray-500');
-        lblSafe.style.color = '#6b7280';
-        lblYolo.style.color = '#ef4444';
-    } else {
-        btn.style.background = '#4b5563';
-        knob.style.transform = 'translateX(0)';
-        knob.textContent = '🛡️';
-        desc.textContent = 'Apenas ativos saudaveis, lucrativos e com boa liquidez.';
-        desc.classList.remove('text-red-400/70');
-        desc.classList.add('text-gray-500');
-        lblSafe.style.color = '#9ca3af';
-        lblYolo.style.color = '#6b7280';
-    }
-
-    // Auto-refresh if there are results visible
-    if (!document.getElementById('results-area').classList.contains('hidden')) {
+    function setBudget(v) {
+        document.getElementById('budget-input').value = v;
         runRecommendation();
     }
-}
 
-// ── Streak (localStorage) — ignores weekends (market closed) ─────────────────
-function updateStreak() {
-    const now = new Date();
-    const dow = now.getDay(); // 0=Sun, 6=Sat
-    if (dow === 0 || dow === 6) return; // Weekend — market closed, don't count
-
-    const today = now.toISOString().split('T')[0];
-    const data = JSON.parse(localStorage.getItem('scope_streak') || '{"last":"","count":0}');
-
-    // Find previous business day (skip weekends)
-    let prev = new Date(now);
-    do { prev.setDate(prev.getDate() - 1); } while (prev.getDay() === 0 || prev.getDay() === 6);
-    const prevBizDay = prev.toISOString().split('T')[0];
-
-    if (data.last === today) {
-        // Already counted today
-    } else if (data.last === prevBizDay) {
-        data.count += 1;
-        data.last = today;
-    } else {
-        data.count = 1;
-        data.last = today;
-    }
-    localStorage.setItem('scope_streak', JSON.stringify(data));
-
-    if (data.count >= 2) {
-        const badge = document.getElementById('streak-badge');
-        badge.classList.remove('hidden');
-        badge.classList.add('flex');
-        document.getElementById('streak-count').textContent = data.count;
-    }
-}
-
-// ── Medal HTML ───────────────────────────────────────────────────────────────
-function medalBadge(rank) {
-    const labels = ['', '🥇', '🥈', '🥉', '4º', '5º'];
-    const classes = ['', 'medal-1', 'medal-2', 'medal-3', 'medal-4', 'medal-5'];
-    return `<span class="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm ${classes[rank] || 'medal-5'}">${labels[rank] || rank}</span>`;
-}
-
-// ── Recommendation ───────────────────────────────────────────────────────────
-async function runRecommendation() {
-    _budget = parseFloat(document.getElementById('budget-input').value) || 50;
-
-    document.getElementById('empty-state').classList.add('hidden');
-    document.getElementById('error-state').classList.add('hidden');
-    document.getElementById('results-area').classList.add('hidden');
-    document.getElementById('projection-panel').classList.add('hidden');
-    document.getElementById('mix-projection-panel').classList.add('hidden');
-    removeInlineWalletForm();
-    document.getElementById('loading').classList.remove('hidden');
-
-    try {
-        const res = await fetch(`/scope/api/recommend?budget=${_budget}&yolo=${_yoloMode}&mode=${_allocMode}`);
-        const data = await res.json();
-        document.getElementById('loading').classList.add('hidden');
-
-        if (data.status === 'error') {
-            showError(data.message || 'Erro desconhecido.');
-            return;
-        }
-        if (data.status === 'empty' || !data.results?.length) {
-            showError(data.message || `Nenhum ativo disponível abaixo de R$ ${_budget.toFixed(2)}.`);
-            return;
-        }
-
-        if (data.mode === 'mix' && data.portfolio) {
-            renderMixPortfolio(data.portfolio, data.results, _budget);
+    // ── Toggle helpers ───────────────────────────────────────────────────────────
+    function _updateToggle(btnId, knobId, lblLeftId, lblRightId, isRight, colorOn, colorOff) {
+        const knob = document.getElementById(knobId);
+        const lblL = document.getElementById(lblLeftId);
+        const lblR = document.getElementById(lblRightId);
+        const btn = document.getElementById(btnId);
+        if (isRight) {
+            knob.style.transform = 'translateX(1.5rem)';
+            lblL.style.color = '#6b7280';
+            lblR.style.color = colorOn;
+            btn.style.background = colorOn + '40';
         } else {
-            renderResults(data.results, _budget);
+            knob.style.transform = 'translateX(0)';
+            lblL.style.color = colorOn;
+            lblR.style.color = '#6b7280';
+            btn.style.background = colorOff || (colorOn + '40');
         }
-        updateStreak();
-
-    } catch (e) {
-        document.getElementById('loading').classList.add('hidden');
-        showError('Falha de comunicação com o servidor.');
     }
-}
 
-function showError(msg) {
-    document.getElementById('error-msg').textContent = msg;
-    document.getElementById('error-state').classList.remove('hidden');
-}
+    // ── Frequency Toggle ─────────────────────────────────────────────────────────
+    function toggleFrequency() {
+        _freqMode = (_freqMode === 'diario') ? 'mensal' : 'diario';
+        _updateToggle('freq-toggle-btn', 'freq-toggle-knob', 'lbl-freq-diario', 'lbl-freq-mensal',
+            _freqMode === 'mensal', '#00FF9D', 'rgba(0,255,157,0.25)');
 
-// ── Render ────────────────────────────────────────────────────────────────────
-function renderResults(recs, budget) {
-    const list = document.getElementById('candidates-list');
-    list.innerHTML = '';
+        // Auto-set allocation default based on frequency
+        if (_freqMode === 'mensal' && _allocMode === 'unico') {
+            _allocMode = 'mix';
+            _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
+                true, '#00FF9D', 'rgba(0,255,157,0.25)');
+        } else if (_freqMode === 'diario' && _allocMode === 'mix') {
+            _allocMode = 'unico';
+            _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
+                false, '#00FF9D', 'rgba(0,255,157,0.25)');
+        }
 
-    recs.forEach((r, i) => {
-        const rank = i + 1;
-        const isWinner = i === 0;
-        const typeTag = r.asset_type === 'FII'
-            ? '<span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded font-semibold">FII</span>'
-            : '<span class="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded font-semibold">AÇÃO</span>';
+        if (!document.getElementById('results-area').classList.contains('hidden')) runRecommendation();
+    }
 
-        const reasonsHtml = (r.reasons || []).map(rs =>
-            `<li class="flex items-start gap-2 text-sm text-gray-300">
+    // ── Allocation Toggle ────────────────────────────────────────────────────────
+    function toggleAllocation() {
+        _allocMode = (_allocMode === 'unico') ? 'mix' : 'unico';
+        _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
+            _allocMode === 'mix', '#00FF9D', 'rgba(0,255,157,0.25)');
+
+        if (!document.getElementById('results-area').classList.contains('hidden')) runRecommendation();
+    }
+
+    // ── YOLO Toggle ──────────────────────────────────────────────────────────────
+    function toggleYolo() {
+        _yoloMode = !_yoloMode;
+
+        const btn = document.getElementById('yolo-toggle-btn');
+        const knob = document.getElementById('yolo-toggle-knob');
+        const desc = document.getElementById('yolo-desc');
+        const lblSafe = document.getElementById('lbl-safe');
+        const lblYolo = document.getElementById('lbl-yolo');
+
+        if (_yoloMode) {
+            btn.style.background = 'linear-gradient(135deg, #dc2626, #991b1b)';
+            knob.style.transform = 'translateX(1.5rem)';
+            knob.textContent = '🔪';
+            desc.textContent = 'ALTO RISCO! Sem filtros de saude financeira. Apenas dividendos.';
+            desc.classList.add('text-red-400/70');
+            desc.classList.remove('text-gray-500');
+            lblSafe.style.color = '#6b7280';
+            lblYolo.style.color = '#ef4444';
+        } else {
+            btn.style.background = '#4b5563';
+            knob.style.transform = 'translateX(0)';
+            knob.textContent = '🛡️';
+            desc.textContent = 'Apenas ativos saudaveis, lucrativos e com boa liquidez.';
+            desc.classList.remove('text-red-400/70');
+            desc.classList.add('text-gray-500');
+            lblSafe.style.color = '#9ca3af';
+            lblYolo.style.color = '#6b7280';
+        }
+
+        // Auto-refresh if there are results visible
+        if (!document.getElementById('results-area').classList.contains('hidden')) {
+            runRecommendation();
+        }
+    }
+
+    // ── Streak (localStorage) — ignores weekends (market closed) ─────────────────
+    function updateStreak() {
+        const now = new Date();
+        const dow = now.getDay(); // 0=Sun, 6=Sat
+        if (dow === 0 || dow === 6) return; // Weekend — market closed, don't count
+
+        const today = now.toISOString().split('T')[0];
+        const data = JSON.parse(localStorage.getItem('scope_streak') || '{"last":"","count":0}');
+
+        // Find previous business day (skip weekends)
+        let prev = new Date(now);
+        do { prev.setDate(prev.getDate() - 1); } while (prev.getDay() === 0 || prev.getDay() === 6);
+        const prevBizDay = prev.toISOString().split('T')[0];
+
+        if (data.last === today) {
+            // Already counted today
+        } else if (data.last === prevBizDay) {
+            data.count += 1;
+            data.last = today;
+        } else {
+            data.count = 1;
+            data.last = today;
+        }
+        localStorage.setItem('scope_streak', JSON.stringify(data));
+
+        if (data.count >= 2) {
+            const badge = document.getElementById('streak-badge');
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+            document.getElementById('streak-count').textContent = data.count;
+        }
+    }
+
+    // ── Medal HTML ───────────────────────────────────────────────────────────────
+    function medalBadge(rank) {
+        const labels = ['', '🥇', '🥈', '🥉', '4º', '5º'];
+        const classes = ['', 'medal-1', 'medal-2', 'medal-3', 'medal-4', 'medal-5'];
+        return `<span class="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm ${classes[rank] || 'medal-5'}">${labels[rank] || rank}</span>`;
+    }
+
+    // ── Recommendation ───────────────────────────────────────────────────────────
+    async function runRecommendation() {
+        _budget = parseFloat(document.getElementById('budget-input').value) || 50;
+
+        document.getElementById('empty-state').classList.add('hidden');
+        document.getElementById('error-state').classList.add('hidden');
+        document.getElementById('results-area').classList.add('hidden');
+        document.getElementById('projection-panel').classList.add('hidden');
+        document.getElementById('mix-projection-panel').classList.add('hidden');
+        removeInlineWalletForm();
+        document.getElementById('loading').classList.remove('hidden');
+
+        try {
+            const res = await fetch(`/scope/api/recommend?budget=${_budget}&yolo=${_yoloMode}&mode=${_allocMode}`);
+            const data = await res.json();
+            document.getElementById('loading').classList.add('hidden');
+
+            if (data.status === 'error') {
+                showError(data.message || 'Erro desconhecido.');
+                return;
+            }
+            if (data.status === 'empty' || !data.results?.length) {
+                showError(data.message || `Nenhum ativo disponível abaixo de R$ ${_budget.toFixed(2)}.`);
+                return;
+            }
+
+            if (data.mode === 'mix' && data.portfolio) {
+                renderMixPortfolio(data.portfolio, data.results, _budget);
+            } else {
+                renderResults(data.results, _budget);
+            }
+            updateStreak();
+
+        } catch (e) {
+            document.getElementById('loading').classList.add('hidden');
+            showError('Falha de comunicação com o servidor.');
+        }
+    }
+
+    function showError(msg) {
+        document.getElementById('error-msg').textContent = msg;
+        document.getElementById('error-state').classList.remove('hidden');
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────────
+    function renderResults(recs, budget) {
+        const list = document.getElementById('candidates-list');
+        list.innerHTML = '';
+
+        recs.forEach((r, i) => {
+            const rank = i + 1;
+            const isWinner = i === 0;
+            const typeTag = r.asset_type === 'FII'
+                ? '<span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded font-semibold">FII</span>'
+                : '<span class="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded font-semibold">AÇÃO</span>';
+
+            const reasonsHtml = (r.reasons || []).map(rs =>
+                `<li class="flex items-start gap-2 text-sm text-gray-300">
                 <svg class="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
                 ${rs}
             </li>`
-        ).join('');
+            ).join('');
 
-        const winnerBanner = isWinner ? (_yoloMode ? `
+            const winnerBanner = isWinner ? (_yoloMode ? `
             <div class="flex items-center gap-2 mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
                 <span class="text-red-400">💀</span>
                 <span class="text-red-400 font-bold text-sm">Maior dividendo identificado — SEM filtro de saude financeira</span>
@@ -552,10 +621,10 @@ function renderResults(recs, budget) {
                 <span class="text-primary font-bold text-sm">Melhor posicionado no ranking de saude financeira e dividendos ate R$ ${budget.toFixed(2)}</span>
             </div>`) : '';
 
-        // Determine analysis page URL based on asset type
-        const analysisUrl = r.asset_type === 'FII' ? '/fiis' : '/acoes';
+            // Determine analysis page URL based on asset type
+            const analysisUrl = r.asset_type === 'FII' ? '/fiis' : '/acoes';
 
-        const actionBtns = `
+            const actionBtns = `
             <div class="flex gap-2 mt-3">
                 <button onclick="prepareWallet(${JSON.stringify(r).replace(/"/g, '&quot;')})"
                     class="flex-1 py-2.5 ${isWinner ? 'bg-primary text-dark-900 font-bold' : 'bg-dark-700 border border-gray-600 text-gray-300 font-semibold hover:border-primary hover:text-primary'} rounded-lg transition text-sm">
@@ -570,9 +639,9 @@ function renderResults(recs, budget) {
                 </a>
             </div>`;
 
-        const card = document.createElement('div');
-        card.className = `candidate-card bg-dark-800 border ${isWinner ? 'winner border-primary/50' : 'border-gray-700'} rounded-2xl p-5`;
-        card.innerHTML = `
+            const card = document.createElement('div');
+            card.className = `candidate-card bg-dark-800 border ${isWinner ? 'winner border-primary/50' : 'border-gray-700'} rounded-2xl p-5`;
+            card.innerHTML = `
             ${winnerBanner}
             <div class="flex items-start gap-4">
                 ${medalBadge(rank)}
@@ -580,12 +649,11 @@ function renderResults(recs, budget) {
                     <div class="flex flex-wrap items-center gap-2 mb-1">
                         <span class="text-xl font-bold text-white">${r.ticker}</span>
                         ${typeTag}
-                        ${r.health_grade ? `<span class="px-2 py-0.5 rounded text-xs font-bold ${
-                            r.health_grade === 'A' ? 'bg-green-500/20 text-green-400' :
-                            r.health_grade === 'B' ? 'bg-blue-500/20 text-blue-400' :
-                            r.health_grade === 'C' ? 'bg-yellow-500/20 text-yellow-400' :
+                        ${r.health_grade ? `<span class="px-2 py-0.5 rounded text-xs font-bold ${r.health_grade === 'A' ? 'bg-green-500/20 text-green-400' :
+                    r.health_grade === 'B' ? 'bg-blue-500/20 text-blue-400' :
+                        r.health_grade === 'C' ? 'bg-yellow-500/20 text-yellow-400' :
                             'bg-red-500/20 text-red-400'
-                        }">Saude ${r.health_grade}</span>` : ''}
+                    }">Saude ${r.health_grade}</span>` : ''}
                         <span class="text-gray-400 text-sm truncate">${r.empresa || ''}</span>
                     </div>
 
@@ -601,9 +669,9 @@ function renderResults(recs, budget) {
                         ${r.pvp ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.pvp < 1 ? 'text-primary' : 'text-gray-300'}">P/VP ${r.pvp.toFixed(2)}</span>` : ''}
                         ${r.liq_corrente ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.liq_corrente >= 1.5 ? 'text-green-400' : 'text-gray-300'}">Liq.Corr ${r.liq_corrente.toFixed(1)}</span>` : ''}
                         ${r.div_liq_ebitda ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.div_liq_ebitda <= 2 ? 'text-green-400' : 'text-orange-400'}">Div/EBITDA ${r.div_liq_ebitda.toFixed(1)}x</span>` : ''}
-                        ${r.roe ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-secondary">ROE ${(r.roe*100).toFixed(0)}%</span>` : ''}
-                        ${r.roic ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-secondary">ROIC ${(r.roic*100).toFixed(0)}%</span>` : ''}
-                        ${r.margem ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.margem > 0 ? 'text-green-400' : 'text-red-400'}">Graham ${(r.margem*100).toFixed(0)}%</span>` : ''}
+                        ${r.roe ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-secondary">ROE ${(r.roe * 100).toFixed(0)}%</span>` : ''}
+                        ${r.roic ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold text-secondary">ROIC ${(r.roic * 100).toFixed(0)}%</span>` : ''}
+                        ${r.margem ? `<span class="px-3 py-1 bg-dark-700 rounded-full text-xs font-semibold ${r.margem > 0 ? 'text-green-400' : 'text-red-400'}">Graham ${(r.margem * 100).toFixed(0)}%</span>` : ''}
                     </div>
 
                     <!-- Technical reasons (top 2 candidates) -->
@@ -618,36 +686,36 @@ function renderResults(recs, budget) {
             </div>
             ${actionBtns}
         `;
-        list.appendChild(card);
-    });
+            list.appendChild(card);
+        });
 
-    // Subtitle
-    document.getElementById('results-subtitle').textContent = _yoloMode
-        ? `⚠️ FACA NA CAVEIRA — sem filtros de saude. Ordenado por dividendo bruto ate R$ ${budget.toFixed(2)}`
-        : `Ranqueados por indicadores de saude financeira + dividendos. Ate R$ ${budget.toFixed(2)} — analise antes de investir.`;
-    document.getElementById('results-count').textContent = `${recs.length} opções encontradas`;
+        // Subtitle
+        document.getElementById('results-subtitle').textContent = _yoloMode
+            ? `⚠️ FACA NA CAVEIRA — sem filtros de saude. Ordenado por dividendo bruto ate R$ ${budget.toFixed(2)}`
+            : `Ranqueados por indicadores de saude financeira + dividendos. Ate R$ ${budget.toFixed(2)} — analise antes de investir.`;
+        document.getElementById('results-count').textContent = `${recs.length} opções encontradas`;
 
-    document.getElementById('results-area').classList.remove('hidden');
+        document.getElementById('results-area').classList.remove('hidden');
 
-    // Render projection for winner
-    document.getElementById('mix-projection-panel').classList.add('hidden');
-    renderProjection(recs[0], budget);
-}
+        // Render projection for winner
+        document.getElementById('mix-projection-panel').classList.add('hidden');
+        renderProjection(recs[0], budget);
+    }
 
-// ── Mix Portfolio Render ──────────────────────────────────────────────────────
-function renderMixPortfolio(portfolio, allResults, budget) {
-    const list = document.getElementById('candidates-list');
-    list.innerHTML = '';
+    // ── Mix Portfolio Render ──────────────────────────────────────────────────────
+    function renderMixPortfolio(portfolio, allResults, budget) {
+        const list = document.getElementById('candidates-list');
+        list.innerHTML = '';
 
-    // Summary card
-    const totalAllocated = portfolio.reduce((s, p) => s + p.allocated, 0);
-    const totalShares = portfolio.reduce((s, p) => s + p.shares, 0);
-    const avgDY = portfolio.reduce((s, p) => s + (p.dy || 0) * (p.allocated / Math.max(totalAllocated, 1)), 0);
-    const remainder = budget - totalAllocated;
+        // Summary card
+        const totalAllocated = portfolio.reduce((s, p) => s + p.allocated, 0);
+        const totalShares = portfolio.reduce((s, p) => s + p.shares, 0);
+        const avgDY = portfolio.reduce((s, p) => s + (p.dy || 0) * (p.allocated / Math.max(totalAllocated, 1)), 0);
+        const remainder = budget - totalAllocated;
 
-    const summaryCard = document.createElement('div');
-    summaryCard.className = 'bg-primary/10 border border-primary/30 rounded-2xl p-5 mb-2';
-    summaryCard.innerHTML = `
+        const summaryCard = document.createElement('div');
+        summaryCard.className = 'bg-primary/10 border border-primary/30 rounded-2xl p-5 mb-2';
+        summaryCard.innerHTML = `
         <div class="flex items-center gap-2 mb-3">
             <span class="text-primary text-lg">📦</span>
             <span class="text-primary font-bold">Mix de Ativos — Carteira Diversificada</span>
@@ -676,22 +744,22 @@ function renderMixPortfolio(portfolio, allResults, budget) {
         </div>
         <p class="text-xs text-gray-500 mt-2 text-center">Distribuicao ponderada por indicadores de saude e dividendos. Setores diversificados automaticamente.</p>
     `;
-    list.appendChild(summaryCard);
+        list.appendChild(summaryCard);
 
-    // Individual asset rows
-    portfolio.forEach((p, i) => {
-        const typeTag = p.asset_type === 'FII'
-            ? '<span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded font-semibold">FII</span>'
-            : p.asset_type === 'ETF'
-            ? '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded font-semibold">ETF</span>'
-            : '<span class="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded font-semibold">AÇÃO</span>';
+        // Individual asset rows
+        portfolio.forEach((p, i) => {
+            const typeTag = p.asset_type === 'FII'
+                ? '<span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded font-semibold">FII</span>'
+                : p.asset_type === 'ETF'
+                    ? '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded font-semibold">ETF</span>'
+                    : '<span class="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded font-semibold">AÇÃO</span>';
 
-        const pctOfTotal = ((p.allocated / Math.max(budget, 1)) * 100).toFixed(0);
-        const analysisUrl = p.asset_type === 'FII' ? '/fiis' : '/acoes';
+            const pctOfTotal = ((p.allocated / Math.max(budget, 1)) * 100).toFixed(0);
+            const analysisUrl = p.asset_type === 'FII' ? '/fiis' : '/acoes';
 
-        const card = document.createElement('div');
-        card.className = 'candidate-card bg-dark-800 border border-gray-700 rounded-2xl p-4';
-        card.innerHTML = `
+            const card = document.createElement('div');
+            card.className = 'candidate-card bg-dark-800 border border-gray-700 rounded-2xl p-4';
+            card.innerHTML = `
             <div class="flex items-center gap-4">
                 ${medalBadge(i + 1)}
                 <div class="flex-1 min-w-0">
@@ -699,11 +767,10 @@ function renderMixPortfolio(portfolio, allResults, budget) {
                         <span class="text-lg font-bold text-white">${p.ticker}</span>
                         ${typeTag}
                         ${p.setor ? `<span class="text-xs text-gray-500">${p.setor}</span>` : ''}
-                        ${p.health_grade ? `<span class="px-2 py-0.5 rounded text-xs font-bold ${
-                            p.health_grade === 'A' ? 'bg-green-500/20 text-green-400' :
-                            p.health_grade === 'B' ? 'bg-blue-500/20 text-blue-400' :
-                            'bg-yellow-500/20 text-yellow-400'
-                        }">Saude ${p.health_grade}</span>` : ''}
+                        ${p.health_grade ? `<span class="px-2 py-0.5 rounded text-xs font-bold ${p.health_grade === 'A' ? 'bg-green-500/20 text-green-400' :
+                    p.health_grade === 'B' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-yellow-500/20 text-yellow-400'
+                    }">Saude ${p.health_grade}</span>` : ''}
                     </div>
                     <div class="flex flex-wrap gap-1.5 mt-1">
                         <span class="px-2 py-0.5 bg-dark-700 rounded-full text-xs text-white font-semibold">${fmt(p.price)}</span>
@@ -735,341 +802,357 @@ function renderMixPortfolio(portfolio, allResults, budget) {
                 </a>
             </div>
         `;
-        list.appendChild(card);
-    });
+            list.appendChild(card);
+        });
 
-    // Subtitle
-    const freqLabel = _freqMode === 'mensal' ? 'mensal' : 'diario';
-    document.getElementById('results-subtitle').textContent = _yoloMode
-        ? `⚠️ Mix FACA NA CAVEIRA — aporte ${freqLabel} de R$ ${budget.toFixed(2)}`
-        : `Mix diversificado — aporte ${freqLabel} de R$ ${budget.toFixed(2)} distribuido por indicadores de saude.`;
-    document.getElementById('results-count').textContent = `${portfolio.length} ativos no mix`;
-    document.getElementById('results-area').classList.remove('hidden');
-    document.getElementById('projection-panel').classList.add('hidden');
-
-    // ── Render Mix Projection Chart ─────────────────────────────
-    renderMixProjectionChart(portfolio, budget);
-}
-
-let _mixChart = null;
-function renderMixProjectionChart(portfolio, budget) {
-    const panel = document.getElementById('mix-projection-panel');
-    panel.classList.remove('hidden');
-
-    const isMonthly = (_freqMode === 'mensal');
-
-    // Calculate weighted average DY (annual %)
-    const totalAllocated = portfolio.reduce((s, p) => s + p.allocated, 0);
-    const wAvgDY = portfolio.reduce((s, p) => s + (p.dy || 0) * (p.allocated / Math.max(totalAllocated, 1)), 0);
-    const monthlyDYRate = wAvgDY / 100 / 12;
-
-    // Build month-by-month projection — extend until BOTH milestones are reached
-    const labels = [];
-    const investedData = [];
-    const dividendData = [];
-    const monthlyDivData = [];  // track monthly dividend for milestone 1
-
-    let cumInvested = 0;
-    let cumDividends = 0;
-    const aportPerMonth = isMonthly ? budget : budget * 22; // ~22 business days
-
-    let milestone1Month = null; // monthly dividends >= monthly deposit
-    let milestone2Month = null; // cumulative dividends >= cumulative invested
-    const maxMonths = 600; // safety cap (50 years)
-    const minMonths = 12;  // always show at least 12
-
-    for (let m = 1; m <= maxMonths; m++) {
-        cumInvested += aportPerMonth;
-        const portfolioValue = cumInvested + cumDividends;
-        const monthDiv = portfolioValue * monthlyDYRate;
-        cumDividends += monthDiv;
-
-        labels.push(`M${m}`);
-        investedData.push(Math.round(cumInvested));
-        dividendData.push(Math.round(cumDividends));
-        monthlyDivData.push(Math.round(monthDiv));
-
-        // Check milestones
-        if (milestone1Month === null && monthDiv >= aportPerMonth) {
-            milestone1Month = m;
-        }
-        if (milestone2Month === null && cumDividends >= cumInvested) {
-            milestone2Month = m;
-        }
-
-        // Stop after both milestones reached (+ a few extra months for visual context)
-        if (m >= minMonths && milestone1Month && milestone2Month) {
-            // Add 2 more months for visual breathing room
-            const extra = Math.min(2, maxMonths - m);
-            for (let e = 1; e <= extra; e++) {
-                cumInvested += aportPerMonth;
-                const pv = cumInvested + cumDividends;
-                const md = pv * monthlyDYRate;
-                cumDividends += md;
-                labels.push(`M${m + e}`);
-                investedData.push(Math.round(cumInvested));
-                dividendData.push(Math.round(cumDividends));
-                monthlyDivData.push(Math.round(md));
-            }
-            break;
-        }
-    }
-
-    const totalMonths = labels.length;
-
-    // Update subtitle
-    const subtitleEl = document.querySelector('#mix-projection-panel .text-xs.text-gray-500');
-    if (subtitleEl) {
-        subtitleEl.textContent = `Estimativa de dividendos acumulados e patrimonio ao longo de ${totalMonths} meses`;
-    }
-
-    // Update summary cards
-    document.getElementById('mix-proj-invested-12m').textContent = fmt(investedData[Math.min(11, totalMonths - 1)]);
-    document.getElementById('mix-proj-div-12m').textContent = fmt(dividendData[Math.min(11, totalMonths - 1)]);
-    document.getElementById('mix-proj-dy').textContent = wAvgDY.toFixed(1) + '% a.a.';
-
-    // Milestone info
-    const m1El = document.getElementById('mix-proj-milestone1');
-    const m2El = document.getElementById('mix-proj-milestone2');
-    if (m1El) {
-        if (milestone1Month) {
-            const years = Math.floor(milestone1Month / 12);
-            const months = milestone1Month % 12;
-            const timeStr = years > 0 ? `${years}a ${months}m` : `${months} meses`;
-            m1El.innerHTML = `<span class="text-yellow-400 text-lg">&#9733;</span> Mes ${milestone1Month} <span class="text-gray-500">(${timeStr})</span>`;
-        } else {
-            m1El.innerHTML = `<span class="text-gray-500">Alem de ${Math.floor(maxMonths/12)} anos</span>`;
-        }
-    }
-    if (m2El) {
-        if (milestone2Month) {
-            const years = Math.floor(milestone2Month / 12);
-            const months = milestone2Month % 12;
-            const timeStr = years > 0 ? `${years}a ${months}m` : `${months} meses`;
-            m2El.innerHTML = `<span class="text-primary text-lg">&#9733;</span> Mes ${milestone2Month} <span class="text-gray-500">(${timeStr})</span>`;
-        } else {
-            m2El.innerHTML = `<span class="text-gray-500">Alem de ${Math.floor(maxMonths/12)} anos</span>`;
-        }
-    }
-
-    // Build point styles: stars at milestones, small dots elsewhere
-    const pointRadii = dividendData.map((_, i) => {
-        const m = i + 1;
-        if (m === milestone1Month || m === milestone2Month) return 10;
-        // Show dots only every N months to avoid clutter on long charts
-        const step = totalMonths > 60 ? 12 : (totalMonths > 24 ? 3 : 1);
-        return (m % step === 0 || m === totalMonths) ? 3 : 0;
-    });
-    const pointStyles = dividendData.map((_, i) => {
-        const m = i + 1;
-        if (m === milestone1Month || m === milestone2Month) return 'star';
-        return 'circle';
-    });
-    const pointColors = dividendData.map((_, i) => {
-        const m = i + 1;
-        if (m === milestone1Month) return '#facc15';
-        if (m === milestone2Month) return '#00FF9D';
-        return '#facc15';
-    });
-
-    // Reduce bar rendering on long charts: show bar border only on select months
-    const barBgColors = investedData.map((_, i) => {
-        const m = i + 1;
-        if (m === milestone1Month) return 'rgba(250,204,21,0.25)';
-        if (m === milestone2Month) return 'rgba(0,255,157,0.4)';
-        return 'rgba(0,255,157,0.2)';
-    });
-    const barBorderColors = investedData.map((_, i) => {
-        const m = i + 1;
-        if (m === milestone1Month) return '#facc15';
-        if (m === milestone2Month) return '#00FF9D';
-        return 'rgba(0,255,157,0.5)';
-    });
-
-    // X-axis: only show select labels to avoid crowding
-    const xStep = totalMonths > 120 ? 24 : (totalMonths > 60 ? 12 : (totalMonths > 24 ? 6 : (totalMonths > 12 ? 3 : 1)));
-
-    // Draw chart
-    const ctx = document.getElementById('mix-projection-chart').getContext('2d');
-    if (_mixChart) _mixChart.destroy();
-
-    _mixChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Valor investido',
-                    data: investedData,
-                    backgroundColor: barBgColors,
-                    borderColor: barBorderColors,
-                    borderWidth: 1,
-                    order: 2,
-                },
-                {
-                    label: 'Dividendos acumulados',
-                    data: dividendData,
-                    type: 'line',
-                    borderColor: '#facc15',
-                    backgroundColor: 'rgba(250,204,21,0.08)',
-                    borderWidth: 2,
-                    pointRadius: pointRadii,
-                    pointStyle: pointStyles,
-                    pointBackgroundColor: pointColors,
-                    pointBorderColor: pointColors,
-                    pointBorderWidth: 2,
-                    fill: true,
-                    tension: 0.3,
-                    order: 1,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                x: {
-                    grid: { color: 'rgba(255,255,255,0.03)' },
-                    ticks: {
-                        color: '#6b7280',
-                        font: { size: 10 },
-                        maxRotation: 0,
-                        callback: function(val, idx) {
-                            const m = idx + 1;
-                            if (m === milestone1Month || m === milestone2Month) return `M${m} ★`;
-                            if (m === 1 || m === totalMonths) return `M${m}`;
-                            if (m % xStep === 0) return `M${m}`;
-                            return '';
-                        }
-                    }
-                },
-                y: {
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: {
-                        color: '#6b7280',
-                        font: { size: 10 },
-                        callback: function(v) {
-                            if (v >= 1e6) return 'R$ ' + (v/1e6).toFixed(1) + 'M';
-                            if (v >= 1000) return 'R$ ' + (v/1000).toFixed(0) + 'k';
-                            return 'R$ ' + v;
-                        }
-                    }
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        title: (items) => {
-                            const m = items[0].dataIndex + 1;
-                            let t = `Mes ${m}`;
-                            if (m === milestone1Month) t += ' ★ Dividendo mensal > Aporte';
-                            if (m === milestone2Month) t += ' ★ Dividendos acum. > Investido';
-                            return t;
-                        },
-                        label: (ctx) => {
-                            const m = ctx.dataIndex + 1;
-                            let line = ctx.dataset.label + ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR');
-                            if (ctx.datasetIndex === 1 && monthlyDivData[ctx.dataIndex]) {
-                                line += ` (mensal: R$ ${monthlyDivData[ctx.dataIndex].toLocaleString('pt-BR')})`;
-                            }
-                            return line;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function renderProjection(winner, budget) {
-    const dy = winner.dy || 0;
-    const price = winner.price || 1;
-    const sharesPerDay = Math.floor(budget / price);
-
-    if (sharesPerDay < 1) {
+        // Subtitle
+        const freqLabel = _freqMode === 'mensal' ? 'mensal' : 'diario';
+        document.getElementById('results-subtitle').textContent = _yoloMode
+            ? `⚠️ Mix FACA NA CAVEIRA — aporte ${freqLabel} de R$ ${budget.toFixed(2)}`
+            : `Mix diversificado — aporte ${freqLabel} de R$ ${budget.toFixed(2)} distribuido por indicadores de saude.`;
+        document.getElementById('results-count').textContent = `${portfolio.length} ativos no mix`;
+        document.getElementById('results-area').classList.remove('hidden');
         document.getElementById('projection-panel').classList.add('hidden');
-        return;
+
+        // ── Render Mix Projection Chart ─────────────────────────────
+        renderMixProjectionChart(portfolio, budget);
     }
 
-    // How many shares accumulated over time (buying daily)
-    const shares30  = sharesPerDay * 30;
-    const shares180 = sharesPerDay * 180;
-    const shares365 = sharesPerDay * 365;
+    let _mixChart = null;
+    function renderMixProjectionChart(portfolio, budget) {
+        const panel = document.getElementById('mix-projection-panel');
+        panel.classList.remove('hidden');
 
-    const invested30  = shares30  * price;
-    const invested180 = shares180 * price;
-    const invested365 = shares365 * price;
+        const isMonthly = (_freqMode === 'mensal');
 
-    // Dividends: DY% * invested capital / 12 * months_held
-    // Simplification: each share held for average half the period
-    // More intuitive: total shares * annual div per share * fraction of year
-    const annualDivPerShare = (dy / 100) * price;
+        // Calculate weighted average DY (annual %)
+        const totalAllocated = portfolio.reduce((s, p) => s + p.allocated, 0);
+        const wAvgDY = portfolio.reduce((s, p) => s + (p.dy || 0) * (p.allocated / Math.max(totalAllocated, 1)), 0);
+        const monthlyDYRate = wAvgDY / 100 / 12;
 
-    // Accumulated dividends: shares bought day 1 earn for whole period,
-    // shares bought last day earn ~0. Average = half.
-    const div30  = shares30  * annualDivPerShare * (30/365)  * 0.5;
-    const div180 = shares180 * annualDivPerShare * (180/365) * 0.5;
-    const div365 = shares365 * annualDivPerShare * (365/365) * 0.5;
+        // Build month-by-month projection — extend until BOTH milestones are reached
+        const labels = [];
+        const investedData = [];
+        const dividendData = [];
+        const monthlyDivData = [];  // track monthly dividend for milestone 1
 
-    // Header labels
-    document.getElementById('proj-budget-lbl').textContent = fmt(budget);
-    document.getElementById('proj-shares-day').textContent = sharesPerDay;
-    document.getElementById('proj-price-lbl').textContent = fmt(price);
+        let cumInvested = 0;
+        let cumDividends = 0;
+        const aportPerMonth = isMonthly ? budget : budget * 22; // ~22 business days
 
-    // Summary cards
-    document.getElementById('proj-shares-30d').textContent = shares30;
-    document.getElementById('proj-invested-30d').textContent = fmt(invested30);
-    document.getElementById('proj-div-30d').textContent = fmt(div30);
-    document.getElementById('proj-dy').textContent = fmtPct(dy);
+        let milestone1Month = null; // monthly dividends >= monthly deposit
+        let milestone2Month = null; // cumulative dividends >= cumulative invested
+        const maxMonths = 600; // safety cap (50 years)
+        const minMonths = 12;  // always show at least 12
 
-    // Detail breakdown
-    document.getElementById('proj-detail-inv-30d').textContent  = 'investido: ' + fmt(invested30);
-    document.getElementById('proj-detail-div-30d').textContent  = 'dividendos: ~' + fmt(div30);
-    document.getElementById('proj-detail-inv-180d').textContent = 'investido: ' + fmt(invested180);
-    document.getElementById('proj-detail-div-180d').textContent = 'dividendos: ~' + fmt(div180);
-    document.getElementById('proj-detail-inv-1y').textContent   = 'investido: ' + fmt(invested365);
-    document.getElementById('proj-detail-div-1y').textContent   = 'dividendos: ~' + fmt(div365);
+        for (let m = 1; m <= maxMonths; m++) {
+            cumInvested += aportPerMonth;
+            const portfolioValue = cumInvested + cumDividends;
+            const monthDiv = portfolioValue * monthlyDYRate;
+            cumDividends += monthDiv;
 
-    // Bars (relative to 1y)
-    const maxDiv = div365 || 1;
-    setTimeout(() => {
-        document.getElementById('bar-30d').style.width  = Math.min(100, (div30/maxDiv)*100)  + '%';
-        document.getElementById('bar-180d').style.width = Math.min(100, (div180/maxDiv)*100) + '%';
-        document.getElementById('bar-1y').style.width   = '100%';
-    }, 100);
-    document.getElementById('bar-30d-lbl').textContent  = '~' + fmt(div30);
-    document.getElementById('bar-180d-lbl').textContent = '~' + fmt(div180);
-    document.getElementById('bar-1y-lbl').textContent   = '~' + fmt(div365);
+            labels.push(`M${m}`);
+            investedData.push(Math.round(cumInvested));
+            dividendData.push(Math.round(cumDividends));
+            monthlyDivData.push(Math.round(monthDiv));
 
-    document.getElementById('projection-panel').classList.remove('hidden');
-}
+            // Check milestones
+            if (milestone1Month === null && monthDiv >= aportPerMonth) {
+                milestone1Month = m;
+            }
+            if (milestone2Month === null && cumDividends >= cumInvested) {
+                milestone2Month = m;
+            }
 
-// ── Wallet (inline form) ──────────────────────────────────────────────────────
-const _wallets = {{ wallets | tojson }};
+            // Stop after both milestones reached (+ a few extra months for visual context)
+            if (m >= minMonths && milestone1Month && milestone2Month) {
+                // Add 2 more months for visual breathing room
+                const extra = Math.min(2, maxMonths - m);
+                for (let e = 1; e <= extra; e++) {
+                    cumInvested += aportPerMonth;
+                    const pv = cumInvested + cumDividends;
+                    const md = pv * monthlyDYRate;
+                    cumDividends += md;
+                    labels.push(`M${m + e}`);
+                    investedData.push(Math.round(cumInvested));
+                    dividendData.push(Math.round(cumDividends));
+                    monthlyDivData.push(Math.round(md));
+                }
+                break;
+            }
+        }
 
-function removeInlineWalletForm() {
-    const old = document.getElementById('inline-wallet-form');
-    if (old) old.remove();
-}
+        const totalMonths = labels.length;
 
-function prepareWallet(r) {
-    _currentWinner = r;
-    removeInlineWalletForm();
+        // Update subtitle
+        const subtitleEl = document.querySelector('#mix-projection-panel .text-xs.text-gray-500');
+        if (subtitleEl) {
+            subtitleEl.textContent = `Estimativa de dividendos acumulados e patrimonio ao longo de ${totalMonths} meses`;
+        }
 
-    const today = new Date().toISOString().split('T')[0];
+        // Update summary cards
+        document.getElementById('mix-proj-invested-12m').textContent = fmt(investedData[Math.min(11, totalMonths - 1)]);
+        document.getElementById('mix-proj-div-12m').textContent = fmt(dividendData[Math.min(11, totalMonths - 1)]);
+        document.getElementById('mix-proj-dy').textContent = wAvgDY.toFixed(1) + '% a.a.';
 
-    // Build wallet options
-    let walletOpts = '';
-    _wallets.forEach(w => {
-        walletOpts += `<option value="${w.id}">${w.name}</option>`;
-    });
+        function formatTime(m) {
+            if (m < 12) return `${m} mes${m > 1 ? 'es' : ''}`;
+            const y = Math.floor(m / 12);
+            const rm = m % 12;
+            if (rm === 0) return `${y} ano${y > 1 ? 's' : ''}`;
+            return `${y}a ${rm}m`;
+        }
 
-    const form = document.createElement('div');
-    form.id = 'inline-wallet-form';
-    form.className = 'bg-dark-700 border border-primary/30 rounded-xl p-5 mt-2 space-y-4';
-    form.innerHTML = `
+        function projectedDate(m) {
+            const d = new Date();
+            d.setMonth(d.getMonth() + m);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            return `${mm}/${yyyy}`;
+        }
+
+        // Milestone info
+        const m1El = document.getElementById('mix-proj-milestone1');
+        const m2El = document.getElementById('mix-proj-milestone2');
+        if (m1El) {
+            if (milestone1Month) {
+                m1El.innerHTML = `<span class="text-yellow-400 text-lg">&#9733;</span> ${projectedDate(milestone1Month)} <span class="text-gray-500">(${formatTime(milestone1Month)})</span>`;
+            } else {
+                m1El.innerHTML = `<span class="text-gray-500">Alem de ${Math.floor(maxMonths / 12)} anos</span>`;
+            }
+        }
+        if (m2El) {
+            if (milestone2Month) {
+                m2El.innerHTML = `<span class="text-primary text-lg">&#9733;</span> ${projectedDate(milestone2Month)} <span class="text-gray-500">(${formatTime(milestone2Month)})</span>`;
+            } else {
+                m2El.innerHTML = `<span class="text-gray-500">Alem de ${Math.floor(maxMonths / 12)} anos</span>`;
+            }
+        }
+
+        // Build point styles: stars at milestones, small dots elsewhere
+        const pointRadii = dividendData.map((_, i) => {
+            const m = i + 1;
+            if (m === milestone1Month || m === milestone2Month) return 10;
+            // Show dots only every N months to avoid clutter on long charts
+            const step = totalMonths > 60 ? 12 : (totalMonths > 24 ? 3 : 1);
+            return (m % step === 0 || m === totalMonths) ? 3 : 0;
+        });
+        const pointStyles = dividendData.map((_, i) => {
+            const m = i + 1;
+            if (m === milestone1Month || m === milestone2Month) return 'star';
+            return 'circle';
+        });
+        const pointColors = dividendData.map((_, i) => {
+            const m = i + 1;
+            if (m === milestone1Month) return '#facc15';
+            if (m === milestone2Month) return '#00FF9D';
+            return '#facc15';
+        });
+
+        // Reduce bar rendering on long charts: show bar border only on select months
+        const barBgColors = investedData.map((_, i) => {
+            const m = i + 1;
+            if (m === milestone1Month) return 'rgba(250,204,21,0.25)';
+            if (m === milestone2Month) return 'rgba(0,255,157,0.4)';
+            return 'rgba(0,255,157,0.2)';
+        });
+        const barBorderColors = investedData.map((_, i) => {
+            const m = i + 1;
+            if (m === milestone1Month) return '#facc15';
+            if (m === milestone2Month) return '#00FF9D';
+            return 'rgba(0,255,157,0.5)';
+        });
+
+        // X-axis: only show select labels to avoid crowding
+        const xStep = totalMonths > 120 ? 24 : (totalMonths > 60 ? 12 : (totalMonths > 24 ? 6 : (totalMonths > 12 ? 3 : 1)));
+
+        // Draw chart
+        const ctx = document.getElementById('mix-projection-chart').getContext('2d');
+        if (_mixChart) _mixChart.destroy();
+
+        _mixChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Valor investido',
+                        data: investedData,
+                        backgroundColor: barBgColors,
+                        borderColor: barBorderColors,
+                        borderWidth: 1,
+                        order: 2,
+                    },
+                    {
+                        label: 'Dividendos acumulados',
+                        data: dividendData,
+                        type: 'line',
+                        borderColor: '#facc15',
+                        backgroundColor: 'rgba(250,204,21,0.08)',
+                        borderWidth: 2,
+                        pointRadius: pointRadii,
+                        pointStyle: pointStyles,
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: pointColors,
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        order: 1,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: {
+                            color: '#6b7280',
+                            font: { size: 10 },
+                            maxRotation: 0,
+                            callback: function (val, idx) {
+                                const m = idx + 1;
+                                const t = formatTime(m);
+                                if (m === milestone1Month || m === milestone2Month) return `${t} ★`;
+                                if (m === 1 || m === totalMonths) return t;
+                                if (m % xStep === 0) return t;
+                                return '';
+                            }
+                        }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: {
+                            color: '#6b7280',
+                            font: { size: 10 },
+                            callback: function (v) {
+                                if (v >= 1e6) return 'R$ ' + (v / 1e6).toFixed(1) + 'M';
+                                if (v >= 1000) return 'R$ ' + (v / 1000).toFixed(0) + 'k';
+                                return 'R$ ' + v;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => {
+                                const m = items[0].dataIndex + 1;
+                                let t = formatTime(m) + ` (${projectedDate(m)})`;
+                                if (m === milestone1Month) t += ' ★ Ponto Magico';
+                                if (m === milestone2Month) t += ' ★ Payback Total';
+                                return t;
+                            },
+                            afterBody: (items) => {
+                                const m = items[0].dataIndex + 1;
+                                if (m === milestone1Month) return '\nEfeito Bola de Neve: Dividendo mensal gerado ultrapassa seu aporte regular.\nO crescimento se retroalimenta com forca total.';
+                                if (m === milestone2Month) return '\nRisco Zero: O acumulado de dividendos ja cobriu todo o capital aportado.\nVoce ja recuperou 100% do seu investimento.';
+                                return '';
+                            },
+                            label: (ctx) => {
+                                let line = ctx.dataset.label + ': ' + fmt(ctx.parsed.y);
+                                if (ctx.datasetIndex === 1 && monthlyDivData[ctx.dataIndex]) {
+                                    line += ` (Renda mensal projetada: ${fmt(monthlyDivData[ctx.dataIndex])})`;
+                                }
+                                return line;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderProjection(winner, budget) {
+        const dy = winner.dy || 0;
+        const price = winner.price || 1;
+        const sharesPerDay = Math.floor(budget / price);
+
+        if (sharesPerDay < 1) {
+            document.getElementById('projection-panel').classList.add('hidden');
+            return;
+        }
+
+        // How many shares accumulated over time (buying daily)
+        const shares30 = sharesPerDay * 30;
+        const shares180 = sharesPerDay * 180;
+        const shares365 = sharesPerDay * 365;
+
+        const invested30 = shares30 * price;
+        const invested180 = shares180 * price;
+        const invested365 = shares365 * price;
+
+        // Dividends: DY% * invested capital / 12 * months_held
+        // Simplification: each share held for average half the period
+        // More intuitive: total shares * annual div per share * fraction of year
+        const annualDivPerShare = (dy / 100) * price;
+
+        // Accumulated dividends: shares bought day 1 earn for whole period,
+        // shares bought last day earn ~0. Average = half.
+        const div30 = shares30 * annualDivPerShare * (30 / 365) * 0.5;
+        const div180 = shares180 * annualDivPerShare * (180 / 365) * 0.5;
+        const div365 = shares365 * annualDivPerShare * (365 / 365) * 0.5;
+
+        // Header labels
+        document.getElementById('proj-budget-lbl').textContent = fmt(budget);
+        document.getElementById('proj-shares-day').textContent = sharesPerDay;
+        document.getElementById('proj-price-lbl').textContent = fmt(price);
+
+        // Summary cards
+        document.getElementById('proj-shares-30d').textContent = shares30;
+        document.getElementById('proj-invested-30d').textContent = fmt(invested30);
+        document.getElementById('proj-div-30d').textContent = fmt(div30);
+        document.getElementById('proj-dy').textContent = fmtPct(dy);
+
+        // Detail breakdown
+        document.getElementById('proj-detail-inv-30d').textContent = 'investido: ' + fmt(invested30);
+        document.getElementById('proj-detail-div-30d').textContent = 'dividendos: ~' + fmt(div30);
+        document.getElementById('proj-detail-inv-180d').textContent = 'investido: ' + fmt(invested180);
+        document.getElementById('proj-detail-div-180d').textContent = 'dividendos: ~' + fmt(div180);
+        document.getElementById('proj-detail-inv-1y').textContent = 'investido: ' + fmt(invested365);
+        document.getElementById('proj-detail-div-1y').textContent = 'dividendos: ~' + fmt(div365);
+
+        // Bars (relative to 1y)
+        const maxDiv = div365 || 1;
+        setTimeout(() => {
+            document.getElementById('bar-30d').style.width = Math.min(100, (div30 / maxDiv) * 100) + '%';
+            document.getElementById('bar-180d').style.width = Math.min(100, (div180 / maxDiv) * 100) + '%';
+            document.getElementById('bar-1y').style.width = '100%';
+        }, 100);
+        document.getElementById('bar-30d-lbl').textContent = '~' + fmt(div30);
+        document.getElementById('bar-180d-lbl').textContent = '~' + fmt(div180);
+        document.getElementById('bar-1y-lbl').textContent = '~' + fmt(div365);
+
+        document.getElementById('projection-panel').classList.remove('hidden');
+    }
+
+    // ── Wallet (inline form) ──────────────────────────────────────────────────────
+    const _wallets = {{ wallets | tojson }};
+
+    function removeInlineWalletForm() {
+        const old = document.getElementById('inline-wallet-form');
+        if (old) old.remove();
+    }
+
+    function prepareWallet(r) {
+        _currentWinner = r;
+        removeInlineWalletForm();
+
+        const today = new Date().toISOString().split('T')[0];
+
+        // Build wallet options
+        let walletOpts = '';
+        _wallets.forEach(w => {
+            walletOpts += `<option value="${w.id}">${w.name}</option>`;
+        });
+
+        const form = document.createElement('div');
+        form.id = 'inline-wallet-form';
+        form.className = 'bg-dark-700 border border-primary/30 rounded-xl p-5 mt-2 space-y-4';
+        form.innerHTML = `
         <div class="flex items-center justify-between mb-1">
             <h4 class="text-sm font-bold text-primary">Adicionar ${r.ticker} à carteira</h4>
             <button onclick="removeInlineWalletForm()" class="text-gray-500 hover:text-gray-300 text-lg leading-none">&times;</button>
@@ -1112,81 +1195,81 @@ function prepareWallet(r) {
         </div>
     `;
 
-    // Find the card that was clicked — walk up from the button
-    // Since we call prepareWallet from onclick, we insert after the card in candidates-list
-    const cards = document.querySelectorAll('#candidates-list .candidate-card');
-    let targetCard = null;
-    for (const card of cards) {
-        if (card.textContent.includes(r.ticker)) {
-            targetCard = card;
-            break;
+        // Find the card that was clicked — walk up from the button
+        // Since we call prepareWallet from onclick, we insert after the card in candidates-list
+        const cards = document.querySelectorAll('#candidates-list .candidate-card');
+        let targetCard = null;
+        for (const card of cards) {
+            if (card.textContent.includes(r.ticker)) {
+                targetCard = card;
+                break;
+            }
         }
-    }
-    if (targetCard) {
-        targetCard.after(form);
-    } else {
-        document.getElementById('candidates-list').appendChild(form);
-    }
-
-    // If no existing wallets, auto-show new wallet name input
-    if (_wallets.length === 0) {
-        document.getElementById('wf-wallet').value = '__new__';
-        document.getElementById('wf-new-name').parentElement.style.display = 'block';
-    }
-
-    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-async function addToWallet() {
-    if (!_currentWinner) return;
-    const selVal = document.getElementById('wf-wallet').value;
-    const isNew = selVal === '__new__';
-    const walletId = isNew ? null : selVal;
-    const newWalletName = isNew ? (document.getElementById('wf-new-name').value.trim() || 'Scope — Habito Diario') : null;
-    const qty = parseInt(document.getElementById('wf-qty').value) || 1;
-    const price = parseFloat(document.getElementById('wf-price').value) || _currentWinner.price;
-    const fb = document.getElementById('wf-feedback');
-
-    try {
-        const res = await fetch('/scope/api/add-to-wallet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ticker: _currentWinner.ticker,
-                asset_type: _currentWinner.asset_type,
-                quantity: qty,
-                price: price,
-                wallet_id: walletId,
-                wallet_name: newWalletName,
-            })
-        });
-        const data = await res.json();
-        fb.classList.remove('hidden', 'text-red-400', 'text-primary');
-        if (data.status === 'success') {
-            fb.classList.add('text-primary');
-            fb.textContent = data.message;
-            updateStreak();
+        if (targetCard) {
+            targetCard.after(form);
         } else {
-            fb.classList.add('text-red-400');
-            fb.textContent = data.message || 'Erro ao adicionar.';
+            document.getElementById('candidates-list').appendChild(form);
         }
-    } catch (e) {
-        fb.classList.remove('hidden');
-        fb.classList.add('text-red-400');
-        fb.textContent = 'Falha de comunicacao.';
-    }
-}
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-(function init() {
-    // Show streak if exists
-    const data = JSON.parse(localStorage.getItem('scope_streak') || '{"count":0}');
-    if (data.count >= 2) {
-        const badge = document.getElementById('streak-badge');
-        badge.classList.remove('hidden');
-        badge.classList.add('flex');
-        document.getElementById('streak-count').textContent = data.count;
+        // If no existing wallets, auto-show new wallet name input
+        if (_wallets.length === 0) {
+            document.getElementById('wf-wallet').value = '__new__';
+            document.getElementById('wf-new-name').parentElement.style.display = 'block';
+        }
+
+        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-})();
+
+    async function addToWallet() {
+        if (!_currentWinner) return;
+        const selVal = document.getElementById('wf-wallet').value;
+        const isNew = selVal === '__new__';
+        const walletId = isNew ? null : selVal;
+        const newWalletName = isNew ? (document.getElementById('wf-new-name').value.trim() || 'Scope — Habito Diario') : null;
+        const qty = parseInt(document.getElementById('wf-qty').value) || 1;
+        const price = parseFloat(document.getElementById('wf-price').value) || _currentWinner.price;
+        const fb = document.getElementById('wf-feedback');
+
+        try {
+            const res = await fetch('/scope/api/add-to-wallet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticker: _currentWinner.ticker,
+                    asset_type: _currentWinner.asset_type,
+                    quantity: qty,
+                    price: price,
+                    wallet_id: walletId,
+                    wallet_name: newWalletName,
+                })
+            });
+            const data = await res.json();
+            fb.classList.remove('hidden', 'text-red-400', 'text-primary');
+            if (data.status === 'success') {
+                fb.classList.add('text-primary');
+                fb.textContent = data.message;
+                updateStreak();
+            } else {
+                fb.classList.add('text-red-400');
+                fb.textContent = data.message || 'Erro ao adicionar.';
+            }
+        } catch (e) {
+            fb.classList.remove('hidden');
+            fb.classList.add('text-red-400');
+            fb.textContent = 'Falha de comunicacao.';
+        }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────────
+    (function init() {
+        // Show streak if exists
+        const data = JSON.parse(localStorage.getItem('scope_streak') || '{"count":0}');
+        if (data.count >= 2) {
+            const badge = document.getElementById('streak-badge');
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+            document.getElementById('streak-count').textContent = data.count;
+        }
+    })();
 </script>
 {% endblock %}
