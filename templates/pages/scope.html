@@ -286,6 +286,42 @@
 
                 <!-- Wallet panel is now injected inline below each card via JS -->
 
+                <!-- ── MIX PROJECTION CHART ──────────────────────────────────── -->
+                <div id="mix-projection-panel" class="hidden bg-dark-800 border border-gray-700 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-white">Projecao de Rendimentos do Mix</h3>
+                            <p class="text-xs text-gray-500">Estimativa de dividendos acumulados e patrimonio ao longo de 12 meses</p>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-primary inline-block"></span> Valor investido</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-yellow-400 inline-block"></span> Dividendos acum.</span>
+                        </div>
+                    </div>
+                    <div style="height: 260px;">
+                        <canvas id="mix-projection-chart"></canvas>
+                    </div>
+                    <!-- Summary below chart -->
+                    <div class="grid grid-cols-3 gap-4 mt-4">
+                        <div class="bg-dark-700 rounded-lg p-3 text-center">
+                            <p class="text-xs text-gray-500">Aporte 12 meses</p>
+                            <p class="text-lg font-bold text-white" id="mix-proj-invested-12m">—</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-lg p-3 text-center">
+                            <p class="text-xs text-gray-500">Dividendos estimados 12m</p>
+                            <p class="text-lg font-bold text-yellow-400" id="mix-proj-div-12m">—</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-lg p-3 text-center">
+                            <p class="text-xs text-gray-500">DY medio ponderado</p>
+                            <p class="text-lg font-bold text-primary" id="mix-proj-dy">—</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-3">
+                        * Projecao simplificada baseada no DY historico atual. Dividendos e valorizacao sao estimativas e podem variar.
+                        Rendimentos passados nao garantem resultados futuros. Impostos nao considerados.
+                    </p>
+                </div>
+
             </div>
             <!-- /results-area -->
 
@@ -449,6 +485,7 @@ async function runRecommendation() {
     document.getElementById('error-state').classList.add('hidden');
     document.getElementById('results-area').classList.add('hidden');
     document.getElementById('projection-panel').classList.add('hidden');
+    document.getElementById('mix-projection-panel').classList.add('hidden');
     removeInlineWalletForm();
     document.getElementById('loading').classList.remove('hidden');
 
@@ -593,6 +630,7 @@ function renderResults(recs, budget) {
     document.getElementById('results-area').classList.remove('hidden');
 
     // Render projection for winner
+    document.getElementById('mix-projection-panel').classList.add('hidden');
     renderProjection(recs[0], budget);
 }
 
@@ -708,6 +746,114 @@ function renderMixPortfolio(portfolio, allResults, budget) {
     document.getElementById('results-count').textContent = `${portfolio.length} ativos no mix`;
     document.getElementById('results-area').classList.remove('hidden');
     document.getElementById('projection-panel').classList.add('hidden');
+
+    // ── Render Mix Projection Chart ─────────────────────────────
+    renderMixProjectionChart(portfolio, budget);
+}
+
+let _mixChart = null;
+function renderMixProjectionChart(portfolio, budget) {
+    const panel = document.getElementById('mix-projection-panel');
+    panel.classList.remove('hidden');
+
+    const isMonthly = (_freqMode === 'mensal');
+    const months = 12;
+
+    // Calculate weighted average DY (annual %)
+    const totalAllocated = portfolio.reduce((s, p) => s + p.allocated, 0);
+    const wAvgDY = portfolio.reduce((s, p) => s + (p.dy || 0) * (p.allocated / Math.max(totalAllocated, 1)), 0);
+    const monthlyDYRate = wAvgDY / 100 / 12;
+
+    // Build month-by-month projection
+    const labels = [];
+    const investedData = [];
+    const dividendData = [];
+
+    let cumInvested = 0;
+    let cumDividends = 0;
+    const aportPerMonth = isMonthly ? budget : budget * 22; // ~22 business days
+
+    for (let m = 1; m <= months; m++) {
+        cumInvested += aportPerMonth;
+        // Dividends are on accumulated portfolio value
+        const portfolioValue = cumInvested + cumDividends;
+        const monthDiv = portfolioValue * monthlyDYRate;
+        cumDividends += monthDiv;
+
+        labels.push(`M${m}`);
+        investedData.push(Math.round(cumInvested));
+        dividendData.push(Math.round(cumDividends));
+    }
+
+    // Update summary
+    document.getElementById('mix-proj-invested-12m').textContent = fmt(cumInvested);
+    document.getElementById('mix-proj-div-12m').textContent = fmt(cumDividends);
+    document.getElementById('mix-proj-dy').textContent = wAvgDY.toFixed(1) + '% a.a.';
+
+    // Draw chart
+    const ctx = document.getElementById('mix-projection-chart').getContext('2d');
+    if (_mixChart) _mixChart.destroy();
+
+    _mixChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Valor investido',
+                    data: investedData,
+                    backgroundColor: 'rgba(0,255,157,0.3)',
+                    borderColor: '#00FF9D',
+                    borderWidth: 1,
+                    order: 2,
+                },
+                {
+                    label: 'Dividendos acumulados',
+                    data: dividendData,
+                    type: 'line',
+                    borderColor: '#facc15',
+                    backgroundColor: 'rgba(250,204,21,0.1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#facc15',
+                    fill: true,
+                    tension: 0.3,
+                    order: 1,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#6b7280', font: { size: 10 } }
+                },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: {
+                        color: '#6b7280',
+                        font: { size: 10 },
+                        callback: function(v) {
+                            if (v >= 1e6) return 'R$ ' + (v/1e6).toFixed(1) + 'M';
+                            if (v >= 1000) return 'R$ ' + (v/1000).toFixed(0) + 'k';
+                            return 'R$ ' + v;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ctx.dataset.label + ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR')
+                    }
+                }
+            }
+        }
+    });
 }
 
 function renderProjection(winner, budget) {

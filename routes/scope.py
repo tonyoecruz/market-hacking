@@ -91,9 +91,9 @@ _RISKY_SET = {t.replace('.SA', '').upper() for t in RISKY_TICKERS}
 # This guarantees results while still ranking safe assets at the top.
 # ---------------------------------------------------------------------------
 
-# Scoring weights
-STOCK_W = {"safety": 0.40, "income": 0.30, "value": 0.30}
-FII_W   = {"safety": 0.35, "income": 0.40, "value": 0.25}
+# Scoring weights — income must be meaningful, not just safe & cheap
+STOCK_W = {"safety": 0.30, "income": 0.40, "value": 0.30}
+FII_W   = {"safety": 0.25, "income": 0.50, "value": 0.25}
 
 
 def _norm(s: pd.Series) -> pd.Series:
@@ -132,12 +132,12 @@ def _filter_and_score_stocks(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         df = df[~df["ticker"].str.replace(".SA", "", regex=False).str.upper().isin(_RISKY_SET)]
 
     df = df[(df["price"] > 0) & (df["price"] <= budget)]
-    df = df[df["dy"] > 0]                          # must pay dividend
-    df = df[df["dy"] <= 30]                         # DY > 30% = data error or dying company
-    df = df[df["liquidezmediadiaria"] >= 100_000]   # min R$100k daily volume (not illiquid)
-    df = df[df["pl"] > 0]                           # negative P/L = company losing money
-    df = df[df["pl"] <= 50]                         # P/L > 50 = overvalued or distorted
-    df = df[df["margem_liquida"] > 0]               # company must be profitable
+    df = df[df["dy"] >= 3.0]                        # min 3% DY — meaningful dividends
+    df = df[df["dy"] <= 30]                          # DY > 30% = data error or dying company
+    df = df[df["liquidezmediadiaria"] >= 100_000]    # min R$100k daily volume (not illiquid)
+    df = df[df["pl"] > 0]                            # negative P/L = company losing money
+    df = df[df["pl"] <= 30]                          # P/L > 30 = overvalued
+    df = df[df["margem_liquida"] > 0]                # company must be profitable
     logger.info(f"[scope] Stocks after hard filters (price<={budget}, conservative): {len(df)}")
 
     if df.empty:
@@ -179,13 +179,16 @@ def _filter_and_score_stocks(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         0.10 * df["_dy_ceil_score"]
     ).fillna(0)
 
-    # Income score (DY — more is better, but capped)
-    df["income_score"] = _norm(df["dy"].clip(0, 15)).fillna(0)
+    # Income score — Bazin-inspired: DY >= 6% is excellent, >= 10% is outstanding
+    df["income_score"] = df["dy"].apply(
+        lambda v: min(1.0, v / 12.0) if v > 0 else 0  # 12% DY = perfect score
+    ).fillna(0)
 
-    # Value score (Graham margin + ROIC)
+    # Value score (Graham margin + ROIC + EV/EBIT)
     df["value_score"] = (
-        0.5 * _norm(df["margem"].clip(-1, 5)) +
-        0.5 * _norm(df["roic"].clip(0, 1))
+        0.35 * _norm(df["margem"].clip(-1, 5)) +
+        0.35 * _norm(df["roic"].clip(0, 1)) +
+        0.30 * (1 - _norm(df["ev_ebit"].clip(1, 30))).fillna(0.5)  # Lower EV/EBIT = better
     ).fillna(0)
 
     df["score"] = (
@@ -213,11 +216,11 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         df = df[~df["ticker"].str.replace(".SA", "", regex=False).str.upper().isin(_RISKY_SET)]
 
     df = df[(df["price"] > 0) & (df["price"] <= budget)]
-    df = df[df["dy"] > 0]                          # must pay dividend
-    df = df[df["dy"] <= 25]                         # DY > 25% on FII = data error or inactive fund
-    df = df[df["liquidezmediadiaria"] >= 50_000]    # min R$50k daily volume (not illiquid/inactive)
-    df = df[df["pvp"] >= 0.30]                      # P/VP < 0.30 = something very wrong
-    df = df[df["pvp"] <= 3.0]                       # P/VP > 3.0 = absurdly overpriced
+    df = df[df["dy"] >= 4.0]                        # min 4% DY — meaningful FII dividends
+    df = df[df["dy"] <= 20]                          # DY > 20% on FII = data error or inactive fund
+    df = df[df["liquidezmediadiaria"] >= 50_000]     # min R$50k daily volume (not illiquid/inactive)
+    df = df[df["pvp"] >= 0.50]                       # P/VP < 0.50 = something very wrong
+    df = df[df["pvp"] <= 2.0]                        # P/VP > 2.0 = overpriced
     logger.info(f"[scope] FIIs after hard filters (price<={budget}, conservative): {len(df)}")
 
     if df.empty:
@@ -239,12 +242,15 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         0.30 * df["_pvp_score"]
     ).fillna(0)
 
-    # Income
-    df["income_score"] = _norm(df["dy"].clip(0, 14)).fillna(0)
+    # Income — FIIs are income vehicles, DY is critical
+    df["income_score"] = df["dy"].apply(
+        lambda v: min(1.0, v / 10.0) if v > 0 else 0  # 10% DY = perfect score for FII
+    ).fillna(0)
 
-    # Value (P/VP discount)
-    df["_pvp_inv"] = (1 / df["pvp"].clip(0.3, 3)).fillna(0)
-    df["value_score"] = _norm(df["_pvp_inv"]).fillna(0)
+    # Value (P/VP discount — closer to 1.0 or below = better)
+    df["value_score"] = df["pvp"].apply(
+        lambda v: 1.0 if 0.7 <= v < 1.0 else (0.8 if v == 1.0 else max(0.2, 1.0 - abs(v - 1.0) / 1.5))
+    ).fillna(0)
 
     df["score"] = (
         FII_W["safety"] * df["safety_score"] +
