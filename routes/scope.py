@@ -127,13 +127,18 @@ def _filter_and_score_stocks(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         else:
             df[col] = 0.0
 
-    # --- HARD FILTERS (minimal — only absolute deal-breakers) ---
+    # --- HARD FILTERS (conservative — eliminate red flags) ---
     if "ticker" in df.columns:
         df = df[~df["ticker"].str.replace(".SA", "", regex=False).str.upper().isin(_RISKY_SET)]
 
     df = df[(df["price"] > 0) & (df["price"] <= budget)]
-    df = df[df["dy"] > 0]  # must pay SOME dividend
-    logger.info(f"[scope] Stocks after hard filters (price<={budget}, DY>0): {len(df)}")
+    df = df[df["dy"] > 0]                          # must pay dividend
+    df = df[df["dy"] <= 30]                         # DY > 30% = data error or dying company
+    df = df[df["liquidezmediadiaria"] >= 100_000]   # min R$100k daily volume (not illiquid)
+    df = df[df["pl"] > 0]                           # negative P/L = company losing money
+    df = df[df["pl"] <= 50]                         # P/L > 50 = overvalued or distorted
+    df = df[df["margem_liquida"] > 0]               # company must be profitable
+    logger.info(f"[scope] Stocks after hard filters (price<={budget}, conservative): {len(df)}")
 
     if df.empty:
         return df
@@ -203,13 +208,17 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         else:
             df[col] = 0.0
 
-    # --- HARD FILTERS (minimal) ---
+    # --- HARD FILTERS (conservative — eliminate red flags) ---
     if "ticker" in df.columns:
         df = df[~df["ticker"].str.replace(".SA", "", regex=False).str.upper().isin(_RISKY_SET)]
 
     df = df[(df["price"] > 0) & (df["price"] <= budget)]
-    df = df[df["dy"] > 0]  # must pay SOME dividend
-    logger.info(f"[scope] FIIs after hard filters (price<={budget}, DY>0): {len(df)}")
+    df = df[df["dy"] > 0]                          # must pay dividend
+    df = df[df["dy"] <= 25]                         # DY > 25% on FII = data error or inactive fund
+    df = df[df["liquidezmediadiaria"] >= 50_000]    # min R$50k daily volume (not illiquid/inactive)
+    df = df[df["pvp"] >= 0.30]                      # P/VP < 0.30 = something very wrong
+    df = df[df["pvp"] <= 3.0]                       # P/VP > 3.0 = absurdly overpriced
+    logger.info(f"[scope] FIIs after hard filters (price<={budget}, conservative): {len(df)}")
 
     if df.empty:
         return df
@@ -247,6 +256,14 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
     # Fill columns that stocks have but FIIs don't
     for col in ["margem", "roic", "liq_corrente", "div_liq_ebitda", "margem_liquida", "roe", "pl"]:
         df[col] = 0
+    # Ensure setor column exists for diversification (use segmento or tipo if available)
+    if "setor" not in df.columns:
+        if "segmento" in df.columns:
+            df["setor"] = df["segmento"]
+        elif "tipo" in df.columns:
+            df["setor"] = df["tipo"]
+        else:
+            df["setor"] = "FII"
     logger.info(f"[scope] FIIs scored: {len(df)} candidates")
     return df
 
@@ -291,6 +308,8 @@ def _yolo_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
     df["asset_type"] = "FII"
     for col in ["margem", "roic", "liq_corrente", "div_liq_ebitda", "margem_liquida", "roe", "pl"]:
         df[col] = 0
+    if "setor" not in df.columns:
+        df["setor"] = df.get("segmento", df.get("tipo", "FII"))
     return df
 
 
@@ -343,7 +362,9 @@ def _build_justification(row: dict, budget: float) -> dict:
             reasons.append(f"P/VP de {pvp:.2f} — preco alinhado ao valor patrimonial")
 
     # --- INCOME ---
-    if dy > 0:
+    if dy > 20:
+        reasons.append(f"Dividend Yield de {dy:.1f}% a.a. — ATENCAO: valor atipico, verifique os dados")
+    elif dy > 0:
         reasons.append(f"Dividend Yield de {dy:.1f}% a.a. — gera renda passiva recorrente")
 
     # --- VALUE ---
@@ -455,16 +476,121 @@ async def debug_data():
         return _json_response({"error": str(e)})
 
 
+def _build_mix_portfolio(combined: pd.DataFrame, budget: float) -> list:
+    """
+    Build a diversified portfolio from scored candidates.
+    Rules:
+      - 1 asset if budget < 30, up to 10 if budget >= 500
+      - Max 2 assets per sector to ensure diversification
+      - Allocation weighted by score (better assets get more)
+      - Exact share counts that fit within budget
+    """
+    if combined.empty:
+        return []
+
+    # Determine target asset count based on budget
+    if budget < 30:
+        max_assets = 1
+    elif budget < 100:
+        max_assets = 3
+    elif budget < 300:
+        max_assets = 5
+    elif budget < 500:
+        max_assets = 7
+    else:
+        max_assets = 10
+
+    # Diversification: pick top assets but limit per sector/type
+    selected = []
+    sector_count = {}
+    type_count = {}
+
+    for _, row in combined.iterrows():
+        if len(selected) >= max_assets:
+            break
+
+        sector = str(row.get("setor", "Outro")).strip() or "Outro"
+        atype = str(row.get("asset_type", "Acao"))
+
+        # Max 2 per sector, max ceil(max_assets*0.6) per asset type
+        max_per_type = max(2, math.ceil(max_assets * 0.6))
+        if sector_count.get(sector, 0) >= 2:
+            continue
+        if type_count.get(atype, 0) >= max_per_type:
+            continue
+
+        selected.append(row.to_dict())
+        sector_count[sector] = sector_count.get(sector, 0) + 1
+        type_count[atype] = type_count.get(atype, 0) + 1
+
+    if not selected:
+        return []
+
+    # Calculate weighted allocation based on score
+    total_score = sum(max(s.get("score", 0), 0.01) for s in selected)
+    remaining_budget = budget
+
+    portfolio = []
+    for s in selected:
+        weight = max(s.get("score", 0), 0.01) / total_score
+        target_alloc = budget * weight
+        price = s.get("price", 0) or 1
+        shares = max(1, math.floor(target_alloc / price))
+        cost = shares * price
+
+        # Don't exceed remaining budget
+        while shares > 0 and cost > remaining_budget:
+            shares -= 1
+            cost = shares * price
+
+        if shares <= 0:
+            continue
+
+        remaining_budget -= cost
+
+        portfolio.append(_safe_dict({
+            "ticker": s.get("ticker", ""),
+            "empresa": s.get("empresa", ""),
+            "asset_type": s.get("asset_type", "Acao"),
+            "setor": s.get("setor", ""),
+            "price": _clean(price),
+            "dy": _clean(s.get("dy", 0)),
+            "pvp": _clean(s.get("pvp")) or None,
+            "pl": _clean(s.get("pl")) or None,
+            "score": _clean(round(s.get("score", 0), 4)),
+            "health_grade": _health_grade(s.get("safety_score", 0)),
+            "shares": shares,
+            "allocated": round(cost, 2),
+        }))
+
+    # Try to use remaining budget — give extra shares to top assets
+    for p in portfolio:
+        price = p["price"] or 1
+        extra = math.floor(remaining_budget / price)
+        if extra > 0:
+            p["shares"] += extra
+            added = extra * price
+            p["allocated"] = round(p["allocated"] + added, 2)
+            remaining_budget -= added
+
+    logger.info(f"[scope] Mix portfolio: {len(portfolio)} assets, "
+                f"allocated R${sum(p['allocated'] for p in portfolio):.2f} of R${budget:.2f}")
+    return portfolio
+
+
 @router.get("/api/recommend")
 async def recommend(
     budget: float = 50.0,
     yolo: bool = False,
+    mode: str = "unico",
     user: dict = Depends(get_optional_user),
 ):
     """
     Daily asset screening based on financial indicators.
     yolo=false (default) → conservative, safety-first filters.
     yolo=true  → "Faca na Caveira" — raw DY ranking, no safety filters.
+    mode='unico' → single best asset ranking (default).
+    mode='mix'   → diversified portfolio builder.
     """
     try:
         if budget <= 0:
@@ -472,15 +598,18 @@ async def recommend(
 
         candidates = []
 
+        # For mix mode, use full budget for filtering (not per-asset budget)
+        filter_budget = budget
+
         # Stocks (BR)
         stocks_raw = db.get_stocks(market="BR") or []
         logger.info(f"[scope] Raw stocks from DB: {len(stocks_raw)}")
         if stocks_raw:
             df_raw = pd.DataFrame(stocks_raw)
             if yolo:
-                df_s = _yolo_score_stocks(df_raw, budget)
+                df_s = _yolo_score_stocks(df_raw, filter_budget)
             else:
-                df_s = _filter_and_score_stocks(df_raw, budget)
+                df_s = _filter_and_score_stocks(df_raw, filter_budget)
             if not df_s.empty:
                 candidates.append(df_s)
 
@@ -490,9 +619,9 @@ async def recommend(
         if fiis_raw:
             df_raw = pd.DataFrame(fiis_raw)
             if yolo:
-                df_f = _yolo_score_fiis(df_raw, budget)
+                df_f = _yolo_score_fiis(df_raw, filter_budget)
             else:
-                df_f = _filter_and_score_fiis(df_raw, budget)
+                df_f = _filter_and_score_fiis(df_raw, filter_budget)
             if not df_f.empty:
                 candidates.append(df_f)
 
@@ -507,7 +636,41 @@ async def recommend(
 
         combined = pd.concat(candidates, ignore_index=True)
         combined = combined.replace([np.inf, -np.inf], np.nan).fillna(0)
-        combined = combined.sort_values("score", ascending=False).head(5)
+        combined = combined.sort_values("score", ascending=False)
+
+        # Conservative mode: final safety gate — remove grade D assets
+        if not yolo:
+            combined = combined[combined.get("safety_score", pd.Series(0, index=combined.index)).fillna(0) >= 0.35]
+            logger.info(f"[scope] After safety gate (>=0.35): {len(combined)} candidates")
+
+        # ── MIX MODE: build diversified portfolio ──
+        if mode == "mix":
+            # Take more candidates for diversification picking
+            pool = combined.head(30)
+            portfolio = _build_mix_portfolio(pool, budget)
+
+            if not portfolio:
+                return _json_response({"status": "empty", "message": f"Nao foi possivel montar um mix com R$ {budget:.2f}."})
+
+            # Also return top 5 as regular results for reference
+            top5 = combined.head(5)
+            results = []
+            for _, row in top5.iterrows():
+                info = _build_justification(row.to_dict(), budget)
+                info = _safe_dict(info)
+                results.append(info)
+
+            return _json_response({
+                "status": "success",
+                "budget": float(budget),
+                "mode": "mix",
+                "count": len(portfolio),
+                "portfolio": portfolio,
+                "results": results,
+            })
+
+        # ── SINGLE MODE: top 5 ranked assets ──
+        combined = combined.head(5)
 
         results = []
         for _, row in combined.iterrows():

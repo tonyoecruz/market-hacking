@@ -77,62 +77,86 @@
 
         <main class="flex-1 overflow-y-auto p-6 space-y-6">
 
-            <!-- ── BUDGET INPUT ────────────────────────────────────────────── -->
-            <div class="bg-dark-800 border border-gray-700 rounded-2xl p-6 scope-glow">
-                <p class="text-sm text-gray-400 mb-4 uppercase tracking-wider font-semibold">
-                    Valor para analise de hoje
-                </p>
-                <div class="flex flex-col md:flex-row gap-4 items-start md:items-end">
+            <!-- ── BUDGET + CONTROLS ────────────────────────────────────────── -->
+            <div class="bg-dark-800 border border-gray-700 rounded-2xl p-4 scope-glow">
+                <div class="flex flex-col lg:flex-row gap-4">
+                    <!-- LEFT: Budget input + presets -->
                     <div class="flex-1">
-                        <label class="block text-xs text-gray-500 mb-1">Valor disponível (R$)</label>
+                        <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">Valor para analise</p>
                         <div class="relative">
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-bold text-lg">R$</span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-bold">R$</span>
                             <input type="number" id="budget-input" value="50" min="1" step="1"
                                 placeholder="50"
-                                class="w-full pl-12 pr-4 py-4 bg-dark-700 border border-gray-600 rounded-xl text-white text-2xl font-bold
+                                class="w-full pl-10 pr-4 py-3 bg-dark-700 border border-gray-600 rounded-xl text-white text-xl font-bold
                                        focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
                                 onkeydown="if(event.key==='Enter') runRecommendation()">
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">
-                            Filtra ativos com cotacao acessivel dentro deste valor.
-                        </p>
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            {% for v in [10, 20, 50, 100, 200, 500, 1000] %}
+                            <button onclick="setBudget({{ v }})"
+                                class="px-2.5 py-1 bg-dark-700 border border-gray-600 rounded-lg text-xs text-gray-300 hover:border-primary hover:text-primary transition">
+                                R$ {{ v }}
+                            </button>
+                            {% endfor %}
+                        </div>
                     </div>
 
-                    <!-- Quick presets -->
-                    <div class="flex flex-wrap gap-2">
-                        <span class="text-xs text-gray-500 w-full mb-1">Atalhos:</span>
-                        {% for v in [10, 20, 50, 100, 200, 500] %}
-                        <button onclick="setBudget({{ v }})"
-                            class="px-3 py-1.5 bg-dark-700 border border-gray-600 rounded-lg text-sm text-gray-300 hover:border-primary hover:text-primary transition">
-                            R$ {{ v }}
-                        </button>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
+                    <!-- CENTER: Toggles (Frequencia + Modo de Alocacao) -->
+                    <div class="flex flex-col gap-3 min-w-[260px]">
+                        <!-- Frequencia: Diário / Mensal -->
+                        <div class="bg-dark-700 rounded-xl p-3">
+                            <p class="text-xs text-gray-500 font-semibold mb-2 uppercase">Frequencia</p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold" id="lbl-freq-diario"
+                                    style="color: #00FF9D;">Diario</span>
+                                <button id="freq-toggle-btn" onclick="toggleFrequency()"
+                                    class="relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none bg-primary/30"
+                                    aria-label="Alternar frequencia">
+                                    <span id="freq-toggle-knob"
+                                        class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 text-xs flex items-center justify-center">
+                                    </span>
+                                </button>
+                                <span class="text-xs font-semibold text-gray-500" id="lbl-freq-mensal">Mensal</span>
+                            </div>
+                        </div>
 
-            <!-- ── FACA NA CAVEIRA TOGGLE ──────────────────────────────────── -->
-            <div id="yolo-toggle-area" class="bg-dark-800 border border-gray-700 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div class="flex items-start gap-3">
-                    <span class="text-2xl mt-0.5" id="yolo-icon">🛡️</span>
-                    <div>
-                        <p class="text-white font-bold text-sm" id="yolo-title">Modo Conservador</p>
-                        <p class="text-xs text-gray-500" id="yolo-desc">
-                            Apenas ativos saudaveis: sem dividas excessivas, lucrativos, com boa liquidez e sem problemas juridicos.
+                        <!-- Alocacao: Ativo Único / Mix de Ativos -->
+                        <div class="bg-dark-700 rounded-xl p-3">
+                            <p class="text-xs text-gray-500 font-semibold mb-2 uppercase">Alocacao</p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold" id="lbl-alloc-unico"
+                                    style="color: #00FF9D;">Ativo Unico</span>
+                                <button id="alloc-toggle-btn" onclick="toggleAllocation()"
+                                    class="relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none bg-primary/30"
+                                    aria-label="Alternar alocacao">
+                                    <span id="alloc-toggle-knob"
+                                        class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 text-xs flex items-center justify-center">
+                                    </span>
+                                </button>
+                                <span class="text-xs font-semibold text-gray-500" id="lbl-alloc-mix">Mix de Ativos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Risk mode (Conservador / Faca na Caveira) -->
+                    <div class="bg-dark-700 rounded-xl p-3 min-w-[220px]">
+                        <p class="text-xs text-gray-500 font-semibold mb-2 uppercase">Perfil de Risco</p>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-gray-400" id="lbl-safe">🛡️ Seguro</span>
+                            <button id="yolo-toggle-btn" onclick="toggleYolo()"
+                                class="relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none bg-gray-600"
+                                aria-label="Alternar modo Faca na Caveira">
+                                <span id="yolo-toggle-knob"
+                                    class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center text-xs">
+                                    🛡️
+                                </span>
+                            </button>
+                            <span class="text-xs font-semibold text-gray-500" id="lbl-yolo">🔪 Caveira</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2" id="yolo-desc">
+                            Apenas ativos saudaveis, lucrativos e com boa liquidez.
                         </p>
                     </div>
-                </div>
-                <div class="flex items-center gap-3 flex-shrink-0">
-                    <span class="text-xs font-semibold text-gray-400" id="lbl-safe">🛡️ Seguro</span>
-                    <button id="yolo-toggle-btn" onclick="toggleYolo()"
-                        class="relative w-14 h-7 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-600"
-                        aria-label="Alternar modo Faca na Caveira">
-                        <span id="yolo-toggle-knob"
-                            class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center text-xs">
-                            🛡️
-                        </span>
-                    </button>
-                    <span class="text-xs font-semibold text-gray-500" id="lbl-yolo">🔪 Faca na Caveira</span>
                 </div>
             </div>
 
@@ -275,6 +299,8 @@
 let _currentWinner = null;
 let _budget = 50;
 let _yoloMode = false;
+let _freqMode = 'diario';   // 'diario' | 'mensal'
+let _allocMode = 'unico';   // 'unico' | 'mix'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(v, decimals = 2) {
@@ -291,53 +317,82 @@ function setBudget(v) {
     runRecommendation();
 }
 
+// ── Toggle helpers ───────────────────────────────────────────────────────────
+function _updateToggle(btnId, knobId, lblLeftId, lblRightId, isRight, colorOn, colorOff) {
+    const knob = document.getElementById(knobId);
+    const lblL = document.getElementById(lblLeftId);
+    const lblR = document.getElementById(lblRightId);
+    const btn = document.getElementById(btnId);
+    if (isRight) {
+        knob.style.transform = 'translateX(1.5rem)';
+        lblL.style.color = '#6b7280';
+        lblR.style.color = colorOn;
+        btn.style.background = colorOn + '40';
+    } else {
+        knob.style.transform = 'translateX(0)';
+        lblL.style.color = colorOn;
+        lblR.style.color = '#6b7280';
+        btn.style.background = colorOff || (colorOn + '40');
+    }
+}
+
+// ── Frequency Toggle ─────────────────────────────────────────────────────────
+function toggleFrequency() {
+    _freqMode = (_freqMode === 'diario') ? 'mensal' : 'diario';
+    _updateToggle('freq-toggle-btn', 'freq-toggle-knob', 'lbl-freq-diario', 'lbl-freq-mensal',
+        _freqMode === 'mensal', '#00FF9D', 'rgba(0,255,157,0.25)');
+
+    // Auto-set allocation default based on frequency
+    if (_freqMode === 'mensal' && _allocMode === 'unico') {
+        _allocMode = 'mix';
+        _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
+            true, '#00FF9D', 'rgba(0,255,157,0.25)');
+    } else if (_freqMode === 'diario' && _allocMode === 'mix') {
+        _allocMode = 'unico';
+        _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
+            false, '#00FF9D', 'rgba(0,255,157,0.25)');
+    }
+
+    if (!document.getElementById('results-area').classList.contains('hidden')) runRecommendation();
+}
+
+// ── Allocation Toggle ────────────────────────────────────────────────────────
+function toggleAllocation() {
+    _allocMode = (_allocMode === 'unico') ? 'mix' : 'unico';
+    _updateToggle('alloc-toggle-btn', 'alloc-toggle-knob', 'lbl-alloc-unico', 'lbl-alloc-mix',
+        _allocMode === 'mix', '#00FF9D', 'rgba(0,255,157,0.25)');
+
+    if (!document.getElementById('results-area').classList.contains('hidden')) runRecommendation();
+}
+
 // ── YOLO Toggle ──────────────────────────────────────────────────────────────
 function toggleYolo() {
     _yoloMode = !_yoloMode;
 
     const btn = document.getElementById('yolo-toggle-btn');
     const knob = document.getElementById('yolo-toggle-knob');
-    const icon = document.getElementById('yolo-icon');
-    const title = document.getElementById('yolo-title');
     const desc = document.getElementById('yolo-desc');
     const lblSafe = document.getElementById('lbl-safe');
     const lblYolo = document.getElementById('lbl-yolo');
-    const area = document.getElementById('yolo-toggle-area');
 
     if (_yoloMode) {
         btn.style.background = 'linear-gradient(135deg, #dc2626, #991b1b)';
-        knob.style.transform = 'translateX(1.75rem)';
+        knob.style.transform = 'translateX(1.5rem)';
         knob.textContent = '🔪';
-        icon.textContent = '💀';
-        title.textContent = 'Faca na Caveira';
-        title.classList.add('text-red-400');
-        title.classList.remove('text-white');
-        desc.textContent = 'ALTO RISCO! Sem filtros de saude financeira. Apenas ordenado por quem paga mais dividendos. Empresas podem ter problemas graves.';
+        desc.textContent = 'ALTO RISCO! Sem filtros de saude financeira. Apenas dividendos.';
         desc.classList.add('text-red-400/70');
         desc.classList.remove('text-gray-500');
-        lblSafe.classList.remove('text-gray-400');
-        lblSafe.classList.add('text-gray-600');
-        lblYolo.classList.remove('text-gray-500');
-        lblYolo.classList.add('text-red-400');
-        area.classList.remove('border-gray-700');
-        area.classList.add('border-red-500/30');
+        lblSafe.style.color = '#6b7280';
+        lblYolo.style.color = '#ef4444';
     } else {
         btn.style.background = '#4b5563';
         knob.style.transform = 'translateX(0)';
         knob.textContent = '🛡️';
-        icon.textContent = '🛡️';
-        title.textContent = 'Modo Conservador';
-        title.classList.remove('text-red-400');
-        title.classList.add('text-white');
-        desc.textContent = 'Apenas ativos saudaveis: sem dividas excessivas, lucrativos, com boa liquidez e sem problemas juridicos.';
+        desc.textContent = 'Apenas ativos saudaveis, lucrativos e com boa liquidez.';
         desc.classList.remove('text-red-400/70');
         desc.classList.add('text-gray-500');
-        lblSafe.classList.add('text-gray-400');
-        lblSafe.classList.remove('text-gray-600');
-        lblYolo.classList.add('text-gray-500');
-        lblYolo.classList.remove('text-red-400');
-        area.classList.add('border-gray-700');
-        area.classList.remove('border-red-500/30');
+        lblSafe.style.color = '#9ca3af';
+        lblYolo.style.color = '#6b7280';
     }
 
     // Auto-refresh if there are results visible
@@ -398,7 +453,7 @@ async function runRecommendation() {
     document.getElementById('loading').classList.remove('hidden');
 
     try {
-        const res = await fetch(`/scope/api/recommend?budget=${_budget}&yolo=${_yoloMode}`);
+        const res = await fetch(`/scope/api/recommend?budget=${_budget}&yolo=${_yoloMode}&mode=${_allocMode}`);
         const data = await res.json();
         document.getElementById('loading').classList.add('hidden');
 
@@ -411,7 +466,11 @@ async function runRecommendation() {
             return;
         }
 
-        renderResults(data.results, _budget);
+        if (data.mode === 'mix' && data.portfolio) {
+            renderMixPortfolio(data.portfolio, data.results, _budget);
+        } else {
+            renderResults(data.results, _budget);
+        }
         updateStreak();
 
     } catch (e) {
@@ -535,6 +594,120 @@ function renderResults(recs, budget) {
 
     // Render projection for winner
     renderProjection(recs[0], budget);
+}
+
+// ── Mix Portfolio Render ──────────────────────────────────────────────────────
+function renderMixPortfolio(portfolio, allResults, budget) {
+    const list = document.getElementById('candidates-list');
+    list.innerHTML = '';
+
+    // Summary card
+    const totalAllocated = portfolio.reduce((s, p) => s + p.allocated, 0);
+    const totalShares = portfolio.reduce((s, p) => s + p.shares, 0);
+    const avgDY = portfolio.reduce((s, p) => s + (p.dy || 0) * (p.allocated / Math.max(totalAllocated, 1)), 0);
+    const remainder = budget - totalAllocated;
+
+    const summaryCard = document.createElement('div');
+    summaryCard.className = 'bg-primary/10 border border-primary/30 rounded-2xl p-5 mb-2';
+    summaryCard.innerHTML = `
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-primary text-lg">📦</span>
+            <span class="text-primary font-bold">Mix de Ativos — Carteira Diversificada</span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center">
+            <div class="bg-dark-700 rounded-lg p-2">
+                <p class="text-xs text-gray-500">Ativos</p>
+                <p class="text-lg font-bold text-white">${portfolio.length}</p>
+            </div>
+            <div class="bg-dark-700 rounded-lg p-2">
+                <p class="text-xs text-gray-500">Cotas totais</p>
+                <p class="text-lg font-bold text-white">${totalShares}</p>
+            </div>
+            <div class="bg-dark-700 rounded-lg p-2">
+                <p class="text-xs text-gray-500">Alocado</p>
+                <p class="text-lg font-bold text-primary">${fmt(totalAllocated)}</p>
+            </div>
+            <div class="bg-dark-700 rounded-lg p-2">
+                <p class="text-xs text-gray-500">Troco</p>
+                <p class="text-lg font-bold ${remainder > 5 ? 'text-yellow-400' : 'text-gray-400'}">${fmt(remainder)}</p>
+            </div>
+            <div class="bg-dark-700 rounded-lg p-2">
+                <p class="text-xs text-gray-500">DY medio pond.</p>
+                <p class="text-lg font-bold text-yellow-400">${avgDY.toFixed(1)}%</p>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2 text-center">Distribuicao ponderada por indicadores de saude e dividendos. Setores diversificados automaticamente.</p>
+    `;
+    list.appendChild(summaryCard);
+
+    // Individual asset rows
+    portfolio.forEach((p, i) => {
+        const typeTag = p.asset_type === 'FII'
+            ? '<span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded font-semibold">FII</span>'
+            : p.asset_type === 'ETF'
+            ? '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded font-semibold">ETF</span>'
+            : '<span class="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded font-semibold">AÇÃO</span>';
+
+        const pctOfTotal = ((p.allocated / Math.max(budget, 1)) * 100).toFixed(0);
+        const analysisUrl = p.asset_type === 'FII' ? '/fiis' : '/acoes';
+
+        const card = document.createElement('div');
+        card.className = 'candidate-card bg-dark-800 border border-gray-700 rounded-2xl p-4';
+        card.innerHTML = `
+            <div class="flex items-center gap-4">
+                ${medalBadge(i + 1)}
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <span class="text-lg font-bold text-white">${p.ticker}</span>
+                        ${typeTag}
+                        ${p.setor ? `<span class="text-xs text-gray-500">${p.setor}</span>` : ''}
+                        ${p.health_grade ? `<span class="px-2 py-0.5 rounded text-xs font-bold ${
+                            p.health_grade === 'A' ? 'bg-green-500/20 text-green-400' :
+                            p.health_grade === 'B' ? 'bg-blue-500/20 text-blue-400' :
+                            'bg-yellow-500/20 text-yellow-400'
+                        }">Saude ${p.health_grade}</span>` : ''}
+                    </div>
+                    <div class="flex flex-wrap gap-1.5 mt-1">
+                        <span class="px-2 py-0.5 bg-dark-700 rounded-full text-xs text-white font-semibold">${fmt(p.price)}</span>
+                        <span class="px-2 py-0.5 bg-dark-700 rounded-full text-xs text-yellow-400 font-semibold">DY ${fmtPct(p.dy)}</span>
+                        ${p.pvp ? `<span class="px-2 py-0.5 bg-dark-700 rounded-full text-xs text-gray-300 font-semibold">P/VP ${p.pvp.toFixed(2)}</span>` : ''}
+                    </div>
+                </div>
+                <!-- Allocation info -->
+                <div class="text-right flex-shrink-0 min-w-[100px]">
+                    <p class="text-xl font-bold text-primary">${p.shares} <span class="text-xs text-gray-500">cotas</span></p>
+                    <p class="text-sm font-semibold text-white">${fmt(p.allocated)}</p>
+                    <div class="w-full bg-dark-700 rounded-full h-1.5 mt-1">
+                        <div class="bg-primary h-1.5 rounded-full" style="width: ${pctOfTotal}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500">${pctOfTotal}% do aporte</p>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-3">
+                <button onclick="prepareWallet(${JSON.stringify(p).replace(/"/g, '&quot;')})"
+                    class="flex-1 py-2 bg-dark-700 border border-gray-600 text-gray-300 font-semibold rounded-lg hover:border-primary hover:text-primary transition text-sm">
+                    + Carteira
+                </button>
+                <a href="${analysisUrl}?analyze=${p.ticker}" target="_blank"
+                    class="px-4 py-2 bg-dark-700 border border-gray-600 text-primary font-semibold rounded-lg hover:border-primary hover:bg-primary/10 transition text-sm flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Analisar
+                </a>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+
+    // Subtitle
+    const freqLabel = _freqMode === 'mensal' ? 'mensal' : 'diario';
+    document.getElementById('results-subtitle').textContent = _yoloMode
+        ? `⚠️ Mix FACA NA CAVEIRA — aporte ${freqLabel} de R$ ${budget.toFixed(2)}`
+        : `Mix diversificado — aporte ${freqLabel} de R$ ${budget.toFixed(2)} distribuido por indicadores de saude.`;
+    document.getElementById('results-count').textContent = `${portfolio.length} ativos no mix`;
+    document.getElementById('results-area').classList.remove('hidden');
+    document.getElementById('projection-panel').classList.add('hidden');
 }
 
 function renderProjection(winner, budget) {
