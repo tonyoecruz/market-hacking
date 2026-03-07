@@ -333,6 +333,11 @@
         // Save default if not yet set
         if (savedMarket === null) localStorage.setItem('selected_market', 'BR');
         renderStrategyCards();
+
+        // Auto-open analysis if ?analyze=TICKER in URL
+        const params = new URLSearchParams(window.location.search);
+        const analyzeTicker = params.get('analyze');
+        if (analyzeTicker) analyzeStock(analyzeTicker.toUpperCase());
     });
 
     function onMarketChange() {

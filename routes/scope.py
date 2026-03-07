@@ -1,17 +1,19 @@
 """
-Scope Router — Habit-Based Daily Investment Recommender
-=======================================================
-Conservative, safety-first daily investment recommendations.
+Scope Router — Habit-Based Daily Investment Analysis
+=====================================================
+Conservative, safety-first daily asset screening tool.
 
 Philosophy:
   SAFETY FIRST — only healthy, well-established assets pass the filters.
-  Then among those, pick the best dividend payers for the user's budget.
+  Then among those, rank the best dividend payers within a given budget.
 
 Pipeline:
   1. Load stocks (BR) + FIIs from database
   2. HARD FILTERS — eliminate risky/unhealthy assets
   3. Score survivors on a balanced mix of safety + income
   4. Return top 5 with full technical justification
+
+Note: This is an educational screening tool, not investment advice.
 """
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -352,7 +354,7 @@ def _build_justification(row: dict, budget: float) -> dict:
             reasons.append(f"ROIC de {roic*100:.0f}% — empresa eficiente no uso do capital")
 
     if not reasons:
-        reasons.append("Melhor relacao risco-retorno disponivel dentro do seu orcamento hoje")
+        reasons.append("Melhor relacao risco-retorno identificada nos indicadores analisados")
 
     shares = math.floor(budget / price) if price > 0 else 0
     proj_monthly = round((dy / 100) * price / 12, 4) if price > 0 else 0
@@ -460,7 +462,7 @@ async def recommend(
     user: dict = Depends(get_optional_user),
 ):
     """
-    Daily investment recommendations.
+    Daily asset screening based on financial indicators.
     yolo=false (default) → conservative, safety-first filters.
     yolo=true  → "Faca na Caveira" — raw DY ranking, no safety filters.
     """
@@ -499,7 +501,7 @@ async def recommend(
                 f"Nenhum ativo com dividendos encontrado abaixo de R$ {budget:.2f}."
                 if yolo else
                 f"Nenhum ativo saudavel com dividendos encontrado abaixo de R$ {budget:.2f}. "
-                f"Tente aumentar o valor — muitos ativos seguros custam acima de R$ 10."
+                f"Tente aumentar o valor — muitos ativos com bons indicadores custam acima de R$ 10."
             )
             return _json_response({"status": "empty", "message": msg})
 
@@ -518,7 +520,7 @@ async def recommend(
             "budget": float(budget),
             "mode": "yolo" if yolo else "safe",
             "count": len(results),
-            "recommendations": results,
+            "results": results,
         })
 
     except Exception as e:

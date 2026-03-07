@@ -245,6 +245,11 @@
     // ══════════════════════════════════════════════════════════════════════
     window.addEventListener('DOMContentLoaded', () => {
         renderStrategyCards();
+
+        // Auto-open analysis if ?analyze=TICKER in URL
+        const params = new URLSearchParams(window.location.search);
+        const analyzeTicker = params.get('analyze');
+        if (analyzeTicker) analyzeFII(analyzeTicker.toUpperCase());
     });
 
     // ══════════════════════════════════════════════════════════════════════

@@ -149,10 +149,10 @@ Este produto oferece uma rentabilidade {{rate_analysis}}.
 ⭐ Score SCOPE3: {score}
 
 🔑 Pontos Principais:
-• {"Produto isento de Imposto de Renda — ideal para prazo de até 2-3 anos" if rate_type == "Isento" else "Incide tabela regressiva de IR (de 22,5% até 15% ao ano)"}
+• {"Produto isento de Imposto de Renda — aplicavel a prazos de ate 2-3 anos" if rate_type == "Isento" else "Incide tabela regressiva de IR (de 22,5% ate 15% ao ano)"}
 • {"Liquidez diária permite resgatar a qualquer momento" if liquidity == "Diária" else f"Prazo de carência de {liquidity} antes do resgate"}
 • {safety_rating} protege até R$ 250.000 por CPF/instituição
-• {"Alta rentabilidade — acima de 110% CDI é considerado excelente" if isinstance(rate_val, (int, float)) and rate_val >= 110 else "Rentabilidade competitiva para o perfil de risco"}
+• {"Rentabilidade acima de 110% CDI — patamar historicamente elevado" if isinstance(rate_val, (int, float)) and rate_val >= 110 else "Rentabilidade dentro da faixa de mercado para o perfil de risco"}
 
 ⚠️ Observações:
 • Compare sempre com o CDI atual (≈ 13,75% a.a.) para avaliar o retorno real
