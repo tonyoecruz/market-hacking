@@ -366,11 +366,26 @@
                                     class="w-3 h-3 rounded bg-yellow-400 inline-block"></span> Dividendos acum.</span>
                         </div>
                     </div>
-                    <div style="height: 260px;">
+                    <div style="height: 300px;">
                         <canvas id="mix-projection-chart"></canvas>
                     </div>
+                    <!-- Milestones -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                        <div class="bg-dark-700 border border-yellow-400/20 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 flex items-center gap-1.5">
+                                <span class="text-yellow-400">&#9733;</span> Dividendo mensal &ge; Aporte mensal
+                            </p>
+                            <p class="text-sm font-bold text-yellow-400 mt-1" id="mix-proj-milestone1">—</p>
+                        </div>
+                        <div class="bg-dark-700 border border-primary/20 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 flex items-center gap-1.5">
+                                <span class="text-primary">&#9733;</span> Dividendos acum. &ge; Total investido
+                            </p>
+                            <p class="text-sm font-bold text-primary mt-1" id="mix-proj-milestone2">—</p>
+                        </div>
+                    </div>
                     <!-- Summary below chart -->
-                    <div class="grid grid-cols-3 gap-4 mt-4">
+                    <div class="grid grid-cols-3 gap-4 mt-3">
                         <div class="bg-dark-700 rounded-lg p-3 text-center">
                             <p class="text-xs text-gray-500">Aporte 12 meses</p>
                             <p class="text-lg font-bold text-white" id="mix-proj-invested-12m">—</p>
