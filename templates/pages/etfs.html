@@ -35,15 +35,17 @@
             </div>
 
             <!-- Strategy Selector + Ranking Area -->
-            <div id="results-area" class="flex gap-5">
-                <!-- LEFT: Strategy Cards -->
-                <div class="w-56 flex-shrink-0">
-                    <p class="text-xs text-gray-500 uppercase font-semibold mb-3 px-1">📦 Estratégias ETF</p>
-                    <div id="strategy-list" class="flex flex-col gap-2"></div>
-                </div>
-
-                <!-- RIGHT: Loading + Ranking Table -->
-                <div class="flex-1 min-w-0">
+            <div class="bg-dark-800 rounded-lg px-4 py-3 mb-4 flex items-center gap-3 flex-wrap">
+                <span id="sidebar-mode-label" class="text-xs text-gray-500 uppercase font-semibold whitespace-nowrap">Estratégias ETF</span>
+                <select id="strategy-dropdown" onchange="selectStrategy(this.value)"
+                    class="px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[220px]">
+                    <option value="">Selecione uma estratégia...</option>
+                </select>
+                <p id="strategy-dropdown-desc" class="text-xs text-gray-400"></p>
+            </div>
+            <div id="strategy-list" class="hidden"></div>
+            <div id="results-area">
+                <div class="min-w-0">
                     <div id="loading" class="hidden text-center py-20">
                         <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                         <p class="text-gray-400 mt-4">Calculando ranking...</p>
@@ -55,7 +57,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                 d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                         </svg>
-                        <p class="text-lg">Selecione uma estratégia ao lado para gerar o ranking</p>
+                        <p class="text-lg">Selecione uma estratégia acima para gerar o ranking</p>
                     </div>
 
                     <div id="results" class="hidden">
@@ -74,17 +76,17 @@
 
                         <div class="bg-dark-800 rounded-xl overflow-hidden border border-gray-700/50">
                             <div class="overflow-x-auto">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-dark-700 text-gray-400 uppercase text-xs">
+                                <table class="w-full text-xs">
+                                    <thead class="bg-dark-700 text-gray-400 uppercase" style="font-size: 10px;">
                                         <tr>
-                                            <th class="px-3 py-3 text-center w-10">#</th>
-                                            <th class="px-3 py-3 text-left">Ticker</th>
-                                            <th class="px-3 py-3 text-right">R$ Atual</th>
-                                            <th class="px-3 py-3 text-right" id="col-metric1">-</th>
-                                            <th class="px-3 py-3 text-right" id="col-metric2">-</th>
-                                            <th class="px-3 py-3 text-right" id="col-metric3">-</th>
-                                            <th class="px-3 py-3 text-right" id="col-metric4">-</th>
-                                            <th class="px-3 py-3 text-center">Ações</th>
+                                            <th class="px-2 py-2 text-center w-10">#</th>
+                                            <th class="px-2 py-2 text-left">Ticker</th>
+                                            <th class="px-2 py-2 text-right">R$ Atual</th>
+                                            <th class="px-2 py-2 text-right" id="col-metric1">-</th>
+                                            <th class="px-2 py-2 text-right" id="col-metric2">-</th>
+                                            <th class="px-2 py-2 text-right" id="col-metric3">-</th>
+                                            <th class="px-2 py-2 text-right" id="col-metric4">-</th>
+                                            <th class="px-2 py-2 text-center">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="ranking-tbody" class="divide-y divide-gray-700/50"></tbody>
@@ -207,28 +209,22 @@
     window.addEventListener('DOMContentLoaded', () => { renderStrategyCards(); });
 
     function renderStrategyCards() {
-        const list = document.getElementById('strategy-list');
-        list.innerHTML = STRATEGIES.map(s => `
-            <button id="card-${s.id}" onclick="selectStrategy('${s.id}')"
-                class="strategy-card w-full text-left px-4 py-3 rounded-xl border border-gray-700 bg-dark-800 hover:border-gray-500 transition-all group">
-                <div class="flex items-center space-x-2">
-                    <span class="text-xl">${s.icon}</span>
-                    <span class="font-bold text-white text-sm group-hover:text-primary transition-colors">${s.name}</span>
-                    <svg class="w-4 h-4 ml-auto text-gray-600 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </div>
-                <p class="text-xs text-gray-500 mt-1 leading-tight">${s.desc}</p>
-            </button>
-        `).join('');
+        const dd = document.getElementById('strategy-dropdown');
+        dd.innerHTML = '<option value="">Selecione uma estratégia...</option>' +
+            STRATEGIES.map(s =>
+                `<option value="${s.id}">${s.icon} ${s.name}</option>`
+            ).join('');
+        if (currentStrategy) dd.value = currentStrategy;
     }
 
     function selectStrategy(strategyId) {
+        if (!strategyId) return;
         currentStrategy = strategyId;
         const strat = STRATEGIES.find(s => s.id === strategyId);
-        document.querySelectorAll('.strategy-card').forEach(c => c.classList.remove('border-primary', 'bg-primary/10'));
-        const activeCard = document.getElementById(`card-${strategyId}`);
-        if (activeCard) activeCard.classList.add('border-primary', 'bg-primary/10');
+        const dd = document.getElementById('strategy-dropdown');
+        if (dd.value !== strategyId) dd.value = strategyId;
+        const descEl = document.getElementById('strategy-dropdown-desc');
+        if (descEl && strat) descEl.textContent = strat.desc;
         if (strat && strat.columns.length >= 4) {
             ['col-metric1', 'col-metric2', 'col-metric3', 'col-metric4'].forEach((id, i) => {
                 const el = document.getElementById(id);
@@ -307,14 +303,14 @@
             const posColor = pos <= 3 ? 'text-amber-400 font-bold' : 'text-gray-500';
             return `
             <tr class="hover:bg-dark-700/60 transition-colors cursor-pointer" onclick="analyzeETF('${item.ticker}')">
-                <td class="px-3 py-3 text-center ${posColor} text-sm">${pos}</td>
-                <td class="px-3 py-3"><span class="font-bold text-white text-sm">${item.ticker}</span></td>
-                <td class="px-3 py-3 text-right text-white font-medium text-sm">${item.price ? `R$ ${fmtNum(item.price)}` : '-'}</td>
-                <td class="px-3 py-3 text-right text-xs ${etfMetricColor(item, cols[0])}">${etfMetricValue(item, cols[0])}</td>
-                <td class="px-3 py-3 text-right text-xs ${etfMetricColor(item, cols[1])}">${etfMetricValue(item, cols[1])}</td>
-                <td class="px-3 py-3 text-right text-xs ${etfMetricColor(item, cols[2])}">${etfMetricValue(item, cols[2])}</td>
-                <td class="px-3 py-3 text-right text-xs ${etfMetricColor(item, cols[3])}">${etfMetricValue(item, cols[3])}</td>
-                <td class="px-3 py-3 text-center">
+                <td class="px-2 py-2 text-center ${posColor} text-sm">${pos}</td>
+                <td class="px-2 py-2"><span class="font-bold text-white text-sm">${item.ticker}</span></td>
+                <td class="px-2 py-2 text-right text-white font-medium text-sm">${item.price ? `R$ ${fmtNum(item.price)}` : '-'}</td>
+                <td class="px-2 py-2 text-right text-xs ${etfMetricColor(item, cols[0])}">${etfMetricValue(item, cols[0])}</td>
+                <td class="px-2 py-2 text-right text-xs ${etfMetricColor(item, cols[1])}">${etfMetricValue(item, cols[1])}</td>
+                <td class="px-2 py-2 text-right text-xs ${etfMetricColor(item, cols[2])}">${etfMetricValue(item, cols[2])}</td>
+                <td class="px-2 py-2 text-right text-xs ${etfMetricColor(item, cols[3])}">${etfMetricValue(item, cols[3])}</td>
+                <td class="px-2 py-2 text-center">
                     <div class="flex items-center justify-center gap-1">
                         <button onclick="event.stopPropagation(); walletQuickAdd.open('${item.ticker}', ${item.price || 0}, this)"
                             class="p-1.5 bg-green-600/20 text-green-400 rounded-lg hover:bg-green-600/30 transition" title="Adicionar a carteira">

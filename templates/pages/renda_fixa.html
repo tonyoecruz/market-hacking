@@ -49,16 +49,20 @@
                 </div>
             </div>
 
-            <!-- Strategy Selector + Ranking Area -->
-            <div id="results-area" class="flex gap-5">
-                <!-- LEFT: Strategy Cards -->
-                <div class="w-56 flex-shrink-0">
-                    <p class="text-xs text-gray-500 uppercase font-semibold mb-3 px-1">💵 Estratégias RF</p>
-                    <div id="strategy-list" class="flex flex-col gap-2"></div>
-                </div>
+            <!-- Strategy Dropdown Bar -->
+            <div class="bg-dark-800 rounded-lg px-4 py-3 mb-4 flex items-center gap-3 flex-wrap">
+                <span id="sidebar-mode-label" class="text-xs text-gray-500 uppercase font-semibold whitespace-nowrap">Estratégias Renda Fixa</span>
+                <select id="strategy-dropdown" onchange="selectStrategy(this.value)"
+                    class="px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[220px]">
+                    <option value="">Selecione uma estratégia...</option>
+                </select>
+                <p id="strategy-dropdown-desc" class="text-xs text-gray-400"></p>
+            </div>
+            <div id="strategy-list" class="hidden"></div>
 
-                <!-- RIGHT: Loading + Ranking Table -->
-                <div class="flex-1 min-w-0">
+            <!-- Ranking Area -->
+            <div id="results-area">
+                <div class="min-w-0">
                     <div id="loading" class="hidden text-center py-20">
                         <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                         <p class="text-gray-400 mt-4">Calculando ranking...</p>
@@ -70,7 +74,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                 d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
-                        <p class="text-lg">Selecione uma estratégia ao lado para filtrar oportunidades</p>
+                        <p class="text-lg">Selecione uma estratégia acima para filtrar oportunidades</p>
                     </div>
 
                     <div id="results" class="hidden">
@@ -89,17 +93,17 @@
 
                         <div class="bg-dark-800 rounded-xl overflow-hidden border border-gray-700/50">
                             <div class="overflow-x-auto">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-dark-700 text-gray-400 uppercase text-xs">
+                                <table class="w-full text-xs">
+                                    <thead class="bg-dark-700 text-gray-400 uppercase" style="font-size: 10px;">
                                         <tr>
-                                            <th class="px-3 py-3 text-center w-10">#</th>
-                                            <th class="px-3 py-3 text-left">Produto</th>
-                                            <th class="px-3 py-3 text-left">Emissor</th>
-                                            <th class="px-3 py-3 text-right" id="col-metric1">-</th>
-                                            <th class="px-3 py-3 text-right" id="col-metric2">-</th>
-                                            <th class="px-3 py-3 text-right" id="col-metric3">-</th>
-                                            <th class="px-3 py-3 text-right" id="col-metric4">-</th>
-                                            <th class="px-3 py-3 text-center">Ações</th>
+                                            <th class="px-2 py-2 text-center w-10">#</th>
+                                            <th class="px-2 py-2 text-left">Produto</th>
+                                            <th class="px-2 py-2 text-left">Emissor</th>
+                                            <th class="px-2 py-2 text-right" id="col-metric1">-</th>
+                                            <th class="px-2 py-2 text-right" id="col-metric2">-</th>
+                                            <th class="px-2 py-2 text-right" id="col-metric3">-</th>
+                                            <th class="px-2 py-2 text-right" id="col-metric4">-</th>
+                                            <th class="px-2 py-2 text-center">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="ranking-tbody" class="divide-y divide-gray-700/50"></tbody>
@@ -150,28 +154,22 @@
     }
 
     function renderStrategyCards() {
-        const list = document.getElementById('strategy-list');
-        list.innerHTML = STRATEGIES.map(s => `
-            <button id="card-${s.id}" onclick="selectStrategy('${s.id}')"
-                class="strategy-card w-full text-left px-4 py-3 rounded-xl border border-gray-700 bg-dark-800 hover:border-gray-500 transition-all group">
-                <div class="flex items-center space-x-2">
-                    <span class="text-xl">${s.icon}</span>
-                    <span class="font-bold text-white text-sm group-hover:text-primary transition-colors">${s.name}</span>
-                    <svg class="w-4 h-4 ml-auto text-gray-600 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </div>
-                <p class="text-xs text-gray-500 mt-1 leading-tight">${s.desc}</p>
-            </button>
-        `).join('');
+        const dd = document.getElementById('strategy-dropdown');
+        dd.innerHTML = '<option value="">Selecione uma estratégia...</option>' +
+            STRATEGIES.map(s =>
+                `<option value="${s.id}">${s.icon} ${s.name}</option>`
+            ).join('');
+        if (currentStrategy) dd.value = currentStrategy;
     }
 
     function selectStrategy(strategyId) {
+        if (!strategyId) return;
         currentStrategy = strategyId;
         const strat = STRATEGIES.find(s => s.id === strategyId);
-        document.querySelectorAll('.strategy-card').forEach(c => c.classList.remove('border-primary', 'bg-primary/10'));
-        const activeCard = document.getElementById(`card-${strategyId}`);
-        if (activeCard) activeCard.classList.add('border-primary', 'bg-primary/10');
+        const dd = document.getElementById('strategy-dropdown');
+        if (dd.value !== strategyId) dd.value = strategyId;
+        const descEl = document.getElementById('strategy-dropdown-desc');
+        if (descEl && strat) descEl.textContent = strat.desc;
         if (strat && strat.columns.length >= 4) {
             ['col-metric1', 'col-metric2', 'col-metric3', 'col-metric4'].forEach((id, i) => {
                 const el = document.getElementById(id);
@@ -255,20 +253,20 @@
 
             return `
             <tr class="hover:bg-dark-700/60 transition-colors cursor-pointer" onclick="analyzeProduct(${idx})">
-                <td class="px-3 py-3 text-center ${posColor} text-sm">${pos}</td>
-                <td class="px-3 py-3">
+                <td class="px-2 py-2 text-center ${posColor} text-sm">${pos}</td>
+                <td class="px-2 py-2">
                     <span class="font-bold ${typeColor} text-sm">${item.type || '-'}</span>
                     <span class="text-xs text-gray-500 ml-1">${item.rate_type || ''}</span>
                 </td>
-                <td class="px-3 py-3 text-gray-300 text-sm">
+                <td class="px-2 py-2 text-gray-300 text-sm">
                     ${item.issuer || '-'}
                     ${item._risk_tier === 'alto_risco' ? '<span class="ml-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">⚠️ risco</span>' : ''}
                 </td>
-                <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[0])}">${rfMetricValue(item, cols[0])}</td>
-                <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[1])}">${rfMetricValue(item, cols[1])}</td>
-                <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[2])}">${rfMetricValue(item, cols[2])}</td>
-                <td class="px-3 py-3 text-right text-xs ${rfMetricColor(item, cols[3])}">${rfMetricValue(item, cols[3])}</td>
-                <td class="px-3 py-3 text-center">
+                <td class="px-2 py-2 text-right text-xs ${rfMetricColor(item, cols[0])}">${rfMetricValue(item, cols[0])}</td>
+                <td class="px-2 py-2 text-right text-xs ${rfMetricColor(item, cols[1])}">${rfMetricValue(item, cols[1])}</td>
+                <td class="px-2 py-2 text-right text-xs ${rfMetricColor(item, cols[2])}">${rfMetricValue(item, cols[2])}</td>
+                <td class="px-2 py-2 text-right text-xs ${rfMetricColor(item, cols[3])}">${rfMetricValue(item, cols[3])}</td>
+                <td class="px-2 py-2 text-center">
                     <button onclick="event.stopPropagation(); analyzeProduct(${idx})"
                         class="px-3 py-1 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 text-xs font-medium transition">Detalhes</button>
                 </td>
