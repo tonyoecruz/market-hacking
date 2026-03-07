@@ -72,16 +72,15 @@ app.include_router(flipping.router, prefix="/flipping", tags=["House Flipping"])
 
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database and start scheduler on app startup"""
-    logger.info("="*80)
-    logger.info("🚀 SCOPE3 APPLICATION STARTING...")
-    logger.info("="*80)
-    
-    # Initialize database
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+executor = ThreadPoolExecutor(max_workers=2)
+
+def run_background_startup():
+    """Heavy synchronous startup tasks (DB and Scheduler)"""
     try:
-        logger.info("📊 Initializing database...")
+        logger.info("📊 Initializing database in background...")
         init_database()
         logger.info("✅ Database initialized successfully")
         
@@ -96,14 +95,11 @@ async def startup_event():
         logger.info(f"   - Total Updates: {stats['total_updates']}")
         logger.info(f"   - Last Update: {stats['last_update']}")
         
-        # Check if database is empty
         if stats['stocks_count'] == 0:
             logger.warning("⚠️  Database is EMPTY - No market data found!")
-            logger.info("📊 Scheduler will trigger initial data update...")
         else:
             logger.info("✅ Database contains market data")
         
-        # Initialize default settings
         db_manager.init_default_settings()
         db_manager.init_default_investors()
         logger.info("✅ Default settings and investor personas initialized")
@@ -116,16 +112,24 @@ async def startup_event():
         logger.info("⏰ Starting background scheduler...")
         start_scheduler()
         logger.info("✅ Background scheduler started successfully")
-        logger.info("📅 Scheduled jobs:")
-        logger.info("   - Data update: Every hour")
-        logger.info("   - Log cleanup: Daily at midnight")
-        logger.info("   - Initial update: IMMEDIATE")
     except Exception as e:
         logger.error(f"❌ Scheduler startup error: {e}", exc_info=True)
     
     logger.info("="*80)
-    logger.info("✅ SCOPE3 APPLICATION READY")
+    logger.info("✅ SCOPE3 BACKGROUND TASKS READY")
     logger.info("="*80)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Fast API startup event"""
+    logger.info("="*80)
+    logger.info("🚀 SCOPE3 API IS STARTING (Port Binding)...")
+    logger.info("="*80)
+    
+    # Run heavy initialization in a background thread to prevent blocking Uvicorn's port binding (Render Timeout Fix)
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(executor, run_background_startup)
 
 @app.on_event("shutdown")
 async def shutdown_event():
