@@ -68,6 +68,7 @@ async def fiis_page(request: Request, user: dict = Depends(get_optional_user)):
 @router.get("/api/data-estrategia")
 async def get_fiis_data_estrategia(
     strategy: str = 'renda_constante',
+    min_liq: float = 500000.0,
 ):
     """
     Strategy-based FII screener.
@@ -81,6 +82,9 @@ async def get_fiis_data_estrategia(
                 'ranking': [], 'strategy': strategy,
                 'caveats': [], 'score_col': {}
             })
+
+        if min_liq > 0:
+            df_universe = df_universe[df_universe['liquidezmediadiaria'].fillna(0) >= min_liq].copy()
 
         total = len(df_universe)
         df_ranked, score_col, caveats = apply_fiis_strategy(df_universe, strategy)

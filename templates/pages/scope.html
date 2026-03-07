@@ -757,25 +757,29 @@ function renderMixProjectionChart(portfolio, budget) {
     panel.classList.remove('hidden');
 
     const isMonthly = (_freqMode === 'mensal');
-    const months = 12;
 
     // Calculate weighted average DY (annual %)
     const totalAllocated = portfolio.reduce((s, p) => s + p.allocated, 0);
     const wAvgDY = portfolio.reduce((s, p) => s + (p.dy || 0) * (p.allocated / Math.max(totalAllocated, 1)), 0);
     const monthlyDYRate = wAvgDY / 100 / 12;
 
-    // Build month-by-month projection
+    // Build month-by-month projection — extend until BOTH milestones are reached
     const labels = [];
     const investedData = [];
     const dividendData = [];
+    const monthlyDivData = [];  // track monthly dividend for milestone 1
 
     let cumInvested = 0;
     let cumDividends = 0;
     const aportPerMonth = isMonthly ? budget : budget * 22; // ~22 business days
 
-    for (let m = 1; m <= months; m++) {
+    let milestone1Month = null; // monthly dividends >= monthly deposit
+    let milestone2Month = null; // cumulative dividends >= cumulative invested
+    const maxMonths = 600; // safety cap (50 years)
+    const minMonths = 12;  // always show at least 12
+
+    for (let m = 1; m <= maxMonths; m++) {
         cumInvested += aportPerMonth;
-        // Dividends are on accumulated portfolio value
         const portfolioValue = cumInvested + cumDividends;
         const monthDiv = portfolioValue * monthlyDYRate;
         cumDividends += monthDiv;
@@ -783,12 +787,107 @@ function renderMixProjectionChart(portfolio, budget) {
         labels.push(`M${m}`);
         investedData.push(Math.round(cumInvested));
         dividendData.push(Math.round(cumDividends));
+        monthlyDivData.push(Math.round(monthDiv));
+
+        // Check milestones
+        if (milestone1Month === null && monthDiv >= aportPerMonth) {
+            milestone1Month = m;
+        }
+        if (milestone2Month === null && cumDividends >= cumInvested) {
+            milestone2Month = m;
+        }
+
+        // Stop after both milestones reached (+ a few extra months for visual context)
+        if (m >= minMonths && milestone1Month && milestone2Month) {
+            // Add 2 more months for visual breathing room
+            const extra = Math.min(2, maxMonths - m);
+            for (let e = 1; e <= extra; e++) {
+                cumInvested += aportPerMonth;
+                const pv = cumInvested + cumDividends;
+                const md = pv * monthlyDYRate;
+                cumDividends += md;
+                labels.push(`M${m + e}`);
+                investedData.push(Math.round(cumInvested));
+                dividendData.push(Math.round(cumDividends));
+                monthlyDivData.push(Math.round(md));
+            }
+            break;
+        }
     }
 
-    // Update summary
-    document.getElementById('mix-proj-invested-12m').textContent = fmt(cumInvested);
-    document.getElementById('mix-proj-div-12m').textContent = fmt(cumDividends);
+    const totalMonths = labels.length;
+
+    // Update subtitle
+    const subtitleEl = document.querySelector('#mix-projection-panel .text-xs.text-gray-500');
+    if (subtitleEl) {
+        subtitleEl.textContent = `Estimativa de dividendos acumulados e patrimonio ao longo de ${totalMonths} meses`;
+    }
+
+    // Update summary cards
+    document.getElementById('mix-proj-invested-12m').textContent = fmt(investedData[Math.min(11, totalMonths - 1)]);
+    document.getElementById('mix-proj-div-12m').textContent = fmt(dividendData[Math.min(11, totalMonths - 1)]);
     document.getElementById('mix-proj-dy').textContent = wAvgDY.toFixed(1) + '% a.a.';
+
+    // Milestone info
+    const m1El = document.getElementById('mix-proj-milestone1');
+    const m2El = document.getElementById('mix-proj-milestone2');
+    if (m1El) {
+        if (milestone1Month) {
+            const years = Math.floor(milestone1Month / 12);
+            const months = milestone1Month % 12;
+            const timeStr = years > 0 ? `${years}a ${months}m` : `${months} meses`;
+            m1El.innerHTML = `<span class="text-yellow-400 text-lg">&#9733;</span> Mes ${milestone1Month} <span class="text-gray-500">(${timeStr})</span>`;
+        } else {
+            m1El.innerHTML = `<span class="text-gray-500">Alem de ${Math.floor(maxMonths/12)} anos</span>`;
+        }
+    }
+    if (m2El) {
+        if (milestone2Month) {
+            const years = Math.floor(milestone2Month / 12);
+            const months = milestone2Month % 12;
+            const timeStr = years > 0 ? `${years}a ${months}m` : `${months} meses`;
+            m2El.innerHTML = `<span class="text-primary text-lg">&#9733;</span> Mes ${milestone2Month} <span class="text-gray-500">(${timeStr})</span>`;
+        } else {
+            m2El.innerHTML = `<span class="text-gray-500">Alem de ${Math.floor(maxMonths/12)} anos</span>`;
+        }
+    }
+
+    // Build point styles: stars at milestones, small dots elsewhere
+    const pointRadii = dividendData.map((_, i) => {
+        const m = i + 1;
+        if (m === milestone1Month || m === milestone2Month) return 10;
+        // Show dots only every N months to avoid clutter on long charts
+        const step = totalMonths > 60 ? 12 : (totalMonths > 24 ? 3 : 1);
+        return (m % step === 0 || m === totalMonths) ? 3 : 0;
+    });
+    const pointStyles = dividendData.map((_, i) => {
+        const m = i + 1;
+        if (m === milestone1Month || m === milestone2Month) return 'star';
+        return 'circle';
+    });
+    const pointColors = dividendData.map((_, i) => {
+        const m = i + 1;
+        if (m === milestone1Month) return '#facc15';
+        if (m === milestone2Month) return '#00FF9D';
+        return '#facc15';
+    });
+
+    // Reduce bar rendering on long charts: show bar border only on select months
+    const barBgColors = investedData.map((_, i) => {
+        const m = i + 1;
+        if (m === milestone1Month) return 'rgba(250,204,21,0.25)';
+        if (m === milestone2Month) return 'rgba(0,255,157,0.4)';
+        return 'rgba(0,255,157,0.2)';
+    });
+    const barBorderColors = investedData.map((_, i) => {
+        const m = i + 1;
+        if (m === milestone1Month) return '#facc15';
+        if (m === milestone2Month) return '#00FF9D';
+        return 'rgba(0,255,157,0.5)';
+    });
+
+    // X-axis: only show select labels to avoid crowding
+    const xStep = totalMonths > 120 ? 24 : (totalMonths > 60 ? 12 : (totalMonths > 24 ? 6 : (totalMonths > 12 ? 3 : 1)));
 
     // Draw chart
     const ctx = document.getElementById('mix-projection-chart').getContext('2d');
@@ -802,8 +901,8 @@ function renderMixProjectionChart(portfolio, budget) {
                 {
                     label: 'Valor investido',
                     data: investedData,
-                    backgroundColor: 'rgba(0,255,157,0.3)',
-                    borderColor: '#00FF9D',
+                    backgroundColor: barBgColors,
+                    borderColor: barBorderColors,
                     borderWidth: 1,
                     order: 2,
                 },
@@ -812,10 +911,13 @@ function renderMixProjectionChart(portfolio, budget) {
                     data: dividendData,
                     type: 'line',
                     borderColor: '#facc15',
-                    backgroundColor: 'rgba(250,204,21,0.1)',
+                    backgroundColor: 'rgba(250,204,21,0.08)',
                     borderWidth: 2,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#facc15',
+                    pointRadius: pointRadii,
+                    pointStyle: pointStyles,
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    pointBorderWidth: 2,
                     fill: true,
                     tension: 0.3,
                     order: 1,
@@ -828,8 +930,19 @@ function renderMixProjectionChart(portfolio, budget) {
             interaction: { mode: 'index', intersect: false },
             scales: {
                 x: {
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: '#6b7280', font: { size: 10 } }
+                    grid: { color: 'rgba(255,255,255,0.03)' },
+                    ticks: {
+                        color: '#6b7280',
+                        font: { size: 10 },
+                        maxRotation: 0,
+                        callback: function(val, idx) {
+                            const m = idx + 1;
+                            if (m === milestone1Month || m === milestone2Month) return `M${m} ★`;
+                            if (m === 1 || m === totalMonths) return `M${m}`;
+                            if (m % xStep === 0) return `M${m}`;
+                            return '';
+                        }
+                    }
                 },
                 y: {
                     grid: { color: 'rgba(255,255,255,0.05)' },
@@ -848,7 +961,21 @@ function renderMixProjectionChart(portfolio, budget) {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => ctx.dataset.label + ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR')
+                        title: (items) => {
+                            const m = items[0].dataIndex + 1;
+                            let t = `Mes ${m}`;
+                            if (m === milestone1Month) t += ' ★ Dividendo mensal > Aporte';
+                            if (m === milestone2Month) t += ' ★ Dividendos acum. > Investido';
+                            return t;
+                        },
+                        label: (ctx) => {
+                            const m = ctx.dataIndex + 1;
+                            let line = ctx.dataset.label + ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR');
+                            if (ctx.datasetIndex === 1 && monthlyDivData[ctx.dataIndex]) {
+                                line += ` (mensal: R$ ${monthlyDivData[ctx.dataIndex].toLocaleString('pt-BR')})`;
+                            }
+                            return line;
+                        }
                     }
                 }
             }
