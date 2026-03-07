@@ -219,9 +219,14 @@ def get_ai_generic_analysis(prompt, investor_style_prompt=None):
              return "IA INDISPONIVEL - GEMINI_KEY não configurada"
 
     try:
+        global_constraint = "DIRETRIZ GLOBAL OBRIGATÓRIA: Vá direto ao ponto. NUNCA use saudações, frases de efeito, conselhos emocionais ou linguagem humanizada (exemplos a evitar: 'ninguém vai te dar nada de bandeja', 'prepare-se', 'olá'). Seja extremamente frio, objetivo e estritamente profissional e técnico na análise dos fundamentos. Inicie a análise diretamente."
+        
         full_prompt = prompt
         if investor_style_prompt:
-            full_prompt = f"{investor_style_prompt}\n\n---\n\n{prompt}"
+            full_prompt = f"{investor_style_prompt}\n\n{global_constraint}\n\n---\n\n{prompt}"
+        else:
+            full_prompt = f"{global_constraint}\n\n---\n\n{prompt}"
+            
         response = model.generate_content(full_prompt, safety_settings=SAFETY_SETTINGS)
         return response.text
     except Exception as e:

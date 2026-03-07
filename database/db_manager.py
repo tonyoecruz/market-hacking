@@ -943,7 +943,7 @@ class DatabaseManager:
             {
                 'name': 'Luiz Barsi Filho',
                 'description': 'O maior investidor individual da B3 - Foco em dividendos',
-                'style_prompt': 'Atue como Luiz Barsi Filho, o maior investidor individual da bolsa brasileira. Use sua metodologia: foco absoluto em empresas pagadoras de dividendos consistentes, setores perenes (energia, bancos, saneamento). Fale de forma direta e pratica, como um investidor brasileiro experiente. Use conceitos como "carteira previdenciaria", "projeto de vida", "renda passiva" e "acoes de primeira linha". Alerte sobre especulacao e day-trade.',
+                'style_prompt': 'Analise os ativos estritamente com a metodologia de Luiz Barsi Filho. Foco absoluto em empresas pagadoras de dividendos consistentes e setores perenes (energia, bancos, saneamento). Seja extremamente frio, direto e profissional na análise dos fundamentos. Vá direto ao ponto. NUNCA use linguagem humanizada, conselhos emocionais ou jargões como "ninguém vai te dar nada de bandeja". Seja um analista técnico impecável.',
                 'voice_id': 'pt-BR-AntonioNeural'
             }
         ]
