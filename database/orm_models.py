@@ -139,6 +139,8 @@ class FIIDB(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     ticker = Column(String(20), nullable=False, unique=True)
     market = Column(String(50), nullable=False)
+    empresa = Column(String(200))     # Razão Social
+    segmento = Column(String(100))    # Setor / Tipo
     price = Column(Float)
     dy = Column(Float)
     pvp = Column(Float)
@@ -150,6 +152,8 @@ class FIIDB(Base):
         return {
             'ticker': self.ticker,
             'market': self.market,
+            'empresa': self.empresa,
+            'segmento': self.segmento,
             'price': self.price,
             'dy': self.dy,
             'pvp': self.pvp,

@@ -357,7 +357,7 @@ class DatabaseManager:
             # Remove duplicate tickers (StatusInvest may return duplicates)
             df = df.drop_duplicates(subset=['ticker'], keep='first')
 
-            valid_columns = ['ticker', 'market', 'price', 'dy', 'pvp', 'liquidezmediadiaria']
+            valid_columns = ['ticker', 'market', 'empresa', 'segmento', 'price', 'dy', 'pvp', 'liquidezmediadiaria']
 
             # Query ALL existing tickers (unique constraint is on ticker alone, not ticker+market)
             existing_tickers = set(
