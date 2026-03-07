@@ -381,7 +381,7 @@ def calculate_flipping_opportunity(df):
 
     Cost Structure:
       - ITBI + Registration: 6% of property value
-      - Renovation: 15% of property value
+      - Renovation: 15% of property value (0% for Terreno)
       - 6-month Maintenance: Condo fee × 6 (if available)
       - Total Cost = Property Value + All Above
 
@@ -406,7 +406,8 @@ def calculate_flipping_opportunity(df):
 
     # 4. Costs
     df['Custo ITBI'] = (df['Valor Total'] * 0.06).round(2)        # 6% ITBI + Registro
-    df['Custo Reforma'] = (df['Valor Total'] * 0.15).round(2)     # 15% Reforma
+    is_terreno = df['Tipo'].str.lower().str.contains('terreno', na=False)
+    df['Custo Reforma'] = (~is_terreno * df['Valor Total'] * 0.15).round(2)  # 15% Reforma (0 para terrenos)
 
     # Condomínio × 6 (if column exists and has data)
     if 'Condominio' in df.columns:
