@@ -100,6 +100,8 @@ def init_database():
         ("investor_personas", "sources", "TEXT"),
         ("flipping_cities", "last_accessed_at", "TIMESTAMP"),
         ("flipping_listings", "regiao", "VARCHAR(50)"),
+        ("fiis", "empresa", "VARCHAR"),
+        ("fiis", "segmento", "VARCHAR"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in _migrate_columns:
