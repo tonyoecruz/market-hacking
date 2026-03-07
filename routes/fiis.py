@@ -163,6 +163,38 @@ async def get_fiis_data(min_dy: float = 0.0, min_liq: float = 0, max_pvp: float 
         print(f"ERRO API FIIS: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/api/search")
+async def search_fiis(q: str = '', limit: int = 10):
+    """Search for FIIs by ticker or company name"""
+    try:
+        fiis = db.get_fiis()
+        if not fiis:
+            return JSONResponse({'status': 'success', 'results': []})
+            
+        q_lower = q.lower()
+        results = []
+        for f in fiis:
+            ticker = f.get('ticker', '').lower()
+            empresa = f.get('empresa', '').lower() if f.get('empresa') else ''
+            
+            if q_lower in ticker or q_lower in empresa:
+                results.append({
+                    'ticker': f.get('ticker', ''),
+                    'empresa': f.get('empresa', '')
+                })
+                
+        # Sort by exact match first, then starts with, then others
+        def sort_key(x):
+            t = x['ticker'].lower()
+            if t == q_lower: return 0
+            if t.startswith(q_lower): return 1
+            return 2
+            
+        results.sort(key=sort_key)
+        return JSONResponse({'status': 'success', 'results': results[:limit]})
+    except Exception as e:
+        logger.error(f"[fiis/api/search] {e}", exc_info=True)
+        return JSONResponse({'status': 'error', 'results': []})
 
 @router.get("/api/decode/{ticker}")
 async def decode_fii(ticker: str, investor: str = ''):

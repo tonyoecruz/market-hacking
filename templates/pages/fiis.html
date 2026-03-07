@@ -29,7 +29,18 @@
                     <p class="text-gray-400 text-sm">Filtros rígidos + fórmulas matemáticas absolutas para Fundos
                         Imobiliários.</p>
                 </div>
-                <div class="flex items-center gap-4 flex-shrink-0">
+                <div class="flex items-center gap-4 flex-shrink-0 w-full md:w-auto">
+                    <!-- Search Field -->
+                    <div class="relative w-full md:w-64">
+                        <input type="text" id="search-input" placeholder="🔍 Buscar FII: MXRF11..."
+                            oninput="onSearchInput()"
+                            class="w-full px-4 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary uppercase text-sm">
+                        <!-- Autocomplete Dropdown -->
+                        <div id="search-dropdown"
+                            class="hidden absolute z-50 w-full mt-1 bg-dark-700 border border-gray-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                        </div>
+                    </div>
+
                     <div class="flex items-center gap-2 bg-dark-700 px-3 py-1.5 rounded-lg border border-gray-600">
                         <label for="liquidez-filter" class="text-xs text-gray-400 whitespace-nowrap">Liq. Min
                             (R$)</label>
@@ -37,7 +48,7 @@
                             onchange="reloadCurrentStrategy()"
                             class="bg-transparent text-white text-sm w-24 text-right focus:outline-none focus:ring-0 border-none p-0 outline-none">
                     </div>
-                    <span class="text-sm text-gray-400">Ativos: <strong id="stock-count"
+                    <span class="text-sm text-gray-400 whitespace-nowrap">Ativos: <strong id="stock-count"
                             class="text-primary text-lg">0</strong></span>
                 </div>
             </div>
@@ -430,6 +441,43 @@
             </tr>`;
         }).join('');
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // SEARCH
+    // ══════════════════════════════════════════════════════════════════════
+    let searchTimeout;
+    function onSearchInput() {
+        clearTimeout(searchTimeout);
+        const q = document.getElementById('search-input').value.trim();
+        if (q.length < 1) {
+            document.getElementById('search-dropdown').classList.add('hidden');
+            return;
+        }
+        searchTimeout = setTimeout(() => performSearch(q), 300);
+    }
+
+    async function performSearch(q) {
+        try {
+            const res = await fetch(`/fiis/api/search?q=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+            const dd = document.getElementById('search-dropdown');
+            if (!data.results?.length) { dd.classList.add('hidden'); return; }
+            dd.innerHTML = data.results.map(r => `
+                <div onclick="document.getElementById('search-dropdown').classList.add('hidden'); analyzeFII('${r.ticker}')"
+                    class="px-4 py-2 hover:bg-dark-600 cursor-pointer flex justify-between items-center">
+                    <span class="text-white font-bold text-sm">${r.ticker}</span>
+                    <span class="text-gray-400 text-xs truncate max-w-[60%]">${r.empresa || ''}</span>
+                </div>`).join('');
+            dd.classList.remove('hidden');
+        } catch { }
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#search-input') && !e.target.closest('#search-dropdown')) {
+            const dropdown = document.getElementById('search-dropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+        }
+    });
 
     // ══════════════════════════════════════════════════════════════════════
     // ANALYSIS MODAL
