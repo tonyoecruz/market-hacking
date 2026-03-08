@@ -1048,6 +1048,10 @@ async def add_plan(request: Request, session: dict = Depends(verify_admin_sessio
         price = float(data.get("price", 0))
         if not name:
             raise HTTPException(status_code=400, detail="Nome do plano obrigatorio")
+        # Check for duplicate name
+        existing = db_manager.get_plans()
+        if any(p["name"].lower() == name.lower() for p in existing):
+            return JSONResponse({"status": "error", "detail": f"Ja existe um plano com o nome '{name}'. Use o botao Editar."}, status_code=409)
         plan = db_manager.add_plan(name, description, price)
         return JSONResponse({"status": "success", "plan": plan})
     except HTTPException:

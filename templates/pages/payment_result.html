@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Pagamento - SCOPE3{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen bg-dark-900">
+    {% include "components/sidebar.html" %}
+    <div class="flex-1 flex flex-col min-h-screen overflow-hidden">
+        <main class="flex-1 overflow-y-auto p-4 md:p-6">
+            <div class="max-w-lg mx-auto text-center py-20">
+
+                {% if result == 'success' %}
+                <div class="mb-6">
+                    <div class="w-20 h-20 mx-auto bg-green-500/20 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl font-extrabold text-white mb-3">Pagamento Aprovado!</h1>
+                    {% if activated %}
+                    <p class="text-gray-400 text-lg">Seu plano <span class="text-primary font-bold">{{ plan_name }}</span> foi ativado com sucesso.</p>
+                    {% else %}
+                    <p class="text-gray-400 text-lg">Seu pagamento foi processado. O plano sera ativado em instantes.</p>
+                    {% endif %}
+                </div>
+                <a href="/dashboard" class="inline-block px-8 py-3 bg-gradient-to-r from-primary to-secondary text-dark-900 font-bold rounded-xl hover:shadow-lg hover:shadow-primary/30 transition">
+                    Ir para o Dashboard
+                </a>
+
+                {% elif result == 'pending' %}
+                <div class="mb-6">
+                    <div class="w-20 h-20 mx-auto bg-yellow-500/20 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-10 h-10 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl font-extrabold text-white mb-3">Pagamento Pendente</h1>
+                    <p class="text-gray-400 text-lg">Seu pagamento esta sendo processado. Voce sera notificado quando for aprovado.</p>
+                </div>
+                <a href="/upgrade" class="inline-block px-8 py-3 bg-gray-700 text-white font-bold rounded-xl hover:bg-gray-600 transition">
+                    Voltar aos Planos
+                </a>
+
+                {% elif result == 'failure' %}
+                <div class="mb-6">
+                    <div class="w-20 h-20 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl font-extrabold text-white mb-3">Pagamento Recusado</h1>
+                    <p class="text-gray-400 text-lg">Nao foi possivel processar seu pagamento. Tente novamente ou use outro metodo de pagamento.</p>
+                </div>
+                <a href="/upgrade" class="inline-block px-8 py-3 bg-gradient-to-r from-primary to-secondary text-dark-900 font-bold rounded-xl hover:shadow-lg hover:shadow-primary/30 transition">
+                    Tentar Novamente
+                </a>
+                {% endif %}
+
+            </div>
+            {% include "components/legal_footer.html" %}
+        </main>
+    </div>
+</div>
+{% endblock %}

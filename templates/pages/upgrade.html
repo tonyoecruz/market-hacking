@@ -50,10 +50,18 @@
             <!-- Payment notice -->
             <div class="text-center mb-10">
                 <p class="text-xs text-gray-600">
-                    Pagamentos serao implementados em breve. Entre em contato pelo
-                    <a href="mailto:contato@scope3.com.br" class="text-primary/70 hover:text-primary">contato@scope3.com.br</a>
-                    para ativar seu plano.
+                    Pagamentos processados com seguranca pelo
+                    <span class="text-primary/70">Mercado Pago</span>.
                 </p>
+            </div>
+
+            <!-- Loading overlay for checkout -->
+            <div id="checkout-loading" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                <div class="bg-dark-800 rounded-2xl p-8 text-center border border-gray-700 max-w-sm mx-4">
+                    <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="text-white font-bold text-lg mb-2">Preparando pagamento...</p>
+                    <p class="text-gray-400 text-sm">Voce sera redirecionado ao Mercado Pago</p>
+                </div>
             </div>
 
             {% include "components/legal_footer.html" %}
@@ -150,12 +158,56 @@ async function applyPromo() {
     }
 }
 
-function requestPlan(planName) {
+async function requestPlan(planName) {
     {% if not user %}
     window.location.href = '/auth/login?next=/upgrade';
     return;
     {% endif %}
-    alert(`Para ativar o plano "${planName}", entre em contato:\ncontato@scope3.com.br\n\nPagamentos online em breve!`);
+
+    const loading = document.getElementById('checkout-loading');
+    loading.classList.remove('hidden');
+
+    try {
+        const promoCode = document.getElementById('promo-input').value.trim();
+        const res = await fetch('/payment/create-preference', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                plan_name: planName,
+                promo_code: promoCode
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.redirect) {
+            // 100% discount — plan activated directly
+            window.location.href = data.redirect;
+            return;
+        }
+
+        if (data.status === 'success' && data.init_point) {
+            // Redirect to Mercado Pago checkout
+            // Use sandbox_init_point for testing, init_point for production
+            const checkoutUrl = data.sandbox_init_point || data.init_point;
+            window.location.href = checkoutUrl;
+        } else {
+            loading.classList.add('hidden');
+            alert(data.detail || 'Erro ao iniciar pagamento. Tente novamente.');
+        }
+    } catch (e) {
+        loading.classList.add('hidden');
+        alert('Erro ao conectar com o servidor: ' + e.message);
+    }
+}
+
+// Check if plan was just activated (via promo 100%)
+if (new URLSearchParams(window.location.search).get('activated') === '1') {
+    const msg = document.createElement('div');
+    msg.className = 'fixed top-4 right-4 bg-green-500/90 text-white px-6 py-3 rounded-xl font-bold z-50 shadow-lg';
+    msg.textContent = 'Plano ativado com sucesso!';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 4000);
 }
 
 loadPlans();

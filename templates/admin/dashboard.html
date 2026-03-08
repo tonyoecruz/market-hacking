@@ -787,6 +787,7 @@
             <div id="content-plans" class="hidden">
                 <div class="bg-dark-800 rounded-lg p-6 mb-6">
                     <h3 class="text-xl font-bold text-white mb-6">Gerenciar Planos de Assinatura</h3>
+                    <input type="hidden" id="plan-edit-id" value="">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div>
                             <label class="block text-gray-300 text-sm font-semibold mb-2">Nome do Plano</label>
@@ -800,10 +801,13 @@
                                 class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
                                 placeholder="29.90">
                         </div>
-                        <div class="flex items-end">
-                            <button onclick="addPlan()"
-                                class="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all">
+                        <div class="flex items-end gap-2">
+                            <button id="plan-save-btn" onclick="savePlan()"
+                                class="flex-1 px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all">
                                 + Adicionar Plano
+                            </button>
+                            <button id="plan-cancel-btn" onclick="cancelEditPlan()" class="hidden px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all" title="Cancelar edicao">
+                                ✕
                             </button>
                         </div>
                     </div>
@@ -1899,53 +1903,88 @@
                 container.innerHTML = '<p class="text-gray-500">Nenhum plano cadastrado.</p>';
                 return;
             }
-            container.innerHTML = `<div class="space-y-3">${plans.map(p => `
-                <div class="flex items-center justify-between bg-dark-700 rounded-lg p-4 border border-gray-600/50">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-3">
-                            <span class="text-white font-bold text-lg">${p.name}</span>
-                            <span class="text-primary font-bold">R$ ${parseFloat(p.price).toFixed(2)}</span>
-                            ${p.is_active ? '<span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Ativo</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inativo</span>'}
-                        </div>
-                        <p class="text-gray-400 text-sm mt-1">${p.description || 'Sem descricao'}</p>
-                    </div>
-                    <div class="flex gap-2 ml-4">
-                        <button onclick="togglePlanActive(${p.id}, ${p.is_active ? 0 : 1})"
-                            class="px-3 py-1.5 ${p.is_active ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'} rounded-lg text-xs font-semibold hover:opacity-80 transition">
-                            ${p.is_active ? 'Desativar' : 'Ativar'}
-                        </button>
-                        <button onclick="deletePlan(${p.id}, '${p.name}')"
-                            class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition">
-                            Remover
-                        </button>
-                    </div>
-                </div>
-            `).join('')}</div>`;
+            // Store plan data safely in a global array to avoid inline escaping issues
+            window._plansData = plans;
+            container.innerHTML = '<div class="space-y-3">' + plans.map((p, idx) => {
+                const safeName = (p.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                const safeDesc = (p.description || 'Sem descricao').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                const activeClass = p.is_active ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400';
+                const activeBadge = p.is_active ? '<span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Ativo</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inativo</span>';
+                return '<div class="flex items-center justify-between bg-dark-700 rounded-lg p-4 border border-gray-600/50">'
+                    + '<div class="flex-1">'
+                    + '<div class="flex items-center gap-3">'
+                    + '<span class="text-white font-bold text-lg">' + safeName + '</span>'
+                    + '<span class="text-primary font-bold">R$ ' + parseFloat(p.price).toFixed(2) + '</span>'
+                    + activeBadge
+                    + '</div>'
+                    + '<p class="text-gray-400 text-sm mt-1">' + safeDesc + '</p>'
+                    + '</div>'
+                    + '<div class="flex gap-2 ml-4">'
+                    + '<button onclick="editPlan(' + idx + ')" class="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-500/30 transition">Editar</button>'
+                    + '<button onclick="togglePlanActive(' + p.id + ', ' + (p.is_active ? 0 : 1) + ')" class="px-3 py-1.5 ' + activeClass + ' rounded-lg text-xs font-semibold hover:opacity-80 transition">' + (p.is_active ? 'Desativar' : 'Ativar') + '</button>'
+                    + '<button onclick="deletePlan(' + p.id + ', ' + idx + ')" class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition">Remover</button>'
+                    + '</div></div>';
+            }).join('') + '</div>';
         } catch (e) {
             container.innerHTML = `<p class="text-red-400">Erro: ${e.message}</p>`;
         }
     }
 
-    async function addPlan() {
+    function editPlan(idx) {
+        const p = window._plansData[idx];
+        if (!p) return;
+        document.getElementById('plan-edit-id').value = p.id;
+        document.getElementById('plan-name').value = p.name || '';
+        document.getElementById('plan-description').value = p.description || '';
+        document.getElementById('plan-price').value = p.price;
+        document.getElementById('plan-save-btn').textContent = 'Salvar Alteracoes';
+        document.getElementById('plan-save-btn').classList.remove('bg-green-600', 'hover:bg-green-700');
+        document.getElementById('plan-save-btn').classList.add('bg-blue-600', 'hover:bg-blue-700');
+        document.getElementById('plan-cancel-btn').classList.remove('hidden');
+        document.getElementById('plan-name').focus();
+    }
+
+    function cancelEditPlan() {
+        document.getElementById('plan-edit-id').value = '';
+        document.getElementById('plan-name').value = '';
+        document.getElementById('plan-description').value = '';
+        document.getElementById('plan-price').value = '';
+        document.getElementById('plan-save-btn').textContent = '+ Adicionar Plano';
+        document.getElementById('plan-save-btn').classList.add('bg-green-600', 'hover:bg-green-700');
+        document.getElementById('plan-save-btn').classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        document.getElementById('plan-cancel-btn').classList.add('hidden');
+    }
+
+    async function savePlan() {
+        const editId = document.getElementById('plan-edit-id').value;
         const name = document.getElementById('plan-name').value.trim();
         const description = document.getElementById('plan-description').value.trim();
         const price = parseFloat(document.getElementById('plan-price').value) || 0;
         if (!name) return alert('Nome do plano obrigatorio');
         try {
-            const res = await fetch('/admin/api/plans', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, description, price})
-            });
+            let res;
+            if (editId) {
+                // UPDATE existing plan
+                res = await fetch(`/admin/api/plans/${editId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, description, price})
+                });
+            } else {
+                // CREATE new plan
+                res = await fetch('/admin/api/plans', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, description, price})
+                });
+            }
             if (handleAuthError(res)) return;
             const data = await res.json();
             if (data.status === 'success') {
-                document.getElementById('plan-name').value = '';
-                document.getElementById('plan-description').value = '';
-                document.getElementById('plan-price').value = '';
+                cancelEditPlan();
                 loadPlansList();
             } else {
-                alert(data.detail || 'Erro ao adicionar plano');
+                alert(data.detail || 'Erro ao salvar plano');
             }
         } catch (e) { alert('Erro: ' + e.message); }
     }
@@ -1961,7 +2000,8 @@
         } catch (e) { alert('Erro: ' + e.message); }
     }
 
-    async function deletePlan(id, name) {
+    async function deletePlan(id, idx) {
+        const name = (window._plansData[idx] || {}).name || 'este plano';
         if (!confirm(`Remover o plano "${name}"?`)) return;
         try {
             await fetch(`/admin/api/plans/${id}`, {method: 'DELETE'});
