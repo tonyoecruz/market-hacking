@@ -6,6 +6,9 @@ from datetime import datetime, timedelta
 from .connection import get_supabase_client
 from .models import User, UserCreate, Wallet, WalletCreate, Asset, AssetCreate, AssetUpdate
 import bcrypt
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class UserQueries:
@@ -125,41 +128,40 @@ class UserQueries:
         try:
             supabase = get_supabase_client()
             if not supabase:
-                print(f"[update_user_plan] ERROR: No Supabase client available")
+                logger.error("[update_user_plan] No Supabase client available")
                 return False
 
-            print(f"[update_user_plan] Attempting: user_id={user_id} (type={type(user_id).__name__}) -> plan '{plan_name}'")
+            logger.info(f"[update_user_plan] Attempting: user_id={user_id} (type={type(user_id).__name__}) -> plan '{plan_name}'")
 
             # Try standard update
             result = supabase.table('users').update({'plan_name': plan_name}).eq('id', user_id).execute()
             updated = result.data if result.data else []
 
             if updated:
-                print(f"[update_user_plan] OK: user {user_id} -> plan '{plan_name}'")
+                logger.info(f"[update_user_plan] SUCCESS: user {user_id} -> plan '{plan_name}'")
                 return True
 
             # If no rows returned, RLS might be blocking. Try with RPC as fallback.
-            print(f"[update_user_plan] WARNING: Standard update returned no rows for user {user_id}. Trying RPC fallback...")
+            logger.warning(f"[update_user_plan] Standard update returned 0 rows for user {user_id}. Trying RPC fallback...")
             try:
                 rpc_result = supabase.rpc('update_user_plan', {
                     'p_user_id': user_id,
                     'p_plan_name': plan_name
                 }).execute()
                 if rpc_result.data:
-                    print(f"[update_user_plan] OK via RPC: user {user_id} -> plan '{plan_name}'")
+                    logger.info(f"[update_user_plan] SUCCESS via RPC: user {user_id} -> plan '{plan_name}'")
                     return True
             except Exception as rpc_err:
-                print(f"[update_user_plan] RPC fallback not available: {rpc_err}")
+                logger.warning(f"[update_user_plan] RPC fallback not available: {rpc_err}")
 
-            # Last resort: verify user exists then try upsert-style approach
+            # Last resort: verify user exists
             verify = supabase.table('users').select('id, plan_name').eq('id', user_id).execute()
             if verify.data:
                 current = verify.data[0]
-                print(f"[update_user_plan] User exists with plan='{current.get('plan_name')}'. UPDATE may be blocked by RLS policy.")
-                print(f"[update_user_plan] ACTION NEEDED: Add Supabase RLS policy or use service_role key.")
-                print(f"[update_user_plan] SQL to fix: CREATE POLICY update_plan ON users FOR UPDATE USING (true) WITH CHECK (true);")
+                logger.error(f"[update_user_plan] BLOCKED: User {user_id} exists (plan='{current.get('plan_name')}') but UPDATE failed. Provavel RLS bloqueando.")
+                logger.error(f"[update_user_plan] FIX: No Supabase SQL Editor rode: CREATE POLICY allow_update ON users FOR UPDATE USING (true) WITH CHECK (true);")
             else:
-                print(f"[update_user_plan] User {user_id} NOT FOUND in Supabase")
+                logger.error(f"[update_user_plan] User {user_id} NOT FOUND in Supabase")
 
             return False
         except Exception as e:

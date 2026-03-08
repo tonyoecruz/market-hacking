@@ -655,9 +655,37 @@
 
             <!-- ==================== LOGS TAB ==================== -->
             <div id="content-logs" class="hidden">
+                <!-- System Logs (real-time) -->
+                <div class="bg-dark-800 rounded-lg overflow-hidden mb-6">
+                    <div class="p-6 border-b border-gray-700">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-white">Logs do Sistema (tempo real)</h3>
+                            <div class="flex gap-2">
+                                <button onclick="loadSystemLogs()" class="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-500/30 transition">Atualizar</button>
+                                <button onclick="clearSystemLogs()" class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition">Limpar</button>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="text" id="syslog-search" oninput="filterSystemLogs()" placeholder="Filtrar logs... (ex: payment, update_user_plan, MP)"
+                                class="flex-1 bg-dark-700 border border-gray-600 text-white px-4 py-2 rounded-lg text-sm focus:outline-none focus:border-primary">
+                            <select id="syslog-level" onchange="filterSystemLogs()"
+                                class="bg-dark-700 border border-gray-600 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-primary">
+                                <option value="">Todos niveis</option>
+                                <option value="ERROR">ERROR</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="INFO">INFO</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="syslog-container" class="max-h-96 overflow-y-auto p-4 font-mono text-xs bg-black/30">
+                        <p class="text-gray-500">Carregando logs...</p>
+                    </div>
+                </div>
+
+                <!-- Data Update Logs -->
                 <div class="bg-dark-800 rounded-lg overflow-hidden">
                     <div class="p-6 border-b border-gray-700">
-                        <h3 class="text-xl font-bold text-white">Recent Update Logs</h3>
+                        <h3 class="text-xl font-bold text-white">Historico de Atualizacoes de Dados</h3>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full">
@@ -1051,7 +1079,7 @@
         if (tab === 'monitoring') refreshData();
         if (tab === 'users') loadUsers();
         if (tab === 'stats') loadStats();
-        if (tab === 'logs') loadLogs();
+        if (tab === 'logs') { loadSystemLogs(); loadLogs(); }
         if (tab === 'investors') loadInvestorsList();
         if (tab === 'parameters') loadSettings();
         if (tab === 'plans') loadPlansList();
@@ -1621,6 +1649,66 @@
             `).join('');
             }
         } catch (error) { console.error('Error loading logs:', error); }
+    }
+
+    // ==================== SYSTEM LOGS ====================
+    window._sysLogs = [];
+
+    async function loadSystemLogs() {
+        try {
+            const response = await fetch('/admin/logs/api');
+            if (handleAuthError(response)) return;
+            const data = await response.json();
+            window._sysLogs = (data.logs || []).reverse(); // newest first
+            filterSystemLogs();
+        } catch (e) {
+            document.getElementById('syslog-container').innerHTML = '<p class="text-red-400">Erro ao carregar logs: ' + e.message + '</p>';
+        }
+    }
+
+    function filterSystemLogs() {
+        const search = (document.getElementById('syslog-search').value || '').toLowerCase().trim();
+        const level = document.getElementById('syslog-level').value;
+        const container = document.getElementById('syslog-container');
+
+        const filtered = window._sysLogs.filter(log => {
+            const matchSearch = !search || (log.message || '').toLowerCase().includes(search) || (log.logger || '').toLowerCase().includes(search);
+            const matchLevel = !level || log.level === level;
+            return matchSearch && matchLevel;
+        });
+
+        if (!filtered.length) {
+            container.innerHTML = '<p class="text-gray-500">Nenhum log encontrado' + (search ? ' para "' + search + '"' : '') + '</p>';
+            return;
+        }
+
+        container.innerHTML = filtered.slice(0, 200).map(log => {
+            var color = 'text-gray-400';
+            if (log.level === 'ERROR') color = 'text-red-400';
+            else if (log.level === 'WARNING') color = 'text-yellow-400';
+            else if (log.level === 'INFO') color = 'text-green-400';
+
+            // Highlight payment/plan related logs
+            var msg = (log.message || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            var isPayment = msg.toLowerCase().includes('payment') || msg.toLowerCase().includes('update_user_plan') || msg.toLowerCase().includes('mp ') || msg.toLowerCase().includes('[mp');
+            var bgClass = isPayment ? 'bg-primary/5 border-l-2 border-primary/30 pl-2' : '';
+
+            return '<div class="py-1 ' + bgClass + '">'
+                + '<span class="text-gray-600">' + (log.timestamp || '') + '</span> '
+                + '<span class="' + color + ' font-bold">[' + (log.level || '') + ']</span> '
+                + '<span class="text-gray-500">' + (log.logger || '') + '</span> '
+                + '<span class="text-gray-300">' + msg + '</span>'
+                + '</div>';
+        }).join('');
+    }
+
+    async function clearSystemLogs() {
+        if (!confirm('Limpar todos os logs do sistema?')) return;
+        try {
+            await fetch('/admin/logs/clear', {method: 'POST'});
+            window._sysLogs = [];
+            document.getElementById('syslog-container').innerHTML = '<p class="text-gray-500">Logs limpos</p>';
+        } catch (e) { alert('Erro: ' + e.message); }
     }
 
     // ==================== FORCE UPDATE ====================
