@@ -36,7 +36,7 @@ def _col(df: pd.DataFrame, name: str) -> bool:
 def _model_renda_constante(df: pd.DataFrame) -> tuple:
     """
     Renda Constante (Max Yield)
-    Filters: Liq > 500K, P/VP 0.8–1.10, Vacância < 15% (if available)
+    Filters: Liq > 500K, P/VP 0.75–1.15, Vacância < 15% (if available)
     Sort:    Descending DY
     """
     caveats = []
@@ -45,9 +45,9 @@ def _model_renda_constante(df: pd.DataFrame) -> tuple:
     # Liquidity filter
     df = df[_safe(df, 'liquidezmediadiaria').fillna(0) > 500_000]
 
-    # P/VP range filter
+    # P/VP range filter (slightly wider to include quality FIIs trading near par)
     pvp = _safe(df, 'pvp')
-    df = df[(pvp >= 0.80) & (pvp <= 1.10)]
+    df = df[(pvp >= 0.75) & (pvp <= 1.15)]
 
     # Vacância filter (if column available)
     if _col(df, 'vacancia'):
@@ -95,7 +95,7 @@ def _model_desconto_patrimonial(df: pd.DataFrame) -> tuple:
 def _model_bazin_fii(df: pd.DataFrame) -> tuple:
     """
     Bazin Imobiliário (Preço Teto FII)
-    Formula: Preço Teto = DivAnual / 0.08
+    Formula: Preço Teto = DivAnual / 0.06  (6% target yield — standard for FIIs)
     Sort:    Descending margin of safety ((PrecoTeto / Price) - 1) * 100
     """
     caveats = []
@@ -112,7 +112,7 @@ def _model_bazin_fii(df: pd.DataFrame) -> tuple:
 
     # Annual dividend approximation = DY_decimal * Price
     div_anual = dy_dec * price
-    df['_preco_teto'] = div_anual / 0.08
+    df['_preco_teto'] = div_anual / 0.06
     df['_margem_seg'] = ((df['_preco_teto'] / price) - 1) * 100
 
     # Only show FIIs with positive margin (below teto)
@@ -124,7 +124,7 @@ def _model_bazin_fii(df: pd.DataFrame) -> tuple:
     df['_dy_display'] = dy_pct
 
     score_col = {'key': '_margem_seg', 'label': 'Margem Seg. (%)', 'pct': False}
-    caveats.append("Dividendo anual aproximado via DY atual × preço (sem histórico real).")
+    caveats.append("Preço teto calculado com taxa alvo de 6% a.a. Dividendo anual aproximado via DY atual × preço.")
     return df, score_col, caveats
 
 
@@ -164,10 +164,12 @@ def _model_qualidade_premium(df: pd.DataFrame) -> tuple:
     caveats = []
     df = df.copy()
 
-    # Segment filter (if available)
+    # Segment filter (if available) — broad to include most brick-and-mortar types
     if _col(df, 'segmento'):
-        allowed = ['lajes corporativas', 'galpões logísticos', 'shoppings',
-                    'lajes comerciais', 'logística', 'shopping']
+        allowed = ['lajes', 'galpões', 'galpoes', 'shoppings', 'shopping',
+                    'logística', 'logistica', 'renda urbana', 'híbrido', 'hibrido',
+                    'corporativ', 'comerci', 'varejo', 'educacional', 'hotel',
+                    'hospital', 'agro', 'industrial']
         df = df[df['segmento'].str.lower().fillna('').apply(
             lambda s: any(a in s for a in allowed)
         )]
@@ -188,9 +190,9 @@ def _model_qualidade_premium(df: pd.DataFrame) -> tuple:
     else:
         caveats.append("Vacância Física não disponível — filtro omitido.")
 
-    # P/VP < 1.05
+    # P/VP < 1.15 (slightly above par — quality FIIs often trade at small premium)
     pvp = _safe(df, 'pvp')
-    df = df[pvp < 1.05]
+    df = df[pvp < 1.15]
 
     # Sort by DY descending
     dy = _safe(df, 'dy')

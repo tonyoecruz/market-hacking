@@ -233,21 +233,27 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         return df
 
     # ── BAZIN sub-score (Preco Teto FII) ──
-    # PrecoTeto = DivAnual / 0.08, margin = (PrecoTeto/Price - 1)
+    # Uses 6% target (more standard for FIIs) instead of 8%
+    # PrecoTeto = DivAnual / 0.06, margin = (PrecoTeto/Price - 1)
     dy_dec = df["dy"] / 100  # back to decimal for dividend calc
     div_anual = dy_dec * df["price"]
-    df["_preco_teto"] = div_anual / 0.08
+    df["_preco_teto"] = div_anual / 0.06
     df["_bazin_margem"] = ((df["_preco_teto"] / df["price"]) - 1).clip(-1, 5)
     df["_bazin"] = _norm(df["_bazin_margem"]).fillna(0)
 
     # ── RENDA CONSTANTE sub-score ──
-    # Favors: P/VP 0.80-1.10 (sweet spot) + high DY
+    # Favors: P/VP 0.80-1.10 (sweet spot) + good DY (8% is already great for FII)
     df["_rc_pvp"] = df["pvp"].apply(lambda v: 1.0 if 0.80 <= v <= 1.10 else _penalty(v, 0.80, 1.10))
-    df["_rc_dy"] = df["dy"].apply(lambda v: min(1.0, v / 10.0)).fillna(0)  # 10% = perfect
+    df["_rc_dy"] = df["dy"].apply(lambda v: min(1.0, v / 8.0)).fillna(0)  # 8% = perfect for FII
     df["_renda_constante"] = (0.4 * df["_rc_pvp"] + 0.6 * df["_rc_dy"]).fillna(0)
 
+    # ── QUALITY sub-score (institutional proxy) ──
+    # High liquidity = institutional interest = quality signal
+    # Use log scale so R$50k vs R$10M is properly distinguished
+    log_liq = np.log10(df["liquidezmediadiaria"].clip(1))
+    df["_quality"] = ((log_liq - 4.7) / (7.5 - 4.7)).clip(0, 1)  # 50k=0, ~30M=1
+
     # ── SAFETY sub-score ──
-    df["_vol_score"] = _norm(df["liquidezmediadiaria"].clip(0)).fillna(0.5)
     df["_dy_ceil_score"] = df["dy"].apply(
         lambda v: 1.0 if v <= 12.0 else max(0.0, 1.0 - (v - 12.0) / 10.0)
     )
@@ -255,18 +261,18 @@ def _filter_and_score_fiis(df: pd.DataFrame, budget: float) -> pd.DataFrame:
         lambda v: 0.5 if v == 0 else _penalty(v, 0.70, 1.30)
     )
     df["safety_score"] = (
-        0.40 * df["_vol_score"] +
-        0.30 * df["_dy_ceil_score"] +
+        0.35 * df["_quality"] +
+        0.35 * df["_dy_ceil_score"] +
         0.30 * df["_pvp_score"]
     ).fillna(0)
 
     # ── COMBINED SCORE ──
-    # 25% safety + 35% Renda Constante + 25% Bazin + 15% volume
+    # 25% safety + 30% Renda Constante + 20% Bazin + 25% quality
     df["score"] = (
         0.25 * df["safety_score"] +
-        0.35 * df["_renda_constante"] +
-        0.25 * df["_bazin"] +
-        0.15 * df["_vol_score"]
+        0.30 * df["_renda_constante"] +
+        0.20 * df["_bazin"] +
+        0.25 * df["_quality"]
     ).fillna(0)
 
     df["asset_type"] = "FII"

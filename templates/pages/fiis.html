@@ -413,7 +413,7 @@
     function renderRankingTable(items, sid) {
         const tbody = document.getElementById('ranking-tbody');
         if (!items || items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-10 text-center text-gray-400">
+            tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-10 text-center text-gray-400">
                 Nenhum FII encontrado para esta estratégia com os filtros atuais.</td></tr>`;
             return;
         }
@@ -425,11 +425,15 @@
             const pos = idx + 1;
             const posColor = pos <= 3 ? 'text-amber-400 font-bold' : 'text-gray-500';
 
+            const seg = item.segmento || item.setor || '-';
             return `
             <tr class="hover:bg-dark-700/60 transition-colors cursor-pointer" onclick="analyzeFII('${item.ticker}')">
                 <td class="px-2 py-2 text-center ${posColor} text-sm">${pos}</td>
                 <td class="px-2 py-2">
                     <span class="font-bold text-white text-sm">${item.ticker}</span>
+                </td>
+                <td class="px-2 py-2 text-left text-gray-400 text-xs truncate max-w-[160px]" title="${seg}">
+                    ${seg}
                 </td>
                 <td class="px-2 py-2 text-right text-white font-medium text-sm">
                     ${item.price ? `R$ ${fmtNum(item.price)}` : '-'}
