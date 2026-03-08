@@ -259,6 +259,14 @@
                 class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
                 <span>&#128188;</span> Investidores
             </button>
+            <button onclick="showTab('plans')" id="tab-plans"
+                class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
+                <span>&#11088;</span> Planos
+            </button>
+            <button onclick="showTab('promos')" id="tab-promos"
+                class="w-full text-left px-4 py-3 rounded-lg tab-inactive text-sm flex items-center gap-3">
+                <span>&#127915;</span> Promo Codes
+            </button>
         </nav>
 
         <div class="p-4 border-t border-gray-700/50">
@@ -773,6 +781,73 @@
                         <p class="text-gray-500">Carregando investidores...</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- ==================== PLANS TAB ==================== -->
+            <div id="content-plans" class="hidden">
+                <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                    <h3 class="text-xl font-bold text-white mb-6">Gerenciar Planos de Assinatura</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Nome do Plano</label>
+                            <input type="text" id="plan-name"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                                placeholder="Ex: Pro, Premium">
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Valor (R$)</label>
+                            <input type="number" step="0.01" min="0" id="plan-price"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                                placeholder="29.90">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="addPlan()"
+                                class="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all">
+                                + Adicionar Plano
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-300 text-sm font-semibold mb-2">Descricao do Plano</label>
+                        <textarea id="plan-description" rows="3"
+                            class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                            placeholder="Descreva os beneficios deste plano..."></textarea>
+                    </div>
+                    <div id="plans-list">
+                        <p class="text-gray-500">Carregando planos...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== PROMO CODES TAB ==================== -->
+            <div id="content-promos" class="hidden">
+                <div class="bg-dark-800 rounded-lg p-6 mb-6">
+                    <h3 class="text-xl font-bold text-white mb-6">Codigos Promocionais</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Codigo</label>
+                            <input type="text" id="promo-code"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary uppercase"
+                                placeholder="Ex: SCOPE50">
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-2">Desconto (%)</label>
+                            <input type="number" step="1" min="1" max="100" id="promo-discount"
+                                class="w-full bg-dark-700 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-primary"
+                                placeholder="50">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="addPromoCode()"
+                                class="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all">
+                                + Adicionar Codigo
+                            </button>
+                        </div>
+                    </div>
+                    <div id="promos-list">
+                        <p class="text-gray-500">Carregando codigos...</p>
+                    </div>
+                </div>
+            </div>
 
         </main>
     </div>
@@ -924,7 +999,7 @@
     // ==================== TAB NAVIGATION ====================
     function showTab(tab) {
         currentTab = tab;
-        const tabs = ['overview', 'monitoring', 'users', 'stats', 'logs', 'parameters', 'investors'];
+        const tabs = ['overview', 'monitoring', 'users', 'stats', 'logs', 'parameters', 'investors', 'plans', 'promos'];
         tabs.forEach(t => {
             const btn = document.getElementById(`tab-${t}`);
             const content = document.getElementById(`content-${t}`);
@@ -944,7 +1019,9 @@
             'stats': '<span>&#128202;</span> System Stats',
             'logs': '<span>&#128221;</span> Update Logs',
             'parameters': '<span>&#9881;</span> Parameters',
-            'investors': '<span>&#128188;</span> Investidores'
+            'investors': '<span>&#128188;</span> Investidores',
+            'plans': '<span>&#11088;</span> Planos',
+            'promos': '<span>&#127915;</span> Promo Codes'
         };
         document.getElementById('page-title').innerHTML = titles[tab] || tab;
 
@@ -955,6 +1032,8 @@
         if (tab === 'logs') loadLogs();
         if (tab === 'investors') loadInvestorsList();
         if (tab === 'parameters') loadSettings();
+        if (tab === 'plans') loadPlansList();
+        if (tab === 'promos') loadPromosList();
     }
 
     function refreshCurrentTab() {
@@ -1807,5 +1886,150 @@
     document.getElementById('investor-edit-modal').addEventListener('click', function (e) {
         if (e.target === this) closeInvestorModal();
     });
+
+    // ==================== PLANS MANAGEMENT ====================
+    async function loadPlansList() {
+        const container = document.getElementById('plans-list');
+        try {
+            const res = await fetch('/admin/api/plans');
+            if (handleAuthError(res)) return;
+            const data = await res.json();
+            const plans = data.plans || [];
+            if (!plans.length) {
+                container.innerHTML = '<p class="text-gray-500">Nenhum plano cadastrado.</p>';
+                return;
+            }
+            container.innerHTML = `<div class="space-y-3">${plans.map(p => `
+                <div class="flex items-center justify-between bg-dark-700 rounded-lg p-4 border border-gray-600/50">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3">
+                            <span class="text-white font-bold text-lg">${p.name}</span>
+                            <span class="text-primary font-bold">R$ ${parseFloat(p.price).toFixed(2)}</span>
+                            ${p.is_active ? '<span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Ativo</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Inativo</span>'}
+                        </div>
+                        <p class="text-gray-400 text-sm mt-1">${p.description || 'Sem descricao'}</p>
+                    </div>
+                    <div class="flex gap-2 ml-4">
+                        <button onclick="togglePlanActive(${p.id}, ${p.is_active ? 0 : 1})"
+                            class="px-3 py-1.5 ${p.is_active ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'} rounded-lg text-xs font-semibold hover:opacity-80 transition">
+                            ${p.is_active ? 'Desativar' : 'Ativar'}
+                        </button>
+                        <button onclick="deletePlan(${p.id}, '${p.name}')"
+                            class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition">
+                            Remover
+                        </button>
+                    </div>
+                </div>
+            `).join('')}</div>`;
+        } catch (e) {
+            container.innerHTML = `<p class="text-red-400">Erro: ${e.message}</p>`;
+        }
+    }
+
+    async function addPlan() {
+        const name = document.getElementById('plan-name').value.trim();
+        const description = document.getElementById('plan-description').value.trim();
+        const price = parseFloat(document.getElementById('plan-price').value) || 0;
+        if (!name) return alert('Nome do plano obrigatorio');
+        try {
+            const res = await fetch('/admin/api/plans', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, description, price})
+            });
+            if (handleAuthError(res)) return;
+            const data = await res.json();
+            if (data.status === 'success') {
+                document.getElementById('plan-name').value = '';
+                document.getElementById('plan-description').value = '';
+                document.getElementById('plan-price').value = '';
+                loadPlansList();
+            } else {
+                alert(data.detail || 'Erro ao adicionar plano');
+            }
+        } catch (e) { alert('Erro: ' + e.message); }
+    }
+
+    async function togglePlanActive(id, active) {
+        try {
+            await fetch(`/admin/api/plans/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({is_active: active})
+            });
+            loadPlansList();
+        } catch (e) { alert('Erro: ' + e.message); }
+    }
+
+    async function deletePlan(id, name) {
+        if (!confirm(`Remover o plano "${name}"?`)) return;
+        try {
+            await fetch(`/admin/api/plans/${id}`, {method: 'DELETE'});
+            loadPlansList();
+        } catch (e) { alert('Erro: ' + e.message); }
+    }
+
+    // ==================== PROMO CODES MANAGEMENT ====================
+    async function loadPromosList() {
+        const container = document.getElementById('promos-list');
+        try {
+            const res = await fetch('/admin/api/promo-codes');
+            if (handleAuthError(res)) return;
+            const data = await res.json();
+            const codes = data.promo_codes || [];
+            if (!codes.length) {
+                container.innerHTML = '<p class="text-gray-500">Nenhum codigo cadastrado.</p>';
+                return;
+            }
+            container.innerHTML = `<table class="w-full text-sm">
+                <thead class="text-gray-400 text-xs uppercase border-b border-gray-700">
+                    <tr><th class="py-2 text-left">Codigo</th><th class="py-2 text-right">Desconto</th><th class="py-2 text-center">Status</th><th class="py-2 text-right">Acao</th></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700/50">${codes.map(c => `
+                    <tr>
+                        <td class="py-3 text-white font-mono font-bold">${c.code}</td>
+                        <td class="py-3 text-right text-primary font-bold">${c.discount_pct}%</td>
+                        <td class="py-3 text-center">${c.is_active ? '<span class="text-green-400 text-xs">Ativo</span>' : '<span class="text-red-400 text-xs">Inativo</span>'}</td>
+                        <td class="py-3 text-right">
+                            <button onclick="deletePromo(${c.id}, '${c.code}')" class="text-red-400 hover:text-red-300 text-xs">Remover</button>
+                        </td>
+                    </tr>
+                `).join('')}</tbody>
+            </table>`;
+        } catch (e) {
+            container.innerHTML = `<p class="text-red-400">Erro: ${e.message}</p>`;
+        }
+    }
+
+    async function addPromoCode() {
+        const code = document.getElementById('promo-code').value.trim();
+        const discount_pct = parseFloat(document.getElementById('promo-discount').value) || 0;
+        if (!code) return alert('Codigo obrigatorio');
+        if (discount_pct <= 0 || discount_pct > 100) return alert('Desconto deve ser entre 1% e 100%');
+        try {
+            const res = await fetch('/admin/api/promo-codes', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({code, discount_pct})
+            });
+            if (handleAuthError(res)) return;
+            const data = await res.json();
+            if (data.status === 'success') {
+                document.getElementById('promo-code').value = '';
+                document.getElementById('promo-discount').value = '';
+                loadPromosList();
+            } else {
+                alert(data.detail || 'Erro ao adicionar codigo');
+            }
+        } catch (e) { alert('Erro: ' + e.message); }
+    }
+
+    async function deletePromo(id, code) {
+        if (!confirm(`Remover o codigo "${code}"?`)) return;
+        try {
+            await fetch(`/admin/api/promo-codes/${id}`, {method: 'DELETE'});
+            loadPromosList();
+        } catch (e) { alert('Erro: ' + e.message); }
+    }
 </script>
 {% endblock %}

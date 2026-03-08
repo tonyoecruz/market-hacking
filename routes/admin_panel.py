@@ -1027,3 +1027,105 @@ async def generate_investor_full(
         logger.error(f"[generate-full] Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ==================== SUBSCRIPTION PLANS API ====================
+
+@router.get("/api/plans")
+async def get_plans(session: dict = Depends(verify_admin_session)):
+    try:
+        plans = db_manager.get_plans()
+        return JSONResponse({"status": "success", "plans": plans})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/plans")
+async def add_plan(request: Request, session: dict = Depends(verify_admin_session)):
+    try:
+        data = await request.json()
+        name = data.get("name", "").strip()
+        description = data.get("description", "").strip()
+        price = float(data.get("price", 0))
+        if not name:
+            raise HTTPException(status_code=400, detail="Nome do plano obrigatorio")
+        plan = db_manager.add_plan(name, description, price)
+        return JSONResponse({"status": "success", "plan": plan})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/api/plans/{plan_id}")
+async def update_plan(plan_id: int, request: Request, session: dict = Depends(verify_admin_session)):
+    try:
+        data = await request.json()
+        plan = db_manager.update_plan(
+            plan_id,
+            name=data.get("name"),
+            description=data.get("description"),
+            price=float(data["price"]) if "price" in data else None,
+            is_active=int(data["is_active"]) if "is_active" in data else None,
+        )
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plano nao encontrado")
+        return JSONResponse({"status": "success", "plan": plan})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/api/plans/{plan_id}")
+async def remove_plan(plan_id: int, session: dict = Depends(verify_admin_session)):
+    try:
+        success = db_manager.remove_plan(plan_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Plano nao encontrado")
+        return JSONResponse({"status": "success", "message": "Plano removido"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== PROMO CODES API ====================
+
+@router.get("/api/promo-codes")
+async def get_promo_codes(session: dict = Depends(verify_admin_session)):
+    try:
+        codes = db_manager.get_promo_codes()
+        return JSONResponse({"status": "success", "promo_codes": codes})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/promo-codes")
+async def add_promo_code(request: Request, session: dict = Depends(verify_admin_session)):
+    try:
+        data = await request.json()
+        code = data.get("code", "").strip()
+        discount_pct = float(data.get("discount_pct", 0))
+        if not code:
+            raise HTTPException(status_code=400, detail="Codigo obrigatorio")
+        if discount_pct <= 0 or discount_pct > 100:
+            raise HTTPException(status_code=400, detail="Desconto deve ser entre 1% e 100%")
+        promo = db_manager.add_promo_code(code, discount_pct)
+        return JSONResponse({"status": "success", "promo_code": promo})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/api/promo-codes/{promo_id}")
+async def remove_promo_code(promo_id: int, session: dict = Depends(verify_admin_session)):
+    try:
+        success = db_manager.remove_promo_code(promo_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Codigo nao encontrado")
+        return JSONResponse({"status": "success", "message": "Codigo removido"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

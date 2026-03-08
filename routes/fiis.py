@@ -49,7 +49,7 @@ def _clean_for_response(df: pd.DataFrame) -> pd.DataFrame:
     internal = [c for c in df.columns if c.startswith('_')]
     keep = [c for c in df.columns if not c.startswith('_')]
     # Also keep score/display columns that start with _
-    score_cols = [c for c in internal if any(k in c for k in ['_dy_display', '_margem_seg', '_preco_teto', '_score', '_rank_dy', '_rank_pvp'])]
+    score_cols = [c for c in internal if any(k in c for k in ['_dy_display', '_margem_seg', '_preco_teto', '_score', '_rank_dy', '_rank_pvp', '_composite'])]
     result = df[keep + score_cols].copy()
     return result.replace({float('nan'): None})
 

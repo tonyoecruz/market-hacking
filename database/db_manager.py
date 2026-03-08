@@ -12,7 +12,7 @@ from typing import List, Optional, Dict
 import pandas as pd
 import numpy as np
 
-from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB, SystemSettingsDB, FlippingCityDB, FlippingListingDB, InvestorPersonaDB
+from database.orm_models import Base, StockDB, ETFDB, FIIDB, UpdateLogDB, SystemSettingsDB, FlippingCityDB, FlippingListingDB, InvestorPersonaDB, SubscriptionPlanDB, PromoCodeDB
 
 logger = logging.getLogger(__name__)
 
@@ -963,6 +963,156 @@ class DatabaseManager:
                 db.rollback()
             finally:
                 db.close()
+
+
+    # ==================== SUBSCRIPTION PLANS ====================
+
+    def get_plans(self) -> List[Dict]:
+        db = self.SessionLocal()
+        try:
+            plans = db.query(SubscriptionPlanDB).order_by(SubscriptionPlanDB.price.asc()).all()
+            return [p.to_dict() for p in plans]
+        finally:
+            db.close()
+
+    def get_plan_by_id(self, plan_id: int) -> Optional[Dict]:
+        db = self.SessionLocal()
+        try:
+            plan = db.query(SubscriptionPlanDB).filter(SubscriptionPlanDB.id == plan_id).first()
+            return plan.to_dict() if plan else None
+        finally:
+            db.close()
+
+    def get_active_plans(self) -> List[Dict]:
+        db = self.SessionLocal()
+        try:
+            plans = db.query(SubscriptionPlanDB).filter(
+                SubscriptionPlanDB.is_active == 1
+            ).order_by(SubscriptionPlanDB.price.asc()).all()
+            return [p.to_dict() for p in plans]
+        finally:
+            db.close()
+
+    def add_plan(self, name: str, description: str = '', price: float = 0) -> Dict:
+        db = self.SessionLocal()
+        try:
+            plan = SubscriptionPlanDB(
+                name=name, description=description, price=price,
+                is_active=1, created_at=datetime.now()
+            )
+            db.add(plan)
+            db.commit()
+            db.refresh(plan)
+            return plan.to_dict()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+
+    def update_plan(self, plan_id: int, **kwargs) -> Optional[Dict]:
+        db = self.SessionLocal()
+        try:
+            plan = db.query(SubscriptionPlanDB).filter(SubscriptionPlanDB.id == plan_id).first()
+            if not plan:
+                return None
+            for k, v in kwargs.items():
+                if hasattr(plan, k) and v is not None:
+                    setattr(plan, k, v)
+            db.commit()
+            db.refresh(plan)
+            return plan.to_dict()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+
+    def remove_plan(self, plan_id: int) -> bool:
+        db = self.SessionLocal()
+        try:
+            plan = db.query(SubscriptionPlanDB).filter(SubscriptionPlanDB.id == plan_id).first()
+            if not plan:
+                return False
+            db.delete(plan)
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+
+    # ==================== PROMO CODES ====================
+
+    def get_promo_codes(self) -> List[Dict]:
+        db = self.SessionLocal()
+        try:
+            codes = db.query(PromoCodeDB).order_by(PromoCodeDB.created_at.desc()).all()
+            return [c.to_dict() for c in codes]
+        finally:
+            db.close()
+
+    def add_promo_code(self, code: str, discount_pct: float) -> Dict:
+        db = self.SessionLocal()
+        try:
+            promo = PromoCodeDB(
+                code=code.upper().strip(), discount_pct=discount_pct,
+                is_active=1, created_at=datetime.now()
+            )
+            db.add(promo)
+            db.commit()
+            db.refresh(promo)
+            return promo.to_dict()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+
+    def remove_promo_code(self, promo_id: int) -> bool:
+        db = self.SessionLocal()
+        try:
+            promo = db.query(PromoCodeDB).filter(PromoCodeDB.id == promo_id).first()
+            if not promo:
+                return False
+            db.delete(promo)
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+
+    def validate_promo_code(self, code: str) -> Optional[Dict]:
+        db = self.SessionLocal()
+        try:
+            promo = db.query(PromoCodeDB).filter(
+                PromoCodeDB.code == code.upper().strip(),
+                PromoCodeDB.is_active == 1
+            ).first()
+            return promo.to_dict() if promo else None
+        finally:
+            db.close()
+
+    def init_default_plan(self):
+        """Ensure a Free plan exists"""
+        db = self.SessionLocal()
+        try:
+            existing = db.query(SubscriptionPlanDB).filter(
+                SubscriptionPlanDB.name == 'Free'
+            ).first()
+            if not existing:
+                db.add(SubscriptionPlanDB(
+                    name='Free', description='Acesso basico a plataforma. Sem analises de IA e sem escolha de investidor.',
+                    price=0, is_active=1, created_at=datetime.now()
+                ))
+                db.commit()
+        except:
+            db.rollback()
+        finally:
+            db.close()
 
 
 # Global instance

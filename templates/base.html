@@ -54,6 +54,24 @@
 
     <!-- Legal Footer included inside each page's scrollable area via components/legal_footer.html -->
 
+    <!-- Plan Restrictions -->
+    <script>
+        window._userPlan = '{{ (user.plan_name or "Free") if user else "Free" }}';
+        window._isFreePlan = (window._userPlan === 'Free');
+    </script>
+    <style>
+        /* Hide elements for free plan users */
+        body.plan-free .premium-only { display: none !important; }
+        body.plan-free .premium-locked {
+            opacity: 0.4;
+            pointer-events: none;
+            filter: grayscale(0.8);
+        }
+    </style>
+    <script>
+        if (window._isFreePlan) document.body.classList.add('plan-free');
+    </script>
+
     <!-- Global Scripts -->
     <script src="/static/js/main.js"></script>
     {% block scripts %}{% endblock %}

@@ -272,6 +272,48 @@ class FlippingListingDB(Base):
         }
 
 
+class SubscriptionPlanDB(Base):
+    """SQLAlchemy model for subscription plans"""
+    __tablename__ = 'subscription_plans'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, unique=True)
+    description = Column(Text)
+    price = Column(Float, nullable=False, default=0)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=func.now())
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'price': self.price,
+            'is_active': bool(self.is_active),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class PromoCodeDB(Base):
+    """SQLAlchemy model for promotional codes"""
+    __tablename__ = 'promo_codes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(50), nullable=False, unique=True)
+    discount_pct = Column(Float, nullable=False, default=0)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=func.now())
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'code': self.code,
+            'discount_pct': self.discount_pct,
+            'is_active': bool(self.is_active),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class InvestorPersonaDB(Base):
     """SQLAlchemy model for investor personas (e.g. Warren Buffett, Luiz Barsi)"""
     __tablename__ = 'investor_personas'

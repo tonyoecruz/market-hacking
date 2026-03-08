@@ -137,15 +137,34 @@
     <!-- User Section -->
     <div class="p-3 border-t border-gray-700">
         {% if user %}
-        <div class="flex items-center space-x-2 mb-2">
+        {% set user_plan = user.plan_name or 'Free' %}
+        {% set is_free = (user_plan == 'Free') %}
+        <div class="flex items-center space-x-2 mb-1">
             <div
                 class="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-dark-900 font-bold text-sm flex-shrink-0">
                 {{ user.username[0].upper() }}
             </div>
             <div class="sidebar-label flex-1 min-w-0">
                 <p class="text-xs font-semibold text-white truncate">{{ user.username }}</p>
+                <span class="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded mt-0.5
+                    {% if is_free %}bg-gray-600/30 text-gray-400{% else %}bg-primary/20 text-primary{% endif %}">
+                    {{ user_plan }}
+                </span>
             </div>
         </div>
+        {% if is_free %}
+        <a href="/upgrade"
+            class="block w-full px-3 py-1.5 bg-gradient-to-r from-primary/20 to-secondary/20 text-primary rounded-lg hover:from-primary/30 hover:to-secondary/30 transition text-xs font-bold text-center mb-1.5 sidebar-label">
+            Upgrade
+        </a>
+        <a href="/upgrade"
+            class="block w-full p-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition sidebar-icon-label hidden mb-1.5"
+            title="Upgrade">
+            <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+            </svg>
+        </a>
+        {% endif %}
         <form action="/auth/logout" method="POST">
             <button type="submit"
                 class="w-full px-3 py-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition text-xs font-semibold sidebar-label">

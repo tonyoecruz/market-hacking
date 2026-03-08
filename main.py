@@ -6,7 +6,7 @@ import os as _os
 from dotenv import load_dotenv
 load_dotenv(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '.env'))
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -102,6 +102,7 @@ def run_background_startup():
         
         db_manager.init_default_settings()
         db_manager.init_default_investors()
+        db_manager.init_default_plan()
         logger.info("✅ Default settings and investor personas initialized")
             
     except Exception as e:
@@ -178,6 +179,14 @@ async def api_info():
     }
 
 
+# ==================== UPGRADE/PLANS PAGE ====================
+from routes.auth import get_optional_user
+
+@app.get("/upgrade", response_class=HTMLResponse)
+async def upgrade_page(request: Request, user: dict = Depends(get_optional_user)):
+    return templates.TemplateResponse("pages/upgrade.html", {"request": request, "user": user})
+
+
 # ==================== GLOBAL TTS ENDPOINT ====================
 from fastapi.responses import FileResponse
 import data_utils as _du
@@ -223,6 +232,30 @@ async def get_investors():
     try:
         investors = db_manager.get_investors()
         return {"status": "success", "investors": investors}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/plans")
+async def get_plans_public():
+    """Get all active subscription plans"""
+    try:
+        plans = db_manager.get_active_plans()
+        return {"status": "success", "plans": plans}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/validate-promo")
+async def validate_promo(request: Request):
+    """Validate a promo code"""
+    try:
+        data = await request.json()
+        code = data.get("code", "")
+        promo = db_manager.validate_promo_code(code)
+        if promo:
+            return {"status": "success", "promo": promo}
+        return {"status": "error", "message": "Codigo invalido ou expirado"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

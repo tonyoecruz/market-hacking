@@ -41,11 +41,12 @@ class UserQueries:
                 bcrypt.gensalt()
             ).decode('utf-8')
             
-            # Insert user
+            # Insert user (default plan: Free)
             result = supabase.table('users').insert({
                 'username': user_data.username,
                 'email': user_data.email,
                 'password_hash': hashed_password,
+                'plan_name': 'Free',
                 'created_at': datetime.utcnow().isoformat()
             }).execute()
             
@@ -108,11 +109,27 @@ class UserQueries:
         try:
             supabase = get_supabase_client()
             result = supabase.table('users').select('*').eq('id', user_id).execute()
-            return result.data[0] if result.data else None
+            if result.data:
+                user = result.data[0]
+                if not user.get('plan_name'):
+                    user['plan_name'] = 'Free'
+                return user
+            return None
         except Exception as e:
             print(f"Error getting user: {e}")
             return None
-    
+
+    @staticmethod
+    def update_user_plan(user_id: int, plan_name: str) -> bool:
+        """Update user's subscription plan"""
+        try:
+            supabase = get_supabase_client()
+            supabase.table('users').update({'plan_name': plan_name}).eq('id', user_id).execute()
+            return True
+        except Exception as e:
+            print(f"Error updating user plan: {e}")
+            return False
+
     @staticmethod
     def login_google_user(email: str, google_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -134,12 +151,13 @@ class UserQueries:
             if result.data:
                 return result.data[0]
             
-            # Create new user
+            # Create new user (default plan: Free)
             username = email.split('@')[0]
             result = supabase.table('users').insert({
                 'username': username,
                 'email': email,
                 'google_id': google_id,
+                'plan_name': 'Free',
                 'created_at': datetime.utcnow().isoformat()
             }).execute()
             
