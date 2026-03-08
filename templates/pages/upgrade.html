@@ -187,10 +187,8 @@ async function requestPlan(planName) {
         }
 
         if (data.status === 'success' && data.init_point) {
-            // Redirect to Mercado Pago checkout
-            // Use sandbox_init_point for testing, init_point for production
-            const checkoutUrl = data.sandbox_init_point || data.init_point;
-            window.location.href = checkoutUrl;
+            // Redirect to Mercado Pago checkout (production)
+            window.location.href = data.init_point;
         } else {
             loading.classList.add('hidden');
             alert(data.detail || 'Erro ao iniciar pagamento. Tente novamente.');

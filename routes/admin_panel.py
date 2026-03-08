@@ -409,6 +409,7 @@ async def get_users(session: dict = Depends(verify_admin_session)):
                 "id": user.get('id'),
                 "username": user.get('username'),
                 "email": user.get('email'),
+                "plan_name": user.get('plan_name') or 'Free',
                 "created_at": user.get('created_at'),
                 "last_login": user.get('last_login'),
                 "is_active": user.get('is_active', True),
@@ -1129,6 +1130,30 @@ async def remove_promo_code(promo_id: int, session: dict = Depends(verify_admin_
         if not success:
             raise HTTPException(status_code=404, detail="Codigo nao encontrado")
         return JSONResponse({"status": "success", "message": "Codigo removido"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# USER PLAN MANAGEMENT (Admin)
+# ══════════════════════════════════════════════════════════════════════════════
+@router.put("/api/users/{user_id}/plan")
+async def update_user_plan_admin(user_id: int, request: Request, session: dict = Depends(verify_admin_session)):
+    """Admin endpoint to manually update a user's plan"""
+    try:
+        data = await request.json()
+        plan_name = data.get("plan_name", "").strip()
+        if not plan_name:
+            raise HTTPException(status_code=400, detail="Nome do plano obrigatorio")
+
+        from database.queries import UserQueries
+        success = UserQueries.update_user_plan(user_id, plan_name)
+        if success:
+            return JSONResponse({"status": "success", "message": f"Plano atualizado para '{plan_name}'"})
+        else:
+            raise HTTPException(status_code=500, detail="Falha ao atualizar plano. Verifique os logs do servidor (possivelmente RLS do Supabase).")
     except HTTPException:
         raise
     except Exception as e:

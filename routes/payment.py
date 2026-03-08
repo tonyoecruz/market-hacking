@@ -26,14 +26,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["payment"])
 templates = Jinja2Templates(directory="templates")
 
-# Mercado Pago credentials
+# Mercado Pago credentials (production)
 MP_ACCESS_TOKEN = os.getenv(
     "MP_ACCESS_TOKEN",
-    "APP_USR-4036439662823536-030722-bac84e227a9801e0f050026542c9cb68-3250899459"
+    "APP_USR-6101608656957617-030722-211db365b799047c660314ab9a168033-77950954"
 )
 MP_PUBLIC_KEY = os.getenv(
     "MP_PUBLIC_KEY",
-    "APP_USR-8639bb94-fc97-4fa9-bc3d-7300222af1da"
+    "APP_USR-90203641-41cb-4f3c-ab32-8b032736ce06"
 )
 MP_API_URL = "https://api.mercadopago.com"
 
@@ -70,7 +70,11 @@ async def create_preference(request: Request, user: dict = Depends(get_current_u
 
         if final_price <= 0:
             # 100% discount — activate plan directly
-            UserQueries.update_user_plan(user["id"], plan_name)
+            logger.info(f"[payment] 100% discount for user {user['id']} (plan: {plan_name})")
+            success = UserQueries.update_user_plan(user["id"], plan_name)
+            if not success:
+                logger.error(f"[payment] Failed to activate plan for user {user['id']}")
+                raise HTTPException(status_code=500, detail="Erro ao ativar plano. Tente novamente.")
             return JSONResponse({
                 "status": "success",
                 "message": "Plano ativado com 100% de desconto!",
