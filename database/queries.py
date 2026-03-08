@@ -133,39 +133,62 @@ class UserQueries:
 
             logger.info(f"[update_user_plan] Attempting: user_id={user_id} (type={type(user_id).__name__}) -> plan '{plan_name}'")
 
-            # Try standard update
-            result = supabase.table('users').update({'plan_name': plan_name}).eq('id', user_id).execute()
-            updated = result.data if result.data else []
-
-            if updated:
-                logger.info(f"[update_user_plan] SUCCESS: user {user_id} -> plan '{plan_name}'")
-                return True
-
-            # If no rows returned, RLS might be blocking. Try with RPC as fallback.
-            logger.warning(f"[update_user_plan] Standard update returned 0 rows for user {user_id}. Trying RPC fallback...")
-            try:
-                rpc_result = supabase.rpc('update_user_plan', {
-                    'p_user_id': user_id,
-                    'p_plan_name': plan_name
-                }).execute()
-                if rpc_result.data:
-                    logger.info(f"[update_user_plan] SUCCESS via RPC: user {user_id} -> plan '{plan_name}'")
-                    return True
-            except Exception as rpc_err:
-                logger.warning(f"[update_user_plan] RPC fallback not available: {rpc_err}")
-
-            # Last resort: verify user exists
-            verify = supabase.table('users').select('id, plan_name').eq('id', user_id).execute()
-            if verify.data:
-                current = verify.data[0]
-                logger.error(f"[update_user_plan] BLOCKED: User {user_id} exists (plan='{current.get('plan_name')}') but UPDATE failed. Provavel RLS bloqueando.")
-                logger.error(f"[update_user_plan] FIX: No Supabase SQL Editor rode: CREATE POLICY allow_update ON users FOR UPDATE USING (true) WITH CHECK (true);")
-            else:
+            # First verify the user exists and check current columns
+            verify = supabase.table('users').select('*').eq('id', user_id).execute()
+            if not verify.data:
                 logger.error(f"[update_user_plan] User {user_id} NOT FOUND in Supabase")
+                return False
+
+            current_user = verify.data[0]
+            current_cols = list(current_user.keys())
+            logger.info(f"[update_user_plan] User {user_id} found. Current plan='{current_user.get('plan_name', 'N/A')}'. Columns: {current_cols}")
+
+            # Check if plan_name column exists
+            if 'plan_name' not in current_cols:
+                logger.error(f"[update_user_plan] COLUMN 'plan_name' DOES NOT EXIST in users table!")
+                logger.error(f"[update_user_plan] FIX: No Supabase SQL Editor rode: ALTER TABLE users ADD COLUMN plan_name TEXT DEFAULT 'Free';")
+                return False
+
+            # Try standard update
+            try:
+                result = supabase.table('users').update({'plan_name': plan_name}).eq('id', user_id).execute()
+                updated = result.data if result.data else []
+                if updated:
+                    logger.info(f"[update_user_plan] SUCCESS: user {user_id} -> plan '{plan_name}'")
+                    return True
+                logger.warning(f"[update_user_plan] Update returned 0 rows (RLS?). Result: {result}")
+            except Exception as update_err:
+                error_msg = str(update_err)
+                logger.error(f"[update_user_plan] UPDATE threw exception: {error_msg}")
+
+                # Check for common Supabase errors
+                if '400' in error_msg or 'Bad Request' in error_msg:
+                    logger.error(f"[update_user_plan] 400 Bad Request — possible causes:")
+                    logger.error(f"  1. Column 'plan_name' has a CHECK constraint rejecting the value")
+                    logger.error(f"  2. RLS policy is blocking the UPDATE")
+                    logger.error(f"  3. Column type mismatch")
+                    logger.error(f"[update_user_plan] FIX OPTIONS:")
+                    logger.error(f"  A. Supabase Dashboard > Authentication > Policies > users > Add UPDATE policy")
+                    logger.error(f"  B. SQL Editor: ALTER TABLE users DISABLE ROW LEVEL SECURITY;")
+                    logger.error(f"  C. SQL Editor: CREATE POLICY allow_all_update ON users FOR UPDATE USING (true) WITH CHECK (true);")
+                    logger.error(f"  D. Use service_role key instead of anon key in SUPABASE_KEY env var")
+
+                # Try direct SQL via RPC as last resort
+                try:
+                    logger.info(f"[update_user_plan] Trying direct SQL via rpc...")
+                    rpc_result = supabase.rpc('update_user_plan', {
+                        'p_user_id': user_id,
+                        'p_plan_name': plan_name
+                    }).execute()
+                    if rpc_result.data:
+                        logger.info(f"[update_user_plan] SUCCESS via RPC: user {user_id} -> plan '{plan_name}'")
+                        return True
+                except Exception as rpc_err:
+                    logger.warning(f"[update_user_plan] RPC not available: {rpc_err}")
 
             return False
         except Exception as e:
-            print(f"[update_user_plan] ERROR for user {user_id}: {e}")
+            logger.error(f"[update_user_plan] EXCEPTION for user {user_id}: {e}", exc_info=True)
             return False
 
     @staticmethod
